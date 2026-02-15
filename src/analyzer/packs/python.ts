@@ -491,7 +491,7 @@ function buildReducedArchitecture(
 
   const nodes = selectedFolders.map((folder) => ({
     id: folder,
-    label: folder === "." ? "." : path.posix.basename(folder),
+    label: folder === "." ? "." : folder,
     type: "folder" as const,
   }));
 

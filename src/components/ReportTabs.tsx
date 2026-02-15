@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { Report } from "@/types/report";
 import { FolderMapTree } from "./FolderMapTree";
-import { ArchitectureGraph } from "./ArchitectureGraph";
+import { ElkArchitectureGraph } from "./ElkArchitectureGraph";
 import { StartHereTable } from "./StartHereTable";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
@@ -208,7 +208,7 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
         )}
 
         {activeTab === "Architecture Map" && (
-          <ArchitectureGraph architecture={report.architecture} />
+          <ElkArchitectureGraph architecture={report.architecture} />
         )}
 
         {activeTab === "Start Here" && (

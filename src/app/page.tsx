@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { InputForm } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
 import type { Report } from "@/types/report";
@@ -151,7 +151,7 @@ function PreviewMock() {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="-mx-5 -mt-5 mb-4 flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-5 py-3">
-        <h2 className="text-base font-semibold text-slate-900">Repo Brief Preview</h2>
+        <h2 className="text-base font-semibold text-slate-900">Sample Repo</h2>
         <span className="text-xs text-slate-500">Read-only sample</span>
       </div>
       <ReportTabs report={SAMPLE_REPORT} variant="preview" />
@@ -165,12 +165,20 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prefillUrl, setPrefillUrl] = useState("");
+  const [showViewReportButton, setShowViewReportButton] = useState(false);
+  const reportSectionRef = useRef<HTMLElement | null>(null);
+
+  const scrollToReport = () => {
+    reportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setShowViewReportButton(false);
+  };
 
   const handleAnalyzeComplete = (reportData: Report, id: string) => {
     setReport(reportData);
     setReportId(id);
     setLoading(false);
     setError(null);
+    setShowViewReportButton(true);
   };
 
   const handleAnalyzeStart = () => {
@@ -197,8 +205,8 @@ export default function Home() {
             <p className="text-sm text-slate-700">Repository Brief Generator</p>
           </div>
           <div className="hidden items-center gap-2 sm:flex">
-            <Badge label="Read-only · never runs code" />
-            <Badge label="JSON + Markdown export" />
+            <Badge label="TS/JS + Python + Java" />
+            <Badge label="Markdown, images & PDFs" />
           </div>
         </header>
 
@@ -229,7 +237,7 @@ export default function Home() {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-900">Analyze a repository</h2>
             <p className="mt-2 text-sm text-slate-700">
-              Paste a public GitHub URL. Deep analysis is currently available for TS/JS and Python repos.
+              Paste a public GitHub URL. Deep analysis is currently available for TS/JS, Python, and Java repos.
             </p>
 
             <div className="mt-5">
@@ -250,11 +258,7 @@ export default function Home() {
                 Try an example
               </p>
               <div className="flex flex-wrap gap-2">
-                {[
-                  "https://github.com/vercel/next.js",
-                  "https://github.com/tailwindlabs/tailwindcss",
-                  "https://github.com/facebook/react",
-                ].map((example) => (
+                {["https://github.com/tailwindlabs/tailwindcss"].map((example) => (
                   <button
                     key={example}
                     type="button"
@@ -269,6 +273,18 @@ export default function Home() {
                 ))}
               </div>
             </div>
+
+            {showViewReportButton && report && (
+              <div className="mt-5">
+                <button
+                  type="button"
+                  onClick={scrollToReport}
+                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100"
+                >
+                  View report ↓
+                </button>
+              </div>
+            )}
 
             {error && (
               <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -358,7 +374,7 @@ export default function Home() {
         </section>
 
         {report && reportId && (
-          <section className="mt-14">
+          <section ref={reportSectionRef} className="mt-14">
             <ReportTabs report={report} reportId={reportId} />
           </section>
         )}

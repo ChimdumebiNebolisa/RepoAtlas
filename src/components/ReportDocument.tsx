@@ -2,7 +2,7 @@
 
 import type { Report } from "@/types/report";
 import { FolderMapTree } from "./FolderMapTree";
-import { ArchitectureGraph } from "./ArchitectureGraph";
+import { ElkArchitectureGraph } from "./ElkArchitectureGraph";
 import { StartHereTable } from "./StartHereTable";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
@@ -38,7 +38,7 @@ export function ReportDocument({ report }: ReportDocumentProps) {
       <section>
         <h2 className="text-xl font-semibold text-slate-900">Architecture Map</h2>
         <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
-          <ArchitectureGraph architecture={report.architecture} />
+          <ElkArchitectureGraph architecture={report.architecture} />
         </div>
       </section>
 

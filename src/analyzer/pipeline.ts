@@ -121,7 +121,9 @@ export async function runIndexingPipeline(
     warnings.push("Max file count reached; some files omitted");
   }
 
-  const run_commands = await extractRunCommands(workspacePath);
+  const { commands: run_commands, warnings: runWarnings } =
+    await extractRunCommands(workspacePath);
+  warnings.push(...runWarnings);
 
   const contribute_signals: ContributeSignals = {
     key_docs,
@@ -139,8 +141,11 @@ export async function runIndexingPipeline(
   };
 }
 
-async function extractRunCommands(workspacePath: string): Promise<RunCommand[]> {
+async function extractRunCommands(
+  workspacePath: string
+): Promise<{ commands: RunCommand[]; warnings: string[] }> {
   const commands: RunCommand[] = [];
+  const warnings: string[] = [];
   const pkgPath = path.join(workspacePath, "package.json");
 
   if (fs.existsSync(pkgPath)) {
@@ -157,9 +162,9 @@ async function extractRunCommands(workspacePath: string): Promise<RunCommand[]> 
         }
       }
     } catch {
-      // ignore parse errors
+      warnings.push("Could not parse package.json scripts");
     }
   }
 
-  return commands;
+  return { commands, warnings };
 }

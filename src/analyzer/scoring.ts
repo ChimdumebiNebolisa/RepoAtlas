@@ -7,9 +7,11 @@ import type { StartHereItem, DangerZoneItem } from "@/types/report";
 import type { IndexingPipelineResult } from "./pipeline";
 import type { TsJsPackResult } from "./packs/tsjs";
 import type { PythonPackResult } from "./packs/python";
+import type { JavaPackResult } from "./packs/java";
 
 const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const PYTHON_EXTENSION = ".py";
+const JAVA_EXTENSION = ".java";
 
 interface StartHereCandidate {
   path: string;
@@ -77,7 +79,8 @@ function computeEntrypointDistance(
 export function computeStartHere(
   pipeline: IndexingPipelineResult,
   tsjs?: TsJsPackResult | null,
-  python?: PythonPackResult | null
+  python?: PythonPackResult | null,
+  java?: JavaPackResult | null
 ): StartHereItem[] {
   const candidates = new Map<string, StartHereCandidate>();
   const getCandidate = (filePath: string): StartHereCandidate => {
@@ -221,6 +224,58 @@ export function computeStartHere(
     }
   }
 
+  if (java) {
+    for (const filePath of pipeline.file_metadata.keys()) {
+      const norm = normalizePath(filePath);
+      const baseName = path.basename(norm).toLowerCase();
+      const isRoot = !norm.includes("/") || norm.split("/").length <= 1;
+      if (isRoot && (baseName === "pom.xml" || baseName.startsWith("build.gradle"))) {
+        const c = getCandidate(filePath);
+        c.rawScore += 85;
+        addReason(c, baseName === "pom.xml" ? "Maven build definition" : "Gradle build definition");
+      }
+      if (isRoot && (baseName.startsWith("settings.gradle"))) {
+        const c = getCandidate(filePath);
+        c.rawScore += 70;
+        addReason(c, "Gradle settings");
+      }
+    }
+
+    const javaFiles = Array.from(pipeline.file_metadata.keys()).filter(
+      (f) => path.extname(f) === JAVA_EXTENSION
+    );
+    const entrypointDistance = computeEntrypointDistance(java.entrypoints, java.imports);
+
+    for (const filePath of javaFiles) {
+      const norm = normalizePath(filePath);
+      const c = getCandidate(filePath);
+
+      const fanIn = java.fanIn.get(filePath) ?? 0;
+      if (fanIn > 0) {
+        c.rawScore += Math.min(35, fanIn * 3);
+        addReason(c, `imported by ${fanIn} classes`);
+      }
+
+      const distance = entrypointDistance.get(filePath);
+      if (distance !== undefined) {
+        if (distance === 0) {
+          c.rawScore += 90;
+          addReason(c, "detected entrypoint");
+        } else if (distance === 1) {
+          c.rawScore += 35;
+          addReason(c, "directly imported by an entrypoint");
+        } else if (distance <= 3) {
+          c.rawScore += 18 - distance * 4;
+          addReason(c, `within ${distance} import hops of an entrypoint`);
+        }
+      }
+
+      if (/Test\.java$|IT\.java$|Tests\.java$|TestCase\.java$/i.test(norm)) {
+        c.rawScore -= 40;
+      }
+    }
+  }
+
   const ranked = Array.from(candidates.values())
     .filter((c) => c.rawScore > 0 && c.reasons.length > 0)
     .sort((a, b) => {
@@ -240,7 +295,8 @@ export function computeStartHere(
 export function computeDangerZones(
   pipeline: IndexingPipelineResult,
   tsjs?: TsJsPackResult | null,
-  python?: PythonPackResult | null
+  python?: PythonPackResult | null,
+  java?: JavaPackResult | null
 ): DangerZoneItem[] {
   const tsjsFiles = tsjs
     ? Array.from(pipeline.file_metadata.keys()).filter((f) =>
@@ -250,12 +306,19 @@ export function computeDangerZones(
   const pythonFiles = python
     ? Array.from(pipeline.file_metadata.keys()).filter((f) => path.extname(f) === PYTHON_EXTENSION)
     : [];
-  const files = [...tsjsFiles, ...pythonFiles];
+  const javaFiles = java
+    ? Array.from(pipeline.file_metadata.keys()).filter((f) => path.extname(f) === JAVA_EXTENSION)
+    : [];
+  const files = [...tsjsFiles, ...pythonFiles, ...javaFiles];
 
   if (!files.length) return [];
 
   const pack = (f: string) =>
-    path.extname(f) === PYTHON_EXTENSION ? python! : tsjs!;
+    path.extname(f) === JAVA_EXTENSION
+      ? java!
+      : path.extname(f) === PYTHON_EXTENSION
+        ? python!
+        : tsjs!;
 
   const sizeValues = files.map((f) => pipeline.file_metadata.get(f)?.size ?? 0);
   const fanInValues = files.map((f) => pack(f).fanIn.get(f) ?? 0);

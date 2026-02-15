@@ -1,18 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { analyzeRepository } from "@/analyzer";
 import { validateGithubUrl } from "@/lib/ingest";
+import {
+  AppError,
+  ERROR_CODES,
+  toApiErrorPayload,
+  toAppError,
+} from "@/lib/errors";
 
-const MAX_REPO_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
 const MAX_ANALYSIS_TIME_MS = 120_000; // 120s
 
+function logAnalyzeError(requestId: string, err: unknown): void {
+  const appErr = toAppError(err);
+  const payload: Record<string, unknown> = {
+    requestId,
+    code: appErr.code,
+    status: appErr.status,
+    message: appErr.message,
+  };
+  if (appErr.meta) payload.meta = appErr.meta;
+  if (appErr.cause != null) {
+    payload.cause =
+      appErr.cause instanceof Error
+        ? { name: appErr.cause.name, message: appErr.cause.message }
+        : String(appErr.cause);
+  }
+  console.error(JSON.stringify({ level: "error", ...payload }));
+}
+
 export async function POST(request: NextRequest) {
+  const requestId = randomUUID();
+
   try {
     const body = await request.json();
     const { githubUrl, zipRef } = body;
 
     if (!githubUrl && !zipRef) {
       return NextResponse.json(
-        { code: "INVALID_INPUT", message: "Provide githubUrl or zipRef" },
+        { code: ERROR_CODES.INVALID_INPUT, message: "Provide githubUrl or zipRef" },
         { status: 400 }
       );
     }
@@ -21,7 +47,7 @@ export async function POST(request: NextRequest) {
       const parsed = validateGithubUrl(githubUrl);
       if (!parsed) {
         return NextResponse.json(
-          { code: "INVALID_URL", message: "Invalid GitHub URL" },
+          { code: ERROR_CODES.INVALID_URL, message: "Invalid GitHub URL" },
           { status: 400 }
         );
       }
@@ -30,7 +56,17 @@ export async function POST(request: NextRequest) {
     const report = await Promise.race([
       analyzeRepository({ githubUrl, zipRef }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), MAX_ANALYSIS_TIME_MS)
+        setTimeout(
+          () =>
+            reject(
+              new AppError({
+                code: ERROR_CODES.TIMEOUT,
+                status: 504,
+                message: "Analysis timed out.",
+              })
+            ),
+          MAX_ANALYSIS_TIME_MS
+        )
       ),
     ]);
 
@@ -43,22 +79,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ reportId: report.reportId });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    if (message === "TIMEOUT") {
-      return NextResponse.json(
-        { code: "TIMEOUT", message: "Analysis timed out" },
-        { status: 504 }
-      );
-    }
-    if (message.includes("CLONE_FAILED") || message.includes("clone")) {
-      return NextResponse.json(
-        { code: "CLONE_FAILED", message: "Git clone failed" },
-        { status: 502 }
-      );
-    }
-    return NextResponse.json(
-      { code: "ANALYSIS_FAILED", message },
-      { status: 500 }
-    );
+    logAnalyzeError(requestId, err);
+    const { status, code, message } = toApiErrorPayload(err);
+    return NextResponse.json({ code, message }, { status });
   }
 }

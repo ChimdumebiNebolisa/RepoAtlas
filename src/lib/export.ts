@@ -17,12 +17,12 @@ function treeToMarkdown(node: Report["folder_map"], indent = 0): string {
 }
 
 function architectureToMarkdown(arch: Report["architecture"]): string {
-  let out = "```mermaid\nflowchart LR\n";
+  let out = "```mermaid\nflowchart TB\n";
   for (const n of arch.nodes) {
     const id = n.id.replace(/[^a-zA-Z0-9_]/g, "_");
     out += `  ${id}["${n.label}"]\n`;
   }
-  for (const e of arch.edges) {
+  for (const e of arch.edges.filter((e) => e.from !== e.to)) {
     const from = e.from.replace(/[^a-zA-Z0-9_]/g, "_");
     const to = e.to.replace(/[^a-zA-Z0-9_]/g, "_");
     out += `  ${from} --> ${to}\n`;

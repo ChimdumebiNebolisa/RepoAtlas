@@ -13,11 +13,11 @@ function buildMermaidFlowchart(arch: Architecture): string {
   const nodes = arch.nodes.slice(0, maxNodes);
   const nodeIds = new Set(nodes.map((n) => n.id));
   const edges = arch.edges.filter(
-    (e) => nodeIds.has(e.from) && nodeIds.has(e.to)
+    (e) => nodeIds.has(e.from) && nodeIds.has(e.to) && e.from !== e.to
   );
 
   const safeId = (id: string) => id.replace(/[^a-zA-Z0-9_]/g, "_");
-  let m = "flowchart LR\n";
+  let m = "flowchart TB\n";
 
   for (const n of nodes) {
     const sid = safeId(n.id);

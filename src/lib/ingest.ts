@@ -8,6 +8,7 @@ import path from "path";
 import { promisify } from "util";
 import { randomUUID } from "crypto";
 import os from "os";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const execAsync = promisify(exec);
 const CLONE_TIMEOUT_MS = 60_000;
@@ -42,13 +43,21 @@ export async function ingestRepo(input: {
   if (input.zipRef) {
     return ingestFromZip(input.zipRef);
   }
-  throw new Error("INVALID_INPUT: Provide githubUrl or zipRef");
+  throw new AppError({
+    code: ERROR_CODES.INVALID_INPUT,
+    status: 400,
+    message: "Provide githubUrl or zipRef",
+  });
 }
 
 async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
   const parsed = validateGithubUrl(githubUrl);
   if (!parsed) {
-    throw new Error("INVALID_URL");
+    throw new AppError({
+      code: ERROR_CODES.INVALID_URL,
+      status: 400,
+      message: "Invalid GitHub URL",
+    });
   }
 
   const { owner, repo, ref } = parsed;
@@ -71,7 +80,49 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
     } catch {
       /* ignore */
     }
-    throw new Error("CLONE_FAILED: " + (err instanceof Error ? err.message : "Unknown error"));
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    const lower = msg.toLowerCase();
+    if (lower.includes("maxbuffer") || lower.includes("max buffer") || lower.includes("enomem")) {
+      throw new AppError({
+        code: ERROR_CODES.REPO_TOO_LARGE,
+        status: 413,
+        message: "Repository exceeds the 100MB limit.",
+        meta: { rawMessage: msg },
+        cause: err,
+      });
+    }
+    if (lower.includes("etimedout") || lower.includes("timeout") || lower.includes("timed out")) {
+      throw new AppError({
+        code: ERROR_CODES.CLONE_TIMEOUT,
+        status: 504,
+        message: "Cloning timed out.",
+        meta: { rawMessage: msg },
+        cause: err,
+      });
+    }
+    if (
+      lower.includes("repository not found") ||
+      lower.includes("not found") ||
+      lower.includes("could not read username") ||
+      lower.includes("authentication failed") ||
+      lower.includes("403") ||
+      lower.includes("404")
+    ) {
+      throw new AppError({
+        code: ERROR_CODES.REPO_NOT_PUBLIC,
+        status: 403,
+        message: "Repository is private or not found.",
+        meta: { rawMessage: msg },
+        cause: err,
+      });
+    }
+    throw new AppError({
+      code: ERROR_CODES.CLONE_FAILED,
+      status: 502,
+      message: "Could not clone the repository.",
+      meta: { rawMessage: msg },
+      cause: err,
+    });
   }
 
   const repoPath = tempDir;
@@ -104,7 +155,12 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
 async function ingestFromZip(zipRef: string): Promise<IngestResult> {
   const fullPath = path.resolve(zipRef);
   if (!fs.existsSync(fullPath)) {
-    throw new Error("ZIP_NOT_FOUND");
+    throw new AppError({
+      code: ERROR_CODES.ZIP_NOT_FOUND,
+      status: 404,
+      message: "Zip path not found.",
+      meta: { zipRef, fullPath },
+    });
   }
 
   return {

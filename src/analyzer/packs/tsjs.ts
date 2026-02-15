@@ -156,10 +156,10 @@ function computeComplexitySignals(content: string): {
 function parseEntrypointsFromScripts(
   workspacePath: string,
   fileByNormalized: Map<string, string>
-): Set<string> {
+): { entrypoints: Set<string>; warning?: string } {
   const entrypoints = new Set<string>();
   const pkgPath = path.join(workspacePath, "package.json");
-  if (!fs.existsSync(pkgPath)) return entrypoints;
+  if (!fs.existsSync(pkgPath)) return { entrypoints };
 
   try {
     const pkgRaw = fs.readFileSync(pkgPath, "utf-8");
@@ -182,17 +182,18 @@ function parseEntrypointsFromScripts(
       }
     }
   } catch {
-    // ignore malformed package.json
+    return { entrypoints, warning: "Could not parse package.json for entrypoints" };
   }
 
-  return entrypoints;
+  return { entrypoints };
 }
 
 function detectEntrypoints(
   files: string[],
   workspacePath: string
-): Set<string> {
+): { entrypoints: Set<string>; warnings: string[] } {
   const entrypoints = new Set<string>();
+  const warnings: string[] = [];
   const fileByNormalized = new Map<string, string>();
   for (const file of files) {
     fileByNormalized.set(normalizeRelPath(file), file);
@@ -227,11 +228,14 @@ function detectEntrypoints(
     }
   }
 
-  for (const fromScripts of parseEntrypointsFromScripts(workspacePath, fileByNormalized)) {
-    entrypoints.add(fromScripts);
+  const { entrypoints: fromScripts, warning: scriptWarning } =
+    parseEntrypointsFromScripts(workspacePath, fileByNormalized);
+  for (const ep of fromScripts) {
+    entrypoints.add(ep);
   }
+  if (scriptWarning) warnings.push(scriptWarning);
 
-  return entrypoints;
+  return { entrypoints, warnings };
 }
 
 function computeTestProximityScore(
@@ -368,7 +372,7 @@ function buildReducedArchitecture(
 
   const nodes = selectedFolders.map((folder) => ({
     id: folder,
-    label: folder === "." ? "." : path.posix.basename(folder),
+    label: folder === "." ? "." : folder,
     type: "folder" as const,
   }));
 
@@ -398,7 +402,9 @@ export function runTsJsPack(
     if (TEST_PATTERNS.some((p) => p.test(normalized))) testFiles.add(f);
   }
 
-  for (const ep of detectEntrypoints(files, workspacePath)) {
+  const { entrypoints: detectedEntrypoints, warnings: entrypointWarnings } =
+    detectEntrypoints(files, workspacePath);
+  for (const ep of detectedEntrypoints) {
     entrypoints.add(ep);
   }
 
@@ -435,7 +441,11 @@ export function runTsJsPack(
     }
   }
 
-  const { architecture, warnings } = buildReducedArchitecture(files, imports);
+  const { architecture, warnings: archWarnings } = buildReducedArchitecture(
+    files,
+    imports
+  );
+  const warnings = [...entrypointWarnings, ...archWarnings];
 
   return {
     architecture,
