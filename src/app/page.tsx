@@ -218,10 +218,11 @@ export default function Home() {
         <section className="mt-10">
           <h1 className="max-w-3xl text-4xl font-semibold tracking-[-0.02em] text-slate-950 sm:text-5xl sm:leading-[1.08]">
             Map{" "}
+            <span className="text-slate-950">any{" "}</span>
             <span className="bg-gradient-to-r from-emerald-700 to-green-600 bg-clip-text text-transparent">
-              any{" "}
+              codebase
             </span>
-            <span className="text-slate-950">codebase in{" "}</span>
+            <span className="text-slate-950"> in </span>
             <span className="bg-gradient-to-r from-emerald-700 to-green-600 bg-clip-text text-transparent">
               seconds
             </span>
@@ -255,6 +256,9 @@ export default function Home() {
               />
               <p className="mt-3 text-xs text-slate-600">
                 Reads repo files only. Never runs code.
+              </p>
+              <p className="mt-1.5 text-xs text-slate-500">
+                Public repos only · Max 100MB · Analysis up to 2 min
               </p>
             </div>
 
