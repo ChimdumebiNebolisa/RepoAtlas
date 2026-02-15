@@ -191,7 +191,7 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
                 <ul className="list-disc list-inside">
                   {report.run_commands.map((cmd, i) => (
                     <li key={i}>
-                      <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                      <code className="bg-gray-100 text-slate-900 px-1 rounded">
                         {cmd.command}
                       </code>
                       {cmd.description && ` - ${cmd.description}`}

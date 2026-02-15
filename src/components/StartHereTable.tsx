@@ -66,7 +66,7 @@ export function StartHereTable({ items }: StartHereTableProps) {
             {sorted.map((item, i) => (
               <tr key={i} className="border-t dark:border-gray-700">
                 <td className="px-4 py-2 font-mono text-sm">
-                  <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                  <code className="bg-gray-100 text-slate-900 px-1 rounded">
                     {item.path}
                   </code>
                 </td>

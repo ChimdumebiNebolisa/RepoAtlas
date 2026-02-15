@@ -193,9 +193,14 @@ export default function Home() {
 
   return (
     <main className="relative isolate min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 to-white">
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[26rem]">
-        <div className="absolute -left-20 -top-10 h-72 w-72 rounded-full bg-gradient-to-tr from-emerald-300/35 via-green-200/25 to-transparent blur-3xl" />
-        <div className="absolute right-0 top-24 h-72 w-72 rounded-full bg-gradient-to-tr from-green-300/30 via-emerald-200/25 to-transparent blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute -left-20 -top-10 h-72 w-72 rounded-full bg-gradient-to-tr from-emerald-300/35 via-green-200/25 to-transparent blur-3xl animate-pulse [animation-duration:9s]" />
+        <div className="absolute right-0 top-24 h-72 w-72 rounded-full bg-gradient-to-tr from-green-300/30 via-emerald-200/25 to-transparent blur-3xl animate-pulse [animation-duration:11s]" />
+        <div className="absolute left-[20%] top-56 h-64 w-64 rounded-full bg-gradient-to-tr from-emerald-300/25 via-lime-200/20 to-transparent blur-3xl animate-pulse [animation-duration:12s]" />
+        <div className="absolute right-[12%] top-[28rem] h-80 w-80 rounded-full bg-gradient-to-tr from-green-300/20 via-emerald-200/20 to-transparent blur-3xl animate-pulse [animation-duration:14s]" />
+        <div className="absolute -left-24 top-[42rem] h-72 w-72 rounded-full bg-gradient-to-tr from-emerald-300/20 via-green-200/15 to-transparent blur-3xl animate-pulse [animation-duration:13s]" />
+        <div className="absolute left-[48%] top-[58rem] h-80 w-80 rounded-full bg-gradient-to-tr from-green-300/18 via-emerald-200/15 to-transparent blur-3xl animate-pulse [animation-duration:15s]" />
+        <div className="absolute right-[-5rem] top-[70rem] h-72 w-72 rounded-full bg-gradient-to-tr from-emerald-300/16 via-green-200/14 to-transparent blur-3xl animate-pulse [animation-duration:16s]" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-10">

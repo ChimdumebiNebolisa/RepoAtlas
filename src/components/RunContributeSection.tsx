@@ -21,7 +21,7 @@ export function RunContributeSection({
           <ul className="space-y-2">
             {runCommands.map((cmd, i) => (
               <li key={i} className="flex items-start gap-2">
-                <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
+                <code className="bg-gray-100 text-slate-900 px-2 py-1 rounded font-mono">
                   {cmd.command}
                 </code>
                 <span className="text-gray-500 text-sm">
