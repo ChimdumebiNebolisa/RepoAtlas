@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Report } from "@/types/report";
 
 interface InputFormProps {
@@ -8,6 +8,7 @@ interface InputFormProps {
   onAnalyzeComplete: (report: Report, reportId: string) => void;
   onAnalyzeError: (message: string) => void;
   loading: boolean;
+  prefillUrl?: string;
 }
 
 export function InputForm({
@@ -15,8 +16,17 @@ export function InputForm({
   onAnalyzeComplete,
   onAnalyzeError,
   loading,
+  prefillUrl,
 }: InputFormProps) {
   const [githubUrl, setGithubUrl] = useState("");
+
+  useEffect(() => {
+    const incoming = prefillUrl?.trim() ?? "";
+    if (!incoming || loading) return;
+    if (incoming !== githubUrl) {
+      setGithubUrl(incoming);
+    }
+  }, [prefillUrl, loading, githubUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +71,7 @@ export function InputForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="githubUrl" className="block text-sm font-medium mb-2">
-          GitHub repository URL
+          GitHub URL (public repos)
         </label>
         <input
           id="githubUrl"
@@ -69,16 +79,22 @@ export function InputForm({
           value={githubUrl}
           onChange={(e) => setGithubUrl(e.target.value)}
           placeholder="https://github.com/owner/repo"
-          className="w-full px-4 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700"
+          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 shadow-sm transition focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100"
           disabled={loading}
         />
       </div>
       <button
         type="submit"
         disabled={loading || !githubUrl.trim()}
-        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-700 to-green-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition duration-200 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Analyzing..." : "Analyze"}
+        {loading && (
+          <span
+            className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+            aria-hidden="true"
+          />
+        )}
+        {loading ? "Analyzing..." : "Analyze Repository"}
       </button>
     </form>
   );

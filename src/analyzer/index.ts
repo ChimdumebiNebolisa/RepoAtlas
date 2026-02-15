@@ -8,9 +8,13 @@ import type { Report } from "@/types/report";
 import { ingestRepo } from "@/lib/ingest";
 import { runIndexingPipeline } from "./pipeline";
 import { runTsJsPack } from "./packs/tsjs";
+import { runPythonPack } from "./packs/python";
 import { computeStartHere, computeDangerZones } from "./scoring";
 import { saveReport } from "@/lib/storage";
 import { randomUUID } from "crypto";
+
+const TSJS_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
+const PYTHON_EXTENSIONS = new Set([".py"]);
 
 export interface AnalyzeInput {
   githubUrl?: string;
@@ -30,15 +34,40 @@ export async function analyzeRepository(
 
   try {
     const pipeline = await runIndexingPipeline(workspace.path);
-    const tsjsResult = runTsJsPack(workspace.path, pipeline);
+    const hasTsJsFiles = Array.from(pipeline.file_metadata.keys()).some((filePath) =>
+      TSJS_EXTENSIONS.has(path.extname(filePath))
+    );
+    const hasPythonFiles = Array.from(pipeline.file_metadata.keys()).some((filePath) =>
+      PYTHON_EXTENSIONS.has(path.extname(filePath))
+    );
+    const tsjsResult = hasTsJsFiles ? runTsJsPack(workspace.path, pipeline) : null;
+    const pythonResult = hasPythonFiles ? runPythonPack(workspace.path, pipeline) : null;
 
-    const architecture = tsjsResult?.architecture ?? {
-      nodes: [],
-      edges: [],
-    };
+    const architecture =
+      tsjsResult?.architecture ?? pythonResult?.architecture ?? {
+        nodes: [],
+        edges: [],
+      };
 
-    const startHere = computeStartHere(pipeline, tsjsResult);
-    const dangerZones = computeDangerZones(pipeline, tsjsResult);
+    const startHere = computeStartHere(pipeline, tsjsResult, pythonResult);
+    const dangerZones = computeDangerZones(pipeline, tsjsResult, pythonResult);
+    const warnings = [
+      ...pipeline.warnings,
+      ...(tsjsResult?.warnings ?? []),
+      ...(pythonResult?.warnings ?? []),
+    ];
+    if (!hasTsJsFiles && !hasPythonFiles) {
+      warnings.push("Deep analysis unavailable: no supported source files detected.");
+    } else {
+      if (!hasTsJsFiles) {
+        warnings.push(
+          "Deep TS/JS analysis unavailable: no TypeScript or JavaScript source files detected."
+        );
+      }
+      if (!hasPythonFiles) {
+        warnings.push("Deep Python analysis unavailable: no Python source files detected.");
+      }
+    }
 
     const report: Report = {
       repo_metadata: {
@@ -54,7 +83,7 @@ export async function analyzeRepository(
       danger_zones: dangerZones,
       run_commands: pipeline.run_commands,
       contribute_signals: pipeline.contribute_signals,
-      warnings: pipeline.warnings,
+      warnings,
     };
 
     await saveReport(reportId, report);

@@ -48,8 +48,8 @@ export function exportReportToMarkdown(report: Report): string {
   }
 
   md += "## Start Here\n\n";
-  md += "| Path | Score | Explanation |\n";
-  md += "|------|-------|-------------|\n";
+  md += "| Path | Score | Signals |\n";
+  md += "|------|-------|---------|\n";
   for (const item of report.start_here) {
     md += `| \`${item.path}\` | ${item.score} | ${item.explanation} |\n`;
   }

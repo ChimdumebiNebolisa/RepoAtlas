@@ -9,6 +9,8 @@ RepoAtlas takes a GitHub repo URL or a local path and generates a **Repo Brief**
 - **Run and Contribute** – Extracted commands and signals
 - **Markdown Export** – Full report download
 
+Deep analysis (import graph, entrypoints, complexity, Start Here, Danger Zones) is supported for **TypeScript/JavaScript** and **Python** repositories.
+
 See [docs/spec.md](docs/spec.md) for the full engineering specification.
 
 ## Quick Start
@@ -34,7 +36,7 @@ npm run lint     # Lint
 Small test repos in `fixtures/`:
 
 - `fixtures/repo-ts` – TypeScript (index, utils, test)
-- `fixtures/repo-python` – Python (main, utils, test)
+- `fixtures/repo-python` – Python (main, utils, myapp package, pyproject.toml, tests)
 - `fixtures/repo-java` – Java (Main, Utils, UtilsTest)
 
 To test with a local fixture via zip path, use the API directly:
