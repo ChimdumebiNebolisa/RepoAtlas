@@ -1,11 +1,28 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
 
 :root {
   --foreground-rgb: 15, 23, 42;
   --background-start-rgb: 248, 250, 252;
   --background-end-rgb: 255, 255, 255;
+
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #dfe7e3;
+  --color-text: #0f172a;
+  --color-muted: #475569;
+  --color-accent: #10b981;
+  --color-accent-2: #047857;
+
+  --shadow-surface: 0 1px 2px rgba(2, 6, 23, 0.06), 0 8px 24px rgba(2, 6, 23, 0.04);
+  --shadow-surface-md: 0 2px 4px rgba(2, 6, 23, 0.08), 0 14px 34px rgba(2, 6, 23, 0.08);
+
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-2xl: 1.125rem;
+
+  --section-gap: 3.25rem;
+  --container-max: 72rem;
 }
 
 body {
@@ -22,3 +39,109 @@ body {
   background: #bfdbfe;
   color: #0f172a;
 }
+
+@layer components {
+  .surface {
+    @apply border;
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-surface);
+  }
+
+  .surface-2xl {
+    border-radius: var(--radius-2xl);
+  }
+
+  .surface-lg {
+    border-radius: var(--radius-lg);
+  }
+
+  .surface-header {
+    @apply flex items-center justify-between gap-3 border-b pb-4;
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+
+  .panel {
+    @apply border;
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(148, 163, 184, 0.25);
+  }
+
+  .btn {
+    @apply inline-flex h-10 items-center justify-center gap-2 px-4 text-sm font-medium transition;
+    border-radius: var(--radius-md);
+    outline: none;
+  }
+
+  .btn:focus {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28);
+  }
+
+  .btn:focus-visible {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28);
+  }
+
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .btn-primary {
+    @apply text-white;
+    background: linear-gradient(135deg, var(--color-accent-2), var(--color-accent));
+    box-shadow: var(--shadow-surface);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.04);
+  }
+
+  .btn-secondary {
+    @apply border;
+    border-color: var(--color-border);
+    background: var(--color-surface);
+    color: #334155;
+  }
+
+  .btn-secondary:hover {
+    border-color: rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.08);
+  }
+
+  .btn-secondary:disabled {
+    border-color: #e2e8f0;
+    background: #f8fafc;
+    color: #94a3b8;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium;
+    border-color: rgba(16, 185, 129, 0.25);
+    background: rgba(16, 185, 129, 0.08);
+    color: #334155;
+  }
+
+  .field-input {
+    @apply w-full border bg-white px-4 text-sm text-slate-900 transition disabled:cursor-not-allowed;
+    height: 2.5rem;
+    border-color: #cbd5e1;
+    border-radius: var(--radius-md);
+    outline: none;
+  }
+
+  .field-input:focus {
+    border-color: #86efac;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28);
+  }
+
+  .field-input:focus-visible {
+    border-color: #86efac;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28);
+  }
+
+  .field-input:disabled {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+}
+
+@tailwind utilities;

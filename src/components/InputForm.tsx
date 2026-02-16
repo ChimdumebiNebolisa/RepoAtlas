@@ -70,7 +70,7 @@ export function InputForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="githubUrl" className="block text-sm font-medium mb-2">
+        <label htmlFor="githubUrl" className="mb-2 block text-sm font-medium text-slate-800">
           GitHub URL (public repos)
         </label>
         <input
@@ -79,14 +79,14 @@ export function InputForm({
           value={githubUrl}
           onChange={(e) => setGithubUrl(e.target.value)}
           placeholder="https://github.com/owner/repo"
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 shadow-sm transition focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100"
+          className="field-input"
           disabled={loading}
         />
       </div>
       <button
         type="submit"
         disabled={loading || !githubUrl.trim()}
-        className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-700 to-green-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition duration-200 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn btn-primary w-full sm:w-auto"
       >
         {loading && (
           <span

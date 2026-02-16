@@ -6,11 +6,7 @@ import { ReportTabs } from "@/components/ReportTabs";
 import type { Report } from "@/types/report";
 
 function Badge({ label }: { label: string }) {
-  return (
-    <span className="rounded-full border border-emerald-100 bg-white/95 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
-      {label}
-    </span>
-  );
+  return <span className="badge">{label}</span>;
 }
 
 function FeatureCard({
@@ -23,9 +19,9 @@ function FeatureCard({
   iconPath: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-200">
+    <div className="surface surface-lg p-5 transition duration-200 hover:border-emerald-200/80">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-emerald-100 bg-emerald-50 text-emerald-700">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -149,8 +145,8 @@ const SAMPLE_REPORT: Report = {
 
 function PreviewMock() {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="-mx-5 -mt-5 mb-4 flex items-center justify-between rounded-t-2xl border-b border-slate-200 bg-slate-50 px-5 py-3">
+    <div className="surface surface-2xl p-6">
+      <div className="surface-header mb-4">
         <h2 className="text-base font-semibold text-slate-900">Sample Repo</h2>
         <span className="text-xs text-slate-500">Read-only sample</span>
       </div>
@@ -192,20 +188,15 @@ export default function Home() {
   };
 
   return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+    <main className="relative isolate min-h-screen overflow-hidden bg-[var(--color-background)]">
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute -left-20 -top-10 h-72 w-72 rounded-full bg-gradient-to-tr from-emerald-300/35 via-green-200/25 to-transparent blur-3xl animate-pulse [animation-duration:9s]" />
-        <div className="absolute right-0 top-24 h-72 w-72 rounded-full bg-gradient-to-tr from-green-300/30 via-emerald-200/25 to-transparent blur-3xl animate-pulse [animation-duration:11s]" />
-        <div className="absolute left-[20%] top-56 h-64 w-64 rounded-full bg-gradient-to-tr from-emerald-300/25 via-lime-200/20 to-transparent blur-3xl animate-pulse [animation-duration:12s]" />
-        <div className="absolute right-[12%] top-[28rem] h-80 w-80 rounded-full bg-gradient-to-tr from-green-300/20 via-emerald-200/20 to-transparent blur-3xl animate-pulse [animation-duration:14s]" />
-        <div className="absolute -left-24 top-[42rem] h-72 w-72 rounded-full bg-gradient-to-tr from-emerald-300/20 via-green-200/15 to-transparent blur-3xl animate-pulse [animation-duration:13s]" />
-        <div className="absolute left-[48%] top-[58rem] h-80 w-80 rounded-full bg-gradient-to-tr from-green-300/18 via-emerald-200/15 to-transparent blur-3xl animate-pulse [animation-duration:15s]" />
-        <div className="absolute right-[-5rem] top-[70rem] h-72 w-72 rounded-full bg-gradient-to-tr from-emerald-300/16 via-green-200/14 to-transparent blur-3xl animate-pulse [animation-duration:16s]" />
+        <div className="absolute inset-0 bg-[radial-gradient(70%_45%_at_10%_0%,rgba(16,185,129,0.16),transparent_72%),radial-gradient(45%_35%_at_90%_8%,rgba(34,197,94,0.12),transparent_72%)]" />
+        <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(to_right,rgba(15,23,42,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.05)_1px,transparent_1px)] [background-size:28px_28px]" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-6xl px-6 py-10">
+      <div className="relative z-10 mx-auto w-full max-w-[var(--container-max)] px-4 py-10 sm:px-6">
         <header className="flex items-start justify-between gap-4">
-          <div>
+          <div className="space-y-1">
             <p className="text-2xl font-bold tracking-tight text-slate-900">RepoAtlas</p>
             <p className="text-sm text-slate-700">Repository Brief Generator</p>
           </div>
@@ -215,7 +206,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="mt-10">
+        <section className="mt-12 space-y-5">
           <h1 className="max-w-3xl text-4xl font-semibold tracking-[-0.02em] text-slate-950 sm:text-5xl sm:leading-[1.08]">
             Map{" "}
             <span className="text-slate-950">any{" "}</span>
@@ -228,21 +219,24 @@ export default function Home() {
             </span>
             .
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-slate-700">
+          <p className="max-w-xl text-base leading-7 text-slate-700">
             Understand unfamiliar code faster, onboard new teammates with confidence, and
             spot risky hotspots before they slow you down.
           </p>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <Badge label="Onboard faster" />
             <Badge label="Spot risks" />
             <Badge label="Export docs" />
           </div>
         </section>
 
-        <section className="mt-10 grid gap-6 lg:grid-cols-2 lg:items-start">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">Analyze a repository</h2>
-            <p className="mt-2 text-sm text-slate-700">
+        <section className="mt-[var(--section-gap)] grid gap-6 lg:grid-cols-2 lg:items-start">
+          <div className="surface surface-2xl p-6">
+            <div className="surface-header mb-4">
+              <h2 className="text-base font-semibold text-slate-900">Analyze a repository</h2>
+              <span aria-hidden="true" />
+            </div>
+            <p className="text-sm text-slate-700">
               Paste a public GitHub URL. Deep analysis is currently available for TS/JS, Python, and Java repos.
             </p>
 
@@ -275,7 +269,7 @@ export default function Home() {
                       setPrefillUrl(example);
                       setError(null);
                     }}
-                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50/70"
+                    className="btn btn-secondary h-10 px-3 text-xs"
                   >
                     {example.replace("https://github.com/", "")}
                   </button>
@@ -288,7 +282,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={scrollToReport}
-                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100"
+                  className="btn btn-secondary border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                 >
                   View report ↓
                 </button>
@@ -305,7 +299,7 @@ export default function Home() {
           <PreviewMock />
         </section>
 
-        <section className="mt-14">
+        <section className="mt-[var(--section-gap)]">
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
             What you get
           </h2>
@@ -343,12 +337,12 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mt-14 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="surface surface-2xl mt-[var(--section-gap)] p-6 shadow-none">
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
             How it works
           </h2>
           <ol className="mt-5 grid gap-4 text-sm text-slate-700 sm:grid-cols-3">
-            <li className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4">
+            <li className="panel surface-lg p-4">
               <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
                 1
               </div>
@@ -357,8 +351,8 @@ export default function Home() {
                 Start analysis in seconds with no local setup.
               </p>
             </li>
-            <li className="rounded-xl border border-green-100 bg-gradient-to-br from-green-50 to-white p-4">
-              <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-700 text-xs font-bold text-white">
+            <li className="panel surface-lg p-4">
+              <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
                 2
               </div>
               <p className="font-semibold text-slate-900">
@@ -368,7 +362,7 @@ export default function Home() {
                 Deterministic signals highlight architecture and coupling.
               </p>
             </li>
-            <li className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4">
+            <li className="panel surface-lg p-4">
               <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
                 3
               </div>
@@ -383,7 +377,7 @@ export default function Home() {
         </section>
 
         {report && reportId && (
-          <section ref={reportSectionRef} className="mt-14">
+          <section ref={reportSectionRef} className="mt-[var(--section-gap)]">
             <ReportTabs report={report} reportId={reportId} />
           </section>
         )}
