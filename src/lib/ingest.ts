@@ -72,8 +72,8 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
   fs.mkdirSync(tempDir, { recursive: true });
 
   const cloneUrl = `https://github.com/${owner}/${repo}.git`;
-  const baseArgs = ["clone", "--depth", "1"] as const;
-  const args = [...baseArgs];
+  const baseArgs = ["clone", "--depth", "1"];
+  const args: string[] = [...baseArgs];
   if (requestedBranch) args.push("--branch", requestedBranch);
   args.push(cloneUrl, tempDir);
 
