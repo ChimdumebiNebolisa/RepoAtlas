@@ -33,6 +33,11 @@ export function validateGithubUrl(url: string): { owner: string; repo: string; r
   return { owner, repo, ref: ref ?? undefined };
 }
 
+export function isRemoteBranchNotFoundMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes("remote branch") && lower.includes("not found");
+}
+
 export async function ingestRepo(input: {
   githubUrl?: string;
   zipRef?: string;
@@ -62,12 +67,15 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
 
   const { owner, repo, ref } = parsed;
   const name = `${owner}/${repo}`;
-  const branch = ref ?? "main";
+  const requestedBranch = ref ?? null;
   const tempDir = path.join(os.tmpdir(), `repoatlas-${randomUUID()}`);
   fs.mkdirSync(tempDir, { recursive: true });
 
   const cloneUrl = `https://github.com/${owner}/${repo}.git`;
-  const args = ["clone", "--depth", "1", "--branch", branch, cloneUrl, tempDir];
+  const baseArgs = ["clone", "--depth", "1"] as const;
+  const args = [...baseArgs];
+  if (requestedBranch) args.push("--branch", requestedBranch);
+  args.push(cloneUrl, tempDir);
 
   try {
     await execAsync(`git ${args.join(" ")}`, {
@@ -75,58 +83,100 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
       maxBuffer: MAX_REPO_SIZE_BYTES,
     });
   } catch (err) {
-    try {
-      await fs.promises.rm(tempDir, { recursive: true, force: true });
-    } catch {
-      /* ignore */
-    }
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    const lower = msg.toLowerCase();
-    if (lower.includes("maxbuffer") || lower.includes("max buffer") || lower.includes("enomem")) {
+    const originalMessage = err instanceof Error ? err.message : "Unknown error";
+    // If the user pasted a tree/blob URL with a stale branch, retry default branch.
+    if (requestedBranch && isRemoteBranchNotFoundMessage(originalMessage)) {
+      try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+        await fs.promises.mkdir(tempDir, { recursive: true });
+        await execAsync(`git ${[...baseArgs, cloneUrl, tempDir].join(" ")}`, {
+          timeout: CLONE_TIMEOUT_MS,
+          maxBuffer: MAX_REPO_SIZE_BYTES,
+        });
+      } catch {
+        // Fall through to regular error classification using the original failure.
+      }
+      if (fs.existsSync(path.join(tempDir, ".git"))) {
+        // Retry succeeded; continue with hash/branch detection below.
+      } else {
+        try {
+          await fs.promises.rm(tempDir, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
+        throw new AppError({
+          code: ERROR_CODES.CLONE_FAILED,
+          status: 400,
+          message: "Requested branch was not found in the repository.",
+          meta: { rawMessage: originalMessage },
+          cause: err,
+        });
+      }
+    } else {
+      try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      const lower = msg.toLowerCase();
+      if (lower.includes("maxbuffer") || lower.includes("max buffer") || lower.includes("enomem")) {
+        throw new AppError({
+          code: ERROR_CODES.REPO_TOO_LARGE,
+          status: 413,
+          message: "Repository exceeds the 100MB limit.",
+          meta: { rawMessage: msg },
+          cause: err,
+        });
+      }
+      if (lower.includes("etimedout") || lower.includes("timeout") || lower.includes("timed out")) {
+        throw new AppError({
+          code: ERROR_CODES.CLONE_TIMEOUT,
+          status: 504,
+          message: "Cloning timed out.",
+          meta: { rawMessage: msg },
+          cause: err,
+        });
+      }
+      if (isRemoteBranchNotFoundMessage(msg)) {
+        throw new AppError({
+          code: ERROR_CODES.CLONE_FAILED,
+          status: 400,
+          message: "Requested branch was not found in the repository.",
+          meta: { rawMessage: msg },
+          cause: err,
+        });
+      }
+      if (
+        lower.includes("repository not found") ||
+        lower.includes("could not read username") ||
+        lower.includes("authentication failed") ||
+        lower.includes("permission denied") ||
+        lower.includes("access denied") ||
+        lower.includes("403") ||
+        lower.includes("404")
+      ) {
+        throw new AppError({
+          code: ERROR_CODES.REPO_NOT_PUBLIC,
+          status: 403,
+          message: "Repository is private or not found.",
+          meta: { rawMessage: msg },
+          cause: err,
+        });
+      }
       throw new AppError({
-        code: ERROR_CODES.REPO_TOO_LARGE,
-        status: 413,
-        message: "Repository exceeds the 100MB limit.",
+        code: ERROR_CODES.CLONE_FAILED,
+        status: 502,
+        message: "Could not clone the repository.",
         meta: { rawMessage: msg },
         cause: err,
       });
     }
-    if (lower.includes("etimedout") || lower.includes("timeout") || lower.includes("timed out")) {
-      throw new AppError({
-        code: ERROR_CODES.CLONE_TIMEOUT,
-        status: 504,
-        message: "Cloning timed out.",
-        meta: { rawMessage: msg },
-        cause: err,
-      });
-    }
-    if (
-      lower.includes("repository not found") ||
-      lower.includes("not found") ||
-      lower.includes("could not read username") ||
-      lower.includes("authentication failed") ||
-      lower.includes("403") ||
-      lower.includes("404")
-    ) {
-      throw new AppError({
-        code: ERROR_CODES.REPO_NOT_PUBLIC,
-        status: 403,
-        message: "Repository is private or not found.",
-        meta: { rawMessage: msg },
-        cause: err,
-      });
-    }
-    throw new AppError({
-      code: ERROR_CODES.CLONE_FAILED,
-      status: 502,
-      message: "Could not clone the repository.",
-      meta: { rawMessage: msg },
-      cause: err,
-    });
   }
 
   const repoPath = tempDir;
   let cloneHash: string | null = null;
+  let detectedBranch: string | null = requestedBranch;
   try {
     const { stdout } = await execAsync("git rev-parse HEAD", {
       cwd: repoPath,
@@ -136,11 +186,23 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
   } catch {
     /* optional */
   }
+  try {
+    const { stdout } = await execAsync("git rev-parse --abbrev-ref HEAD", {
+      cwd: repoPath,
+      timeout: 5000,
+    });
+    const value = stdout.trim();
+    if (value && value !== "HEAD") {
+      detectedBranch = value;
+    }
+  } catch {
+    /* optional */
+  }
 
   return {
     path: repoPath,
     name,
-    branch,
+    branch: detectedBranch,
     cloneHash,
     cleanup: async () => {
       try {
