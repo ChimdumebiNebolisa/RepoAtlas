@@ -13,7 +13,7 @@ It analyzes repository files (without executing code) and produces:
 
 Deep analysis is currently implemented for **TypeScript/JavaScript**, **Python**, and **Java** repositories.
 
-Paste a GitHub URL; we download the repo as a zip, extract it, analyze the folder, and return a Repo Brief.
+Upload a zip of your repository; we extract it, analyze the folder, and return a Repo Brief. (Optional legacy path: GitHub URL download is still supported in the API.)
 
 ---
 
@@ -40,7 +40,7 @@ Paste a GitHub URL; we download the repo as a zip, extract it, analyze the folde
 
 ## Features
 
-- **Single-input workflow**: paste a public GitHub URL and generate a report.
+- **Single-input workflow**: upload a zip of your repo and generate a report.
 - **Deterministic scoring**: Start Here and Danger Zones are derived from measurable repo signals.
 - **Multi-language packs**: TS/JS, Python, and Java packs provide deeper static analysis.
 - **Interactive visualization**: pan/zoom dependency view with ELK layout.
@@ -53,9 +53,9 @@ Paste a GitHub URL; we download the repo as a zip, extract it, analyze the folde
 
 ## How It Works
 
-1. User submits a GitHub repository URL from the web UI.
-2. `POST /api/analyze` validates input and starts analysis.
-3. Repo ingest downloads the repository as a zip (GitHub archive) to a temporary workspace.
+1. User uploads a zip of the repository from the web UI.
+2. `POST /api/analyze` receives the file, saves it to a temp path, and starts analysis.
+3. Repo ingest extracts the zip to a temporary workspace.
 4. Common indexing pipeline collects:
    - folder tree
    - file metadata and language hints
@@ -110,7 +110,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`, paste a public GitHub URL, and click **Analyze Repository**.
+Open `http://localhost:3000`, upload a zip of your repository, and click **Analyze Repository**.
 
 ---
 
@@ -119,7 +119,7 @@ Open `http://localhost:3000`, paste a public GitHub URL, and click **Analyze Rep
 ### Web UI (primary flow)
 
 - Open the homepage.
-- Enter a public GitHub URL (`https://github.com/owner/repo`).
+- Upload a zip of your repository (e.g. from GitHub: Code → Download ZIP).
 - View generated tabs:
   - Overview
   - Folder Map
@@ -135,9 +135,16 @@ Open `http://localhost:3000`, paste a public GitHub URL, and click **Analyze Rep
 - **PNG**: full report snapshot export
 - **Markdown**: `GET /api/reports/:id/export/md`
 
-### API/testing flow with local path input
+### API: multipart upload (primary) or JSON zipRef (testing)
 
-The API also accepts a `zipRef` path input (used for local testing and fixtures):
+**Primary:** Send a zip file via multipart form (field name `file` or `zip`):
+
+```bash
+curl -X POST http://localhost:3000/api/analyze \
+  -F "file=@/path/to/repo.zip"
+```
+
+**Testing / CLI:** Send a local path as JSON (no upload):
 
 ```bash
 curl -X POST http://localhost:3000/api/analyze \
@@ -151,15 +158,9 @@ curl -X POST http://localhost:3000/api/analyze \
 
 ### `POST /api/analyze`
 
-Request body (exactly one required):
+**Primary:** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
 
-```json
-{
-  "githubUrl": "https://github.com/owner/repo"
-}
-```
-
-or
+**Optional (testing):** `Content-Type: application/json` with body:
 
 ```json
 {
@@ -175,7 +176,7 @@ Success response:
 }
 ```
 
-Common error codes (`CLONE_TIMEOUT` and `CLONE_FAILED` correspond to download failures):
+Common error codes (e.g. `CLONE_*` apply if using optional GitHub URL flow):
 
 - `INVALID_INPUT`
 - `INVALID_URL`
@@ -314,7 +315,7 @@ The following are the direct libraries currently declared in `package.json`.
 - `html2canvas` - DOM capture for image/PDF export flow
 - `jspdf` - PDF file generation
 - `mermaid` - diagram support (used for markdown architecture export compatibility)
-- `adm-zip` - zip extraction for GitHub archive ingest
+- `adm-zip` - zip extraction for uploaded repos (and optional GitHub archive)
 - `@vercel/blob` - optional report storage when deployed on Vercel
 
 ### Development dependencies

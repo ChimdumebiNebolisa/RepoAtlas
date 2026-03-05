@@ -50,12 +50,12 @@ Engineers joining unfamiliar repositories waste significant time exploring ad ho
 ### User Flow
 
 ```
-Input (GitHub URL or zip) → Validation → Analysis (loading) → Report Tabs → Optional Markdown Export
+Input (zip upload) → Validation → Analysis (loading) → Report Tabs → Optional Markdown Export
 ```
 
-1. User enters a GitHub URL or uploads a zip.
-2. Client validates format; on submit, `POST /api/analyze`.
-3. Server validates, clones/extracts, runs analyzer.
+1. User uploads a zip of the repository (primary flow). Optional legacy: GitHub URL via API only.
+2. Client sends zip via multipart; on submit, `POST /api/analyze`.
+3. Server saves zip to temp, extracts, runs analyzer.
 4. UI shows loading state (spinner/skeleton).
 5. On success: `reportId` returned; UI fetches report and renders tabs.
 6. User can export full report as Markdown via "Export Markdown" button.
@@ -154,8 +154,8 @@ flowchart TB
 
 ### Data Flow
 
-1. **Request**: Client `POST /api/analyze` with `{ githubUrl }` or `{ zipRef }` (from prior upload).
-2. **Ingest**: Server clones GitHub repo (or uses extracted zip) into temp workspace.
+1. **Request**: Client `POST /api/analyze` with multipart zip file (primary), or JSON `{ zipRef }` for testing.
+2. **Ingest**: Server extracts uploaded zip (or uses zipRef path) into temp workspace.
 3. **Analysis**: Analyzer walks workspace, runs common pipeline + applicable language packs.
 4. **Report**: Analyzer produces `Report` JSON; server writes to disk, returns `{ reportId }`.
 5. **Render**: Client `GET /api/reports/:id`; UI parses and renders tabs.
@@ -165,7 +165,9 @@ flowchart TB
 
 ## 4. Repo Ingest
 
-### GitHub URL Validation Rules
+**Primary flow:** Zip file is uploaded to `POST /api/analyze` (multipart); server writes to temp, passes path as `zipRef` to ingest, which extracts and analyzes. Optional legacy path: GitHub URL (API only) triggers download of GitHub archive zip then same extract pipeline.
+
+### GitHub URL Validation Rules (optional / legacy API)
 
 **Valid patterns** (regex):
 
@@ -180,7 +182,7 @@ flowchart TB
 
 **Acceptance criteria**: `https://github.com/vercel/next.js` and `https://github.com/vercel/next.js/tree/canary` both accepted; `https://gitlab.com/foo/bar` rejected.
 
-### Clone Strategy
+### Clone Strategy (optional / legacy)
 
 - **Command**: `git clone --depth 1 [--branch <ref>] <url> <dest>`
 - **Depth**: Default 1 (shallow). Configurable via env `GIT_CLONE_DEPTH` (default 1).
@@ -447,19 +449,17 @@ export interface Report {
 
 ### POST /api/analyze
 
-**Request**:
+**Request (primary):** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
 
-```http
-POST /api/analyze
-Content-Type: application/json
+**Request (testing/CLI):** `Content-Type: application/json` with body:
 
+```json
 {
-  "githubUrl"?: "https://github.com/owner/repo",
-  "zipRef"?: "path-or-id-from-upload"
+  "zipRef": "path-to-local-repo-or-fixture"
 }
 ```
 
-Exactly one of `githubUrl` or `zipRef` required.
+Optional legacy: JSON body may include `githubUrl` instead of `zipRef` (API only; UI uses zip upload).
 
 **Response (200)**:
 
@@ -526,7 +526,7 @@ Content-Disposition: attachment; filename="repo-brief-{id}.md"
 | Component | Responsibility |
 |-----------|----------------|
 | `Page` | Root layout; input form + report tabs container |
-| `InputForm` | URL input, zip upload, submit; calls POST /api/analyze |
+| `InputForm` | Zip file input, submit; calls POST /api/analyze with multipart |
 | `ReportTabs` | Tab bar + tab content; receives `Report` |
 | `FolderMapTree` | Recursive tree; expand/collapse |
 | `ArchitectureGraph` | Mermaid rendering; collapse to folder if nodes > 50 |
@@ -719,8 +719,8 @@ flowchart LR
 
 ### Demo Script (2 Minutes)
 
-1. **0:00–0:15** – Open RepoAtlas; paste `https://github.com/vercel/next.js` (or smaller repo).
-2. **0:15–0:45** – Click "Analyze"; show loading state; wait for completion.
+1. **0:00–0:15** – Open RepoAtlas; upload a zip of a repo (e.g. download from GitHub Code → Download ZIP, then select the file).
+2. **0:15–0:45** – Click "Analyze Repository"; show loading state; wait for completion.
 3. **0:45–1:30** – Walk through tabs: Overview (metadata), Folder Map (expand tree), Architecture (Mermaid graph), Start Here (table), Danger Zones (table), Run & Contribute.
 4. **1:30–2:00** – Click "Export Markdown"; download; show Markdown file structure.
 

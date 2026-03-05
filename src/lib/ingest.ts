@@ -1,5 +1,6 @@
 /**
- * Repo ingest: GitHub archive (zip) download and zip extraction.
+ * Repo ingest: zip extraction (primary) and optional GitHub archive download.
+ * Primary flow: UI uploads a zip → API saves to temp → we extract here. GitHub path is legacy/optional.
  * Vercel-compatible: no git binary required.
  */
 
@@ -116,6 +117,7 @@ export async function ingestRepo(input: {
   githubUrl?: string;
   zipRef?: string;
 }): Promise<IngestResult> {
+  // Primary: zipRef (from multipart upload or JSON). Optional: githubUrl (legacy).
   if (input.githubUrl) {
     return ingestFromGithub(input.githubUrl);
   }

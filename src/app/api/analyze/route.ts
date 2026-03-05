@@ -11,6 +11,7 @@ import {
   toAppError,
 } from "@/lib/errors";
 
+// Primary flow: multipart zip upload. Optional: JSON body with zipRef (tests/CLI).
 const MAX_ANALYSIS_TIME_MS = 120_000; // 120s
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100MB
 
