@@ -32,6 +32,3 @@ yarn-error.log*
 
 # Reports (stored on disk)
 reports
-
-# Docs (never commit)
-docs/
