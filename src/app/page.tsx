@@ -160,7 +160,6 @@ export default function Home() {
   const [reportId, setReportId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [prefillUrl, setPrefillUrl] = useState("");
   const [showViewReportButton, setShowViewReportButton] = useState(false);
   const reportSectionRef = useRef<HTMLElement | null>(null);
 
@@ -237,7 +236,7 @@ export default function Home() {
               <span aria-hidden="true" />
             </div>
             <p className="text-sm text-slate-700">
-              Paste a public GitHub URL. Deep analysis is currently available for TS/JS, Python, and Java repos.
+              Upload a zip of your repository. Deep analysis is available for TS/JS, Python, and Java repos.
             </p>
 
             <div className="mt-5">
@@ -246,35 +245,13 @@ export default function Home() {
                 onAnalyzeComplete={handleAnalyzeComplete}
                 onAnalyzeError={handleAnalyzeError}
                 loading={loading}
-                prefillUrl={prefillUrl}
               />
               <p className="mt-3 text-xs text-slate-600">
                 Reads repo files only. Never runs code.
               </p>
               <p className="mt-1.5 text-xs text-slate-500">
-                Public repos only · Max 100MB · Analysis up to 2 min
+                Max 100MB · Analysis up to 2 min
               </p>
-            </div>
-
-            <div className="mt-5">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Try an example
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {["https://github.com/tailwindlabs/tailwindcss"].map((example) => (
-                  <button
-                    key={example}
-                    type="button"
-                    onClick={() => {
-                      setPrefillUrl(example);
-                      setError(null);
-                    }}
-                    className="btn btn-secondary h-10 px-3 text-xs"
-                  >
-                    {example.replace("https://github.com/", "")}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {showViewReportButton && report && (
@@ -346,9 +323,9 @@ export default function Home() {
               <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
                 1
               </div>
-              <p className="font-semibold text-slate-900">Paste a public GitHub URL</p>
+              <p className="font-semibold text-slate-900">Upload a zip of your repo</p>
               <p className="mt-1 text-xs text-slate-600">
-                Start analysis in seconds with no local setup.
+                Zip the repo folder and upload. No GitHub link required.
               </p>
             </li>
             <li className="panel surface-lg p-4">

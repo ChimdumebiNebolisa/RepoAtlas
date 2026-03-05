@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
+import os from "os";
 import { analyzeRepository } from "@/analyzer";
-import { validateGithubUrl } from "@/lib/ingest";
 import {
   AppError,
   ERROR_CODES,
@@ -10,6 +12,7 @@ import {
 } from "@/lib/errors";
 
 const MAX_ANALYSIS_TIME_MS = 120_000; // 120s
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100MB
 
 function logAnalyzeError(requestId: string, err: unknown): void {
   const appErr = toAppError(err);
@@ -31,30 +34,54 @@ function logAnalyzeError(requestId: string, err: unknown): void {
 
 export async function POST(request: NextRequest) {
   const requestId = randomUUID();
+  let tempZipPath: string | null = null;
 
   try {
-    const body = await request.json();
-    const { githubUrl, zipRef } = body;
+    const contentType = request.headers.get("content-type") ?? "";
+    let zipRef: string | undefined;
 
-    if (!githubUrl && !zipRef) {
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      const file = formData.get("file") ?? formData.get("zip");
+      if (!file || typeof file === "string") {
+        return NextResponse.json(
+          { code: ERROR_CODES.INVALID_INPUT, message: "Upload a single zip file." },
+          { status: 400 }
+        );
+      }
+      const blob = file as Blob;
+      const size = blob.size;
+      if (size > MAX_UPLOAD_BYTES) {
+        return NextResponse.json(
+          {
+            code: ERROR_CODES.REPO_TOO_LARGE,
+            message: "Repository exceeds the 100MB limit. Try a smaller zip.",
+          },
+          { status: 413 }
+        );
+      }
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      tempZipPath = path.join(os.tmpdir(), `repoatlas-${randomUUID()}.zip`);
+      await fs.promises.writeFile(tempZipPath, buffer);
+      zipRef = tempZipPath;
+    } else if (contentType.includes("application/json")) {
+      const body = await request.json();
+      zipRef = body.zipRef;
+      if (!zipRef) {
+        return NextResponse.json(
+          { code: ERROR_CODES.INVALID_INPUT, message: "Provide zipRef or upload a zip file." },
+          { status: 400 }
+        );
+      }
+    } else {
       return NextResponse.json(
-        { code: ERROR_CODES.INVALID_INPUT, message: "Provide githubUrl or zipRef" },
+        { code: ERROR_CODES.INVALID_INPUT, message: "Upload a zip file or send JSON with zipRef." },
         { status: 400 }
       );
     }
 
-    if (githubUrl) {
-      const parsed = validateGithubUrl(githubUrl);
-      if (!parsed) {
-        return NextResponse.json(
-          { code: ERROR_CODES.INVALID_URL, message: "Invalid GitHub URL" },
-          { status: 400 }
-        );
-      }
-    }
-
     const report = await Promise.race([
-      analyzeRepository({ githubUrl, zipRef }),
+      analyzeRepository({ zipRef }),
       new Promise<never>((_, reject) =>
         setTimeout(
           () =>
@@ -82,5 +109,13 @@ export async function POST(request: NextRequest) {
     logAnalyzeError(requestId, err);
     const { status, code, message } = toApiErrorPayload(err);
     return NextResponse.json({ code, message }, { status });
+  } finally {
+    if (tempZipPath) {
+      try {
+        await fs.promises.unlink(tempZipPath);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }

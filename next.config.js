@@ -2,6 +2,9 @@
 const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['mermaid'],
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
   },
 };
 

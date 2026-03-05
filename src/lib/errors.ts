@@ -66,7 +66,7 @@ export function toAppError(err: unknown): AppError {
 
 /** User-facing messages for known error codes. */
 const USER_MESSAGES: Record<ErrorCode, string> = {
-  [ERROR_CODES.INVALID_INPUT]: "Provide githubUrl or zipRef",
+  [ERROR_CODES.INVALID_INPUT]: "Upload a zip file or provide zipRef.",
   [ERROR_CODES.INVALID_URL]: "Please enter a valid GitHub URL (e.g. https://github.com/owner/repo)",
   [ERROR_CODES.ZIP_NOT_FOUND]: "Zip path not found. Check the path or re-upload.",
   [ERROR_CODES.ZIP_INVALID]: "Invalid or corrupted zip file.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useRef } from "react";
 import type { Report } from "@/types/report";
 
 interface InputFormProps {
@@ -8,7 +8,6 @@ interface InputFormProps {
   onAnalyzeComplete: (report: Report, reportId: string) => void;
   onAnalyzeError: (message: string) => void;
   loading: boolean;
-  prefillUrl?: string;
 }
 
 export function InputForm({
@@ -16,26 +15,23 @@ export function InputForm({
   onAnalyzeComplete,
   onAnalyzeError,
   loading,
-  prefillUrl,
 }: InputFormProps) {
-  const [githubUrl, setGithubUrl] = useState("");
-
-  useEffect(() => {
-    const incoming = prefillUrl?.trim() ?? "";
-    if (incoming) setGithubUrl(incoming);
-  }, [prefillUrl]);
+  const [file, setFile] = useState<File | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!githubUrl.trim() || loading) return;
+    if (!file || loading) return;
 
     onAnalyzeStart();
 
     try {
+      const formData = new FormData();
+      formData.append("file", file);
+
       const res = await fetch("/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ githubUrl: githubUrl.trim() }),
+        body: formData,
       });
 
       const data = await res.json().catch(() => ({}));
@@ -64,25 +60,40 @@ export function InputForm({
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const chosen = e.target.files?.[0];
+    if (!chosen) {
+      setFile(null);
+      return;
+    }
+    if (!chosen.name.toLowerCase().endsWith(".zip")) {
+      onAnalyzeError("Please select a .zip file.");
+      setFile(null);
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+    setFile(chosen);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="githubUrl" className="mb-2 block text-sm font-medium text-slate-800">
-          GitHub URL (public repos)
+        <label htmlFor="zipFile" className="mb-2 block text-sm font-medium text-slate-800">
+          Repository zip file
         </label>
         <input
-          id="githubUrl"
-          type="url"
-          value={githubUrl}
-          onChange={(e) => setGithubUrl(e.target.value)}
-          placeholder="https://github.com/owner/repo"
-          className="field-input"
+          ref={inputRef}
+          id="zipFile"
+          type="file"
+          accept=".zip"
+          onChange={handleFileChange}
+          className="field-input block w-full text-sm text-slate-600 file:mr-4 file:rounded-md file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white file:hover:bg-emerald-700"
           disabled={loading}
         />
       </div>
       <button
         type="submit"
-        disabled={loading || !githubUrl.trim()}
+        disabled={loading || !file}
         className="btn btn-primary w-full sm:w-auto"
       >
         {loading && (

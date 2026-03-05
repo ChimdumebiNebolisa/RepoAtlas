@@ -348,10 +348,68 @@ async function ingestFromZip(zipRef: string): Promise<IngestResult> {
     });
   }
 
+  const stat = fs.statSync(fullPath);
+  const isZipFile =
+    stat.isFile() &&
+    (fullPath.toLowerCase().endsWith(".zip") || path.extname(fullPath).toLowerCase() === ".zip");
+
+  if (!isZipFile) {
+    return {
+      path: fullPath,
+      name: path.basename(fullPath, path.extname(fullPath)),
+      branch: null,
+      cloneHash: null,
+    };
+  }
+
+  const size = stat.size;
+  if (size > MAX_REPO_SIZE_BYTES) {
+    throw new AppError({
+      code: ERROR_CODES.REPO_TOO_LARGE,
+      status: 413,
+      message: "Repository exceeds the 100MB limit.",
+      meta: { size },
+    });
+  }
+
+  const tempDir = path.join(os.tmpdir(), `repoatlas-${randomUUID()}-extract`);
+  fs.mkdirSync(tempDir, { recursive: true });
+
+  try {
+    const zip = new AdmZip(fullPath);
+    zip.extractAllTo(tempDir, true);
+  } catch (err) {
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    throw new AppError({
+      code: ERROR_CODES.CLONE_FAILED,
+      status: 502,
+      message: "Could not extract the repository.",
+      meta: { rawMessage: msg },
+      cause: err,
+    });
+  }
+
+  const entries = fs.readdirSync(tempDir, { withFileTypes: true });
+  const singleDir = entries.length === 1 && entries[0].isDirectory() ? entries[0].name : null;
+  const repoPath = singleDir ? path.join(tempDir, singleDir) : tempDir;
+  const name = path.basename(fullPath, path.extname(fullPath)) || "uploaded-repo";
+
   return {
-    path: fullPath,
-    name: path.basename(fullPath, path.extname(fullPath)),
+    path: repoPath,
+    name,
     branch: null,
     cloneHash: null,
+    cleanup: async () => {
+      try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+    },
   };
 }
