@@ -81,15 +81,24 @@ export function InputForm({
         <label htmlFor="zipFile" className="mb-2 block text-sm font-medium text-slate-800">
           Repository zip file
         </label>
-        <input
-          ref={inputRef}
-          id="zipFile"
-          type="file"
-          accept=".zip"
-          onChange={handleFileChange}
-          className="field-input block w-full text-sm text-slate-600 file:mr-4 file:rounded-md file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white file:hover:bg-emerald-700"
-          disabled={loading}
-        />
+        <div className="relative flex min-h-[2.5rem] w-full items-stretch overflow-hidden rounded-[var(--radius-md)] border border-[#cbd5e1] bg-white focus-within:border-[#86efac] focus-within:outline-none focus-within:ring-2 focus-within:ring-emerald-500/30">
+          <input
+            ref={inputRef}
+            id="zipFile"
+            type="file"
+            accept=".zip"
+            onChange={handleFileChange}
+            className="absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-not-allowed"
+            disabled={loading}
+            aria-label="Choose repository zip file"
+          />
+          <span className="flex min-h-[2.5rem] flex-1 items-center truncate pl-4 pr-3 text-sm text-slate-500">
+            {file ? file.name : "No file chosen"}
+          </span>
+          <span className="flex min-h-[2.5rem] shrink-0 items-center border-l border-[#cbd5e1] bg-slate-100 px-4 text-sm font-medium text-slate-700">
+            Choose file
+          </span>
+        </div>
       </div>
       <button
         type="submit"
