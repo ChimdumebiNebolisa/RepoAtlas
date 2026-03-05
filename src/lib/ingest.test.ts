@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isRemoteBranchNotFoundMessage, validateGithubUrl } from "./ingest";
+import { validateGithubUrl } from "./ingest";
 
 describe("validateGithubUrl", () => {
   it("accepts valid GitHub URLs", () => {
@@ -28,23 +28,5 @@ describe("validateGithubUrl", () => {
   it("rejects malformed URLs", () => {
     expect(validateGithubUrl("not-a-url")).toBeNull();
     expect(validateGithubUrl("")).toBeNull();
-  });
-});
-
-describe("isRemoteBranchNotFoundMessage", () => {
-  it("detects git remote branch missing errors", () => {
-    expect(
-      isRemoteBranchNotFoundMessage(
-        "fatal: Remote branch main not found in upstream origin"
-      )
-    ).toBe(true);
-  });
-
-  it("ignores unrelated clone failures", () => {
-    expect(
-      isRemoteBranchNotFoundMessage(
-        "fatal: repository 'https://github.com/owner/private.git/' not found"
-      )
-    ).toBe(false);
   });
 });

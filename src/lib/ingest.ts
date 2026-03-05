@@ -1,17 +1,16 @@
 /**
- * Repo ingest: GitHub clone and zip extraction.
+ * Repo ingest: GitHub archive (zip) download and zip extraction.
+ * Vercel-compatible: no git binary required.
  */
 
-import { exec } from "child_process";
+import AdmZip from "adm-zip";
 import fs from "fs";
 import path from "path";
-import { promisify } from "util";
 import { randomUUID } from "crypto";
 import os from "os";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
-const execAsync = promisify(exec);
-const CLONE_TIMEOUT_MS = 60_000;
+const FETCH_TIMEOUT_MS = 60_000;
 const MAX_REPO_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
 
 const GITHUB_URL_RE =
@@ -33,9 +32,84 @@ export function validateGithubUrl(url: string): { owner: string; repo: string; r
   return { owner, repo, ref: ref ?? undefined };
 }
 
-export function isRemoteBranchNotFoundMessage(message: string): boolean {
-  const lower = message.toLowerCase();
-  return lower.includes("remote branch") && lower.includes("not found");
+function getAuthHeaders(): Record<string, string> {
+  const token = process.env.GITHUB_TOKEN;
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
+
+async function getDefaultBranch(owner: string, repo: string): Promise<string> {
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        ...getAuthHeaders(),
+      },
+    });
+    if (!res.ok) {
+      if (res.status === 404 || res.status === 403) {
+        throw new AppError({
+          code: ERROR_CODES.REPO_NOT_PUBLIC,
+          status: 403,
+          message: "Repository is private or not found.",
+          meta: { status: res.status },
+        });
+      }
+      throw new AppError({
+        code: ERROR_CODES.CLONE_FAILED,
+        status: 502,
+        message: "Could not fetch repository info.",
+        meta: { status: res.status },
+      });
+    }
+    const data = (await res.json()) as { default_branch?: string };
+    const branch = data?.default_branch ?? "main";
+    return branch;
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    if (msg.includes("abort") || msg.includes("timeout")) {
+      throw new AppError({
+        code: ERROR_CODES.CLONE_TIMEOUT,
+        status: 504,
+        message: "Cloning timed out.",
+        meta: { rawMessage: msg },
+        cause: err,
+      });
+    }
+    throw new AppError({
+      code: ERROR_CODES.CLONE_FAILED,
+      status: 502,
+      message: "Could not clone the repository.",
+      meta: { rawMessage: msg },
+      cause: err,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function getCommitSha(owner: string, repo: string, branch: string): Promise<string | null> {
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(branch)}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        ...getAuthHeaders(),
+      },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { sha?: string };
+    return data?.sha ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function ingestRepo(input: {
@@ -67,134 +141,183 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
 
   const { owner, repo, ref } = parsed;
   const name = `${owner}/${repo}`;
-  const requestedBranch = ref ?? null;
+
+  const branch = ref ?? (await getDefaultBranch(owner, repo));
+  const archiveUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${branch}.zip`;
+
   const tempDir = path.join(os.tmpdir(), `repoatlas-${randomUUID()}`);
   fs.mkdirSync(tempDir, { recursive: true });
 
-  const cloneUrl = `https://github.com/${owner}/${repo}.git`;
-  const baseArgs = ["clone", "--depth", "1"];
-  const args: string[] = [...baseArgs];
-  if (requestedBranch) args.push("--branch", requestedBranch);
-  args.push(cloneUrl, tempDir);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
+  let res: Response;
   try {
-    await execAsync(`git ${args.join(" ")}`, {
-      timeout: CLONE_TIMEOUT_MS,
-      maxBuffer: MAX_REPO_SIZE_BYTES,
+    res = await fetch(archiveUrl, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: getAuthHeaders(),
     });
   } catch (err) {
-    const originalMessage = err instanceof Error ? err.message : "Unknown error";
-    // If the user pasted a tree/blob URL with a stale branch, retry default branch.
-    if (requestedBranch && isRemoteBranchNotFoundMessage(originalMessage)) {
-      try {
-        await fs.promises.rm(tempDir, { recursive: true, force: true });
-        await fs.promises.mkdir(tempDir, { recursive: true });
-        await execAsync(`git ${[...baseArgs, cloneUrl, tempDir].join(" ")}`, {
-          timeout: CLONE_TIMEOUT_MS,
-          maxBuffer: MAX_REPO_SIZE_BYTES,
-        });
-      } catch {
-        // Fall through to regular error classification using the original failure.
-      }
-      if (fs.existsSync(path.join(tempDir, ".git"))) {
-        // Retry succeeded; continue with hash/branch detection below.
-      } else {
-        try {
-          await fs.promises.rm(tempDir, { recursive: true, force: true });
-        } catch {
-          /* ignore */
-        }
+    clearTimeout(timeoutId);
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    const lower = msg.toLowerCase();
+    if (lower.includes("abort") || lower.includes("timeout")) {
+      throw new AppError({
+        code: ERROR_CODES.CLONE_TIMEOUT,
+        status: 504,
+        message: "Cloning timed out.",
+        meta: { rawMessage: msg },
+        cause: err,
+      });
+    }
+    throw new AppError({
+      code: ERROR_CODES.CLONE_FAILED,
+      status: 502,
+      message: "Could not clone the repository.",
+      meta: { rawMessage: msg },
+      cause: err,
+    });
+  }
+  clearTimeout(timeoutId);
+
+  if (!res.ok) {
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+    if (res.status === 404 || res.status === 403) {
+      if (ref) {
         throw new AppError({
           code: ERROR_CODES.CLONE_FAILED,
           status: 400,
           message: "Requested branch was not found in the repository.",
-          meta: { rawMessage: originalMessage },
-          cause: err,
+          meta: { status: res.status },
         });
       }
-    } else {
+      throw new AppError({
+        code: ERROR_CODES.REPO_NOT_PUBLIC,
+        status: 403,
+        message: "Repository is private or not found.",
+        meta: { status: res.status },
+      });
+    }
+    throw new AppError({
+      code: ERROR_CODES.CLONE_FAILED,
+      status: 502,
+      message: "Could not clone the repository.",
+      meta: { status: res.status },
+    });
+  }
+
+  const contentLength = res.headers.get("content-length");
+  if (contentLength) {
+    const size = parseInt(contentLength, 10);
+    if (!Number.isNaN(size) && size > MAX_REPO_SIZE_BYTES) {
       try {
         await fs.promises.rm(tempDir, { recursive: true, force: true });
       } catch {
         /* ignore */
       }
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      const lower = msg.toLowerCase();
-      if (lower.includes("maxbuffer") || lower.includes("max buffer") || lower.includes("enomem")) {
-        throw new AppError({
-          code: ERROR_CODES.REPO_TOO_LARGE,
-          status: 413,
-          message: "Repository exceeds the 100MB limit.",
-          meta: { rawMessage: msg },
-          cause: err,
-        });
-      }
-      if (lower.includes("etimedout") || lower.includes("timeout") || lower.includes("timed out")) {
-        throw new AppError({
-          code: ERROR_CODES.CLONE_TIMEOUT,
-          status: 504,
-          message: "Cloning timed out.",
-          meta: { rawMessage: msg },
-          cause: err,
-        });
-      }
-      if (isRemoteBranchNotFoundMessage(msg)) {
-        throw new AppError({
-          code: ERROR_CODES.CLONE_FAILED,
-          status: 400,
-          message: "Requested branch was not found in the repository.",
-          meta: { rawMessage: msg },
-          cause: err,
-        });
-      }
-      if (
-        lower.includes("repository not found") ||
-        lower.includes("could not read username") ||
-        lower.includes("authentication failed") ||
-        lower.includes("permission denied") ||
-        lower.includes("access denied") ||
-        lower.includes("403") ||
-        lower.includes("404")
-      ) {
-        throw new AppError({
-          code: ERROR_CODES.REPO_NOT_PUBLIC,
-          status: 403,
-          message: "Repository is private or not found.",
-          meta: { rawMessage: msg },
-          cause: err,
-        });
-      }
       throw new AppError({
-        code: ERROR_CODES.CLONE_FAILED,
-        status: 502,
-        message: "Could not clone the repository.",
-        meta: { rawMessage: msg },
-        cause: err,
+        code: ERROR_CODES.REPO_TOO_LARGE,
+        status: 413,
+        message: "Repository exceeds the 100MB limit.",
+        meta: { contentLength: size },
       });
     }
   }
 
-  const repoPath = tempDir;
-  let cloneHash: string | null = null;
-  let detectedBranch: string | null = requestedBranch;
+  let buffer: ArrayBuffer;
   try {
-    const { stdout } = await execAsync("git rev-parse HEAD", {
-      cwd: repoPath,
-      timeout: 5000,
-    });
-    cloneHash = stdout.trim() || null;
-  } catch {
-    /* optional */
-  }
-  try {
-    const { stdout } = await execAsync("git rev-parse --abbrev-ref HEAD", {
-      cwd: repoPath,
-      timeout: 5000,
-    });
-    const value = stdout.trim();
-    if (value && value !== "HEAD") {
-      detectedBranch = value;
+    const reader = res.body;
+    if (!reader) {
+      throw new Error("No response body");
     }
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    const streamReader = reader.getReader();
+    for (;;) {
+      const { done, value } = await streamReader.read();
+      if (done) break;
+      total += value.length;
+      if (total > MAX_REPO_SIZE_BYTES) {
+        streamReader.cancel();
+        throw new AppError({
+          code: ERROR_CODES.REPO_TOO_LARGE,
+          status: 413,
+          message: "Repository exceeds the 100MB limit.",
+        });
+      }
+      chunks.push(value);
+    }
+    const length = chunks.reduce((sum, c) => sum + c.length, 0);
+    buffer = new ArrayBuffer(length);
+    const view = new Uint8Array(buffer);
+    let offset = 0;
+    for (const chunk of chunks) {
+      view.set(chunk, offset);
+      offset += chunk.length;
+    }
+  } catch (err) {
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+    if (err instanceof AppError) throw err;
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    const lower = msg.toLowerCase();
+    if (lower.includes("enomem") || lower.includes("memory")) {
+      throw new AppError({
+        code: ERROR_CODES.REPO_TOO_LARGE,
+        status: 413,
+        message: "Repository exceeds the 100MB limit.",
+        meta: { rawMessage: msg },
+        cause: err,
+      });
+    }
+    throw new AppError({
+      code: ERROR_CODES.CLONE_FAILED,
+      status: 502,
+      message: "Could not clone the repository.",
+      meta: { rawMessage: msg },
+      cause: err,
+    });
+  }
+
+  try {
+    const zip = new AdmZip(Buffer.from(buffer));
+    zip.extractAllTo(tempDir, true);
+  } catch (err) {
+    try {
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    throw new AppError({
+      code: ERROR_CODES.CLONE_FAILED,
+      status: 502,
+      message: "Could not clone the repository.",
+      meta: { rawMessage: msg },
+      cause: err,
+    });
+  }
+
+  const entries = fs.readdirSync(tempDir, { withFileTypes: true });
+  const singleDir = entries.length === 1 && entries[0].isDirectory() ? entries[0].name : null;
+  const repoPath = singleDir ? path.join(tempDir, singleDir) : tempDir;
+
+  let cloneHash: string | null = null;
+  try {
+    cloneHash = await getCommitSha(owner, repo, branch);
   } catch {
     /* optional */
   }
@@ -202,7 +325,7 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
   return {
     path: repoPath,
     name,
-    branch: detectedBranch,
+    branch,
     cloneHash,
     cleanup: async () => {
       try {
