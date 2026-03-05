@@ -64,7 +64,7 @@ export function toAppError(err: unknown): AppError {
   });
 }
 
-/** User-facing messages for known error codes (per docs/spec.md). */
+/** User-facing messages for known error codes. */
 const USER_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.INVALID_INPUT]: "Provide githubUrl or zipRef",
   [ERROR_CODES.INVALID_URL]: "Please enter a valid GitHub URL (e.g. https://github.com/owner/repo)",
@@ -73,13 +73,13 @@ const USER_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.REPO_TOO_LARGE]:
     "Repository exceeds the 100MB limit. Try a smaller repo or a specific branch.",
   [ERROR_CODES.CLONE_TIMEOUT]:
-    "Cloning timed out. The repo may be too large or the network slow. Try again or use a smaller repo.",
+    "Download timed out. The repo may be too large or the network slow. Try again or use a smaller repo.",
   [ERROR_CODES.TIMEOUT]:
     "Analysis timed out. The repo may be too large or complex. Try a smaller repo or a specific branch.",
   [ERROR_CODES.REPO_NOT_PUBLIC]:
     "Repository is private or not found. RepoAtlas only analyzes public GitHub repos.",
   [ERROR_CODES.CLONE_FAILED]:
-    "Could not clone the repository. Check the URL and that the repo is public.",
+    "Could not download the repository. Check the URL and that the repo is public.",
   [ERROR_CODES.ANALYSIS_FAILED]: "Analysis failed. Check server logs.",
 };
 

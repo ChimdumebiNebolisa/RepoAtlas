@@ -13,6 +13,8 @@ It analyzes repository files (without executing code) and produces:
 
 Deep analysis is currently implemented for **TypeScript/JavaScript**, **Python**, and **Java** repositories.
 
+Paste a GitHub URL; we download the repo as a zip, extract it, analyze the folder, and return a Repo Brief.
+
 ---
 
 ## Table of Contents
@@ -70,6 +72,7 @@ Deep analysis is currently implemented for **TypeScript/JavaScript**, **Python**
 
 ## Architecture
 
+- **Flow:** GitHub URL → ingest (download zip, extract) → analyzer (folder map, language packs, scoring) → storage (save report) → API returns report ID → UI fetches and renders report.
 - **Frontend**: Next.js App Router + React + Tailwind CSS
 - **API routes**:
   - `POST /api/analyze`
@@ -172,7 +175,7 @@ Success response:
 }
 ```
 
-Common error codes:
+Common error codes (`CLONE_TIMEOUT` and `CLONE_FAILED` correspond to download failures):
 
 - `INVALID_INPUT`
 - `INVALID_URL`
@@ -196,10 +199,8 @@ Returns a downloadable markdown file named `repo-brief-<id>.md`.
 
 ## Configuration
 
-Environment variables:
-
-- `REPORTS_DIR` (optional): path for report JSON files when not using Blob. Default: `<project-root>/reports`
-- `BLOB_READ_WRITE_TOKEN` (optional): Vercel Blob token; when set, reports are stored in Blob (for serverless/deployment). Set in Vercel project env or `.env.local` for local dev with Blob.
+- **Vercel (production):** Set `BLOB_READ_WRITE_TOKEN` (from your Blob store). No `REPORTS_DIR` needed.
+- **Local dev:** Optional `REPORTS_DIR` when not using Blob (default: `<project-root>/reports`). Optional `BLOB_READ_WRITE_TOKEN` if you want to test Blob locally.
 
 No `.env` file is required for local development by default.
 
@@ -281,7 +282,7 @@ These are used for local test scenarios and analyzer regression checks.
 Current enforced/expected limits:
 
 - Public GitHub repositories only (for `githubUrl` flow)
-- Clone timeout: 60 seconds
+- Download timeout: 60 seconds
 - Analysis timeout: 120 seconds
 - Repository size guard: approximately 100 MB
 - File indexing cap: 10,000 files

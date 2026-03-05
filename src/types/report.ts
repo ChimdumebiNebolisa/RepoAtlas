@@ -7,6 +7,7 @@ export interface RepoMetadata {
   name: string;
   url: string;
   branch: string;
+  /** Commit SHA of the analyzed branch (historically clone_hash). */
   clone_hash: string | null;
   analyzed_at: string; // ISO 8601
 }
