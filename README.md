@@ -31,7 +31,6 @@ Deep analysis is currently implemented for **TypeScript/JavaScript**, **Python**
 - [Fixtures](#fixtures)
 - [Limits and Behavior](#limits-and-behavior)
 - [Security Notes](#security-notes)
-- [Roadmap and Spec](#roadmap-and-spec)
 - [Libraries and Licenses](#libraries-and-licenses)
 - [License](#license)
 
@@ -46,7 +45,7 @@ Deep analysis is currently implemented for **TypeScript/JavaScript**, **Python**
 - **Portable exports**:
   - Client-side full report export to **PDF** and **PNG**
   - API export to **Markdown** (`/api/reports/:id/export/md`)
-- **Local report persistence**: report JSON is stored on disk under `reports/` (or custom path).
+- **Report persistence**: report JSON on disk (`reports/`) or Vercel Blob when deployed with `BLOB_READ_WRITE_TOKEN`.
 
 ---
 
@@ -54,7 +53,7 @@ Deep analysis is currently implemented for **TypeScript/JavaScript**, **Python**
 
 1. User submits a GitHub repository URL from the web UI.
 2. `POST /api/analyze` validates input and starts analysis.
-3. Repo ingest clones the repository to a temporary workspace.
+3. Repo ingest downloads the repository as a zip (GitHub archive) to a temporary workspace.
 4. Common indexing pipeline collects:
    - folder tree
    - file metadata and language hints
@@ -77,10 +76,8 @@ Deep analysis is currently implemented for **TypeScript/JavaScript**, **Python**
   - `GET /api/reports/:id`
   - `GET /api/reports/:id/export/md`
 - **Analyzer**: in-process TypeScript worker-style module
-- **Storage**: filesystem JSON files (`reports/<reportId>.json`)
+- **Storage**: report JSON on filesystem (`reports/`) or Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
 - **Temp workspace**: OS temp directory per analysis run
-
-See `docs/spec.md` for the complete engineering specification.
 
 ---
 
@@ -99,7 +96,6 @@ See `docs/spec.md` for the complete engineering specification.
 
 - **Node.js**: 18+ recommended
 - **npm**: 9+
-- **git**: required for repository cloning
 - **OS**: Windows, macOS, or Linux (local filesystem + temp directory access)
 
 ---
@@ -202,8 +198,8 @@ Returns a downloadable markdown file named `repo-brief-<id>.md`.
 
 Environment variables:
 
-- `REPORTS_DIR` (optional): absolute/relative path for persisted report JSON files.  
-  Default: `<project-root>/reports`
+- `REPORTS_DIR` (optional): path for report JSON files when not using Blob. Default: `<project-root>/reports`
+- `BLOB_READ_WRITE_TOKEN` (optional): Vercel Blob token; when set, reports are stored in Blob (for serverless/deployment). Set in Vercel project env or `.env.local` for local dev with Blob.
 
 No `.env` file is required for local development by default.
 
@@ -231,12 +227,10 @@ src/
     errors.ts
   types/
     report.ts
-docs/
-  spec.md
-  guardrails.md
 fixtures/
-reports/
 ```
+
+`reports/` is created at runtime when using filesystem storage.
 
 ---
 
@@ -306,15 +300,6 @@ When analysis cannot perform a deep language pass, warnings are added to report 
 
 ---
 
-## Roadmap and Spec
-
-- Engineering spec: `docs/spec.md`
-- Project guardrails: `docs/guardrails.md`
-
-The spec contains product goals, scoring design, API contracts, and acceptance criteria.
-
----
-
 ## Libraries and Licenses
 
 The following are the direct libraries currently declared in `package.json`.
@@ -328,6 +313,8 @@ The following are the direct libraries currently declared in `package.json`.
 - `html2canvas` - DOM capture for image/PDF export flow
 - `jspdf` - PDF file generation
 - `mermaid` - diagram support (used for markdown architecture export compatibility)
+- `adm-zip` - zip extraction for GitHub archive ingest
+- `@vercel/blob` - optional report storage when deployed on Vercel
 
 ### Development dependencies
 
@@ -335,7 +322,7 @@ The following are the direct libraries currently declared in `package.json`.
 - `vitest` - test runner
 - `eslint`, `eslint-config-next` - linting rules and integration
 - `tailwindcss`, `postcss`, `autoprefixer` - styling pipeline
-- `@types/node`, `@types/react`, `@types/react-dom` - TypeScript type definitions
+- `@types/node`, `@types/react`, `@types/react-dom`, `@types/adm-zip` - TypeScript type definitions
 
 Third-party dependencies are distributed under their own respective licenses; check each package's npm page/repository for full license text.
 

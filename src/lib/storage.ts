@@ -10,8 +10,16 @@ import { put, get } from "@vercel/blob";
 const REPORTS_DIR = process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
 const REPORTS_BLOB_PREFIX = "reports/";
 
+function isVercel(): boolean {
+  return process.env.VERCEL === "1";
+}
+
 function useBlob(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
+
+function getBlobToken(): string | undefined {
+  return process.env.BLOB_READ_WRITE_TOKEN;
 }
 
 function ensureReportsDir() {
@@ -24,11 +32,20 @@ export async function saveReport(reportId: string, report: Report): Promise<void
   const body = JSON.stringify(report, null, 2);
 
   if (useBlob()) {
+    const token = getBlobToken();
     await put(`${REPORTS_BLOB_PREFIX}${reportId}.json`, body, {
       access: "public",
       contentType: "application/json",
+      allowOverwrite: true,
+      ...(token && { token }),
     });
     return;
+  }
+
+  if (isVercel()) {
+    throw new Error(
+      "BLOB_READ_WRITE_TOKEN is required on Vercel. Add it in Project Settings → Environment Variables (from your Blob store)."
+    );
   }
 
   ensureReportsDir();
@@ -39,7 +56,11 @@ export async function saveReport(reportId: string, report: Report): Promise<void
 export async function getReport(reportId: string): Promise<Report | null> {
   if (useBlob()) {
     const pathname = `${REPORTS_BLOB_PREFIX}${reportId}.json`;
-    const result = await get(pathname, { access: "public" });
+    const token = getBlobToken();
+    const result = await get(pathname, {
+      access: "public",
+      ...(token && { token }),
+    });
     if (!result || result.statusCode !== 200 || !result.stream) {
       return null;
     }
