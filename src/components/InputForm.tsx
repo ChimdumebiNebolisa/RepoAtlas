@@ -22,11 +22,8 @@ export function InputForm({
 
   useEffect(() => {
     const incoming = prefillUrl?.trim() ?? "";
-    if (!incoming || loading) return;
-    if (incoming !== githubUrl) {
-      setGithubUrl(incoming);
-    }
-  }, [prefillUrl, loading, githubUrl]);
+    if (incoming) setGithubUrl(incoming);
+  }, [prefillUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
