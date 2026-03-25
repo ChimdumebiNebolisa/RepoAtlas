@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import AdmZip from "adm-zip";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const fixturePath = path.resolve(process.cwd(), "fixtures/repo-ts");
@@ -71,6 +72,33 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(markdown).toContain("## Danger Zones");
     expect(markdown).toContain("## Run & Contribute");
   }, 30000);
+
+  it("creates a report from multipart zip upload", async () => {
+    const analyzeRoute = await import("@/app/api/analyze/route");
+    const reportRoute = await import("@/app/api/reports/[id]/route");
+
+    const zip = new AdmZip();
+    zip.addLocalFolder(fixturePath, "repo-ts");
+    const zipBlob = new Blob([zip.toBuffer()], { type: "application/zip" });
+    const form = new FormData();
+    form.append("file", zipBlob, "repo-ts.zip");
+
+    const analyzeRequest = new Request("http://localhost/api/analyze", {
+      method: "POST",
+      body: form,
+    });
+
+    const analyzeResponse = await analyzeRoute.POST(analyzeRequest as never);
+    expect(analyzeResponse.status).toBe(200);
+
+    const analyzePayload = (await analyzeResponse.json()) as { reportId?: string };
+    expect(analyzePayload.reportId).toBeTruthy();
+
+    const reportResponse = await reportRoute.GET(new Request("http://localhost"), {
+      params: { id: analyzePayload.reportId as string },
+    });
+    expect(reportResponse.status).toBe(200);
+  });
 
   it("returns 404 for unknown report ID", async () => {
     const reportRoute = await import("@/app/api/reports/[id]/route");
