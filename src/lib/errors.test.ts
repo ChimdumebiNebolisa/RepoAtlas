@@ -143,7 +143,7 @@ describe("toApiErrorPayload", () => {
     const payload = toApiErrorPayload(err);
     expect(payload.status).toBe(504);
     expect(payload.code).toBe("CLONE_TIMEOUT");
-    expect(payload.message).toContain("Cloning");
+    expect(payload.message).toContain("timed out");
   });
 
   it("returns ZIP_NOT_FOUND with 404 and specific message", () => {

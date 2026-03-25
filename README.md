@@ -13,7 +13,7 @@ It analyzes repository files (without executing code) and produces:
 
 Deep analysis is currently implemented for **TypeScript/JavaScript**, **Python**, and **Java** repositories.
 
-Upload a zip of your repository; we extract it, analyze the folder, and return a Repo Brief. (Optional legacy path: GitHub URL download is still supported in the API.)
+Upload a zip of your repository; we extract it, analyze the folder, and return a Repo Brief.
 
 ---
 
@@ -46,7 +46,7 @@ Upload a zip of your repository; we extract it, analyze the folder, and return a
 - **Interactive visualization**: pan/zoom dependency view with ELK layout.
 - **Portable exports**:
   - Client-side full report export to **PDF** and **PNG**
-  - API export to **Markdown** (`/api/reports/:id/export/md`)
+  - No server-side export endpoint is currently implemented
 - **Report persistence**: report JSON on disk (`reports/`) or Vercel Blob when deployed with `BLOB_READ_WRITE_TOKEN`.
 
 ---
@@ -72,12 +72,10 @@ Upload a zip of your repository; we extract it, analyze the folder, and return a
 
 ## Architecture
 
-- **Flow:** GitHub URL → ingest (download zip, extract) → analyzer (folder map, language packs, scoring) → storage (save report) → API returns report ID → UI fetches and renders report.
+- **Flow:** Zip upload or JSON `zipRef` → ingest (extract) → analyzer (folder map, language packs, scoring) → storage (save report) → API returns report ID.
 - **Frontend**: Next.js App Router + React + Tailwind CSS
 - **API routes**:
   - `POST /api/analyze`
-  - `GET /api/reports/:id`
-  - `GET /api/reports/:id/export/md`
 - **Analyzer**: in-process TypeScript worker-style module
 - **Storage**: report JSON on filesystem (`reports/`) or Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
 - **Temp workspace**: OS temp directory per analysis run
@@ -133,7 +131,7 @@ Open `http://localhost:3000`, upload a zip of your repository, and click **Analy
 
 - **PDF**: full report snapshot export
 - **PNG**: full report snapshot export
-- **Markdown**: `GET /api/reports/:id/export/md`
+- **Markdown**: not exposed via API route in current implementation
 
 ### API: multipart upload (primary) or JSON zipRef (testing)
 
@@ -176,25 +174,27 @@ Success response:
 }
 ```
 
-Common error codes (e.g. `CLONE_*` apply if using optional GitHub URL flow):
+Common error codes:
 
 - `INVALID_INPUT`
-- `INVALID_URL`
 - `ZIP_NOT_FOUND`
+- `ZIP_INVALID`
 - `REPO_TOO_LARGE`
-- `CLONE_TIMEOUT`
 - `TIMEOUT`
-- `REPO_NOT_PUBLIC`
-- `CLONE_FAILED`
 - `ANALYSIS_FAILED`
 
-### `GET /api/reports/:id`
+Common statuses in this route:
 
-Returns the full report JSON.
+- `200` on success (`{ "reportId": "uuid" }`)
+- `400` for malformed payloads or unsupported content type
+- `404` when JSON `zipRef` path is missing
+- `413` when upload exceeds 100MB
+- `500` for unexpected analysis failures
+- `504` when analysis exceeds 120s
 
-### `GET /api/reports/:id/export/md`
+### API availability
 
-Returns a downloadable markdown file named `repo-brief-<id>.md`.
+For the full **current UI flow**, only `POST /api/analyze` is required. The UI keeps the generated report in client state from this response cycle and does not rely on additional `/api/reports/*` routes.
 
 ---
 
@@ -214,8 +214,6 @@ src/
   app/
     api/
       analyze/route.ts
-      reports/[id]/route.ts
-      reports/[id]/export/md/route.ts
   analyzer/
     packs/
     index.ts
@@ -282,8 +280,6 @@ These are used for local test scenarios and analyzer regression checks.
 
 Current enforced/expected limits:
 
-- Public GitHub repositories only (for `githubUrl` flow)
-- Download timeout: 60 seconds
 - Analysis timeout: 120 seconds
 - Repository size guard: approximately 100 MB
 - File indexing cap: 10,000 files
@@ -314,8 +310,8 @@ The following are the direct libraries currently declared in `package.json`.
 - `react-zoom-pan-pinch` - pan/zoom controls for graph navigation
 - `html2canvas` - DOM capture for image/PDF export flow
 - `jspdf` - PDF file generation
-- `mermaid` - diagram support (used for markdown architecture export compatibility)
-- `adm-zip` - zip extraction for uploaded repos (and optional GitHub archive)
+- `mermaid` - diagram tooling dependency
+- `adm-zip` - zip extraction for uploaded repos
 - `@vercel/blob` - optional report storage when deployed on Vercel
 
 ### Development dependencies
