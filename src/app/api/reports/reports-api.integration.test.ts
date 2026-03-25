@@ -75,26 +75,26 @@ describe("API integration: analyze -> report -> markdown export", () => {
   it("returns 404 for unknown report ID", async () => {
     const reportRoute = await import("@/app/api/reports/[id]/route");
     const response = await reportRoute.GET(new Request("http://localhost"), {
-      params: { id: "does-not-exist" },
+      params: { id: "11111111-1111-4111-8111-111111111111" },
     });
 
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({
       code: "NOT_FOUND",
-      message: "Report not found or expired",
+      message: "Report not found.",
     });
   });
 
   it("returns 404 markdown export for unknown report ID", async () => {
     const exportRoute = await import("@/app/api/reports/[id]/export/md/route");
     const response = await exportRoute.GET(new Request("http://localhost"), {
-      params: { id: "does-not-exist" },
+      params: { id: "11111111-1111-4111-8111-111111111111" },
     });
 
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({
       code: "NOT_FOUND",
-      message: "Report not found or expired",
+      message: "Report not found.",
     });
   });
 });

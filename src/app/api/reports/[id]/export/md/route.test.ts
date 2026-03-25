@@ -43,6 +43,8 @@ const sampleReport: Report = {
 };
 
 describe("GET /api/reports/[id]/export/md", () => {
+  const validId = "550e8400-e29b-41d4-a716-446655440000";
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -52,7 +54,7 @@ describe("GET /api/reports/[id]/export/md", () => {
     exportReportToMarkdownMock.mockReturnValue("# Repo Brief\n");
 
     const response = await GET(new Request("http://localhost") as any, {
-      params: { id: "report_123" },
+      params: { id: validId },
     });
 
     expect(response.status).toBe(200);
@@ -61,9 +63,9 @@ describe("GET /api/reports/[id]/export/md", () => {
       "text/markdown; charset=utf-8"
     );
     expect(response.headers.get("Content-Disposition")).toBe(
-      'attachment; filename="repo-brief-report_123.md"'
+      `attachment; filename="repo-brief-${validId}.md"`
     );
-    expect(getReportMock).toHaveBeenCalledWith("report_123");
+    expect(getReportMock).toHaveBeenCalledWith(validId);
     expect(exportReportToMarkdownMock).toHaveBeenCalledWith(sampleReport);
   });
 
@@ -71,12 +73,12 @@ describe("GET /api/reports/[id]/export/md", () => {
     getReportMock.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost") as any, {
-      params: { id: "missing-report" },
+      params: { id: validId },
     });
 
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({
-      code: "REPORT_NOT_FOUND",
+      code: "NOT_FOUND",
       message: "Report not found.",
     });
     expect(exportReportToMarkdownMock).not.toHaveBeenCalled();
@@ -99,7 +101,7 @@ describe("GET /api/reports/[id]/export/md", () => {
     getReportMock.mockRejectedValue(new Error("boom"));
 
     const response = await GET(new Request("http://localhost") as any, {
-      params: { id: "report_123" },
+      params: { id: validId },
     });
 
     expect(response.status).toBe(500);

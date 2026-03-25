@@ -1,25 +1,27 @@
- codex/create-report-export-api-route
 import { NextRequest, NextResponse } from "next/server";
+
+import { ERROR_CODES, toApiErrorPayload } from "@/lib/errors";
 import { exportReportToMarkdown } from "@/lib/export";
-import { toApiErrorPayload } from "@/lib/errors";
 import { getReport } from "@/lib/storage";
 
-const REPORT_ID_REGEX = /^[A-Za-z0-9_-]+$/;
+const UUID_LIKE_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isValidReportId(id: string): boolean {
-  return REPORT_ID_REGEX.test(id);
+  const normalized = id.trim();
+  return normalized.length > 0 && UUID_LIKE_PATTERN.test(normalized);
 }
 
 export async function GET(
   _request: NextRequest,
   context: { params: { id: string } }
 ) {
-  const id = context.params.id;
+  const id = context.params?.id?.trim() ?? "";
 
   if (!isValidReportId(id)) {
     return NextResponse.json(
       {
-        code: "INVALID_INPUT",
+        code: ERROR_CODES.INVALID_INPUT,
         message: "Invalid report id.",
       },
       { status: 400 }
@@ -32,7 +34,7 @@ export async function GET(
     if (!report) {
       return NextResponse.json(
         {
-          code: "REPORT_NOT_FOUND",
+          code: "NOT_FOUND",
           message: "Report not found.",
         },
         { status: 404 }
@@ -52,34 +54,4 @@ export async function GET(
     const { status, code, message } = toApiErrorPayload(err);
     return NextResponse.json({ code, message }, { status });
   }
-
-import { NextResponse } from "next/server";
-import { getReport } from "@/lib/storage";
-import { exportReportToMarkdown } from "@/lib/export";
-
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(_request: Request, { params }: RouteContext) {
-  const report = await getReport(params.id);
-
-  if (!report) {
-    return NextResponse.json(
-      { code: "NOT_FOUND", message: "Report not found or expired" },
-      { status: 404 }
-    );
-  }
-
-  const markdown = exportReportToMarkdown(report);
-  return new NextResponse(markdown, {
-    status: 200,
-    headers: {
-      "content-type": "text/markdown; charset=utf-8",
-      "content-disposition": `attachment; filename="repo-brief-${params.id}.md"`,
-    },
-  });
-main
 }
