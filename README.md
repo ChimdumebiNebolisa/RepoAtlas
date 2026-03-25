@@ -131,7 +131,7 @@ Open `http://localhost:3000`, upload a zip of your repository, and click **Analy
 
 - **PDF**: full report snapshot export
 - **PNG**: full report snapshot export
-- **Markdown**: not exposed via API route in current implementation
+- **Markdown**: available via `GET /api/reports/:id/export/md` (also available from UI export controls)
 
 ### API: multipart upload (primary) or JSON zipRef (testing)
 
@@ -153,6 +153,16 @@ curl -X POST http://localhost:3000/api/analyze \
 ---
 
 ## API Reference
+
+### Source-of-truth route table (from `src/app/api/**/route.ts`)
+
+| Route file | Methods | Public endpoint |
+|---|---|---|
+| `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` |
+| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` |
+| `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` |
+
+> Maintenance note: update this table only by checking the route handler files above. If route files change, update this table in the same PR.
 
 ### `POST /api/analyze`
 
@@ -192,9 +202,29 @@ Common statuses in this route:
 - `500` for unexpected analysis failures
 - `504` when analysis exceeds 120s
 
+### `GET /api/reports/:id`
+
+Returns a previously generated report by ID.
+
+Common statuses:
+
+- `200` with full report JSON when found
+- `400` for invalid report IDs
+- `404` when the report does not exist
+
+### `GET /api/reports/:id/export/md`
+
+Returns the report as downloadable Markdown (`text/markdown`).
+
+Common statuses:
+
+- `200` with markdown body and download headers
+- `400` for invalid report IDs
+- `404` when the report does not exist
+
 ### API availability
 
-For the full **current UI flow**, only `POST /api/analyze` is required. The UI keeps the generated report in client state from this response cycle and does not rely on additional `/api/reports/*` routes.
+Current implemented API routes are listed in the source-of-truth table above. The UI analyze flow starts with `POST /api/analyze`, then can read/export by report ID using `/api/reports/*`.
 
 ---
 
