@@ -1,5 +1,9 @@
 # RepoAtlas Engineering Specification
 
+> Last validated against code on **2026-03-25**.
+>
+> **Document boundary:** This file is the deep product/engineering spec (assumptions, architecture, algorithms, and future-state details). For concise setup and a current endpoint-only summary, use [`README.md`](../README.md).
+
 **Version:** 1.0  
 **Status:** Implementation-ready  
 **Target:** Local dev first, then container deployment  
@@ -141,7 +145,7 @@ flowchart TB
 | Component | Description |
 |-----------|-------------|
 | **Next.js UI** | React + TypeScript + Tailwind CSS. Single page with input form and tabbed report. |
-| **API Routes** | Next.js Route Handler in App Router. Current API surface is `app/api/analyze/route.ts`. |
+| **API Routes** | Next.js Route Handler in App Router. Current route handlers include `app/api/analyze/route.ts` and `app/api/reports/[id]/route.ts`. |
 | **Analyzer Worker** | Node.js (TypeScript) module. Runs in-process; not a separate Go process. |
 | **Temp Workspace** | `os.tmpdir()` subdir per analysis. Clone or extract zip here. |
 | **Report Storage** | JSON files on disk. Path: `{REPORTS_DIR}/{reportId}.json`. No database. |
@@ -440,6 +444,8 @@ export interface Report {
 
 ## 8. API Design
 
+For the concise quickstart + current endpoint-only view, see [`README.md`](../README.md#api-endpoints-currently-available).
+
 ### POST /api/analyze
 
 **Request (primary):** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
@@ -473,9 +479,9 @@ export interface Report {
 
 ### API availability
 
-- **Required for full current UI flow:** `POST /api/analyze`.
-- **Not currently implemented in `src/app/api/**`:** `/api/reports/:id`, `/api/reports/:id/export/md`, `/api/upload`.
-- UI report rendering and export actions operate without additional API routes.
+- **Current route handlers in `src/app/api/**`:** `POST /api/analyze`, `GET /api/reports/:id`.
+- **Current UI flow dependency:** `POST /api/analyze` is the primary route used during analysis + render flow.
+- **Not currently implemented:** `/api/reports/:id/export/md`, `/api/upload`.
 
 ### Retry Behavior
 
