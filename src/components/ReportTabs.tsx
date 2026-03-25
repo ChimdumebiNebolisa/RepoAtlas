@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Report } from "@/types/report";
 import { FolderMapTree } from "./FolderMapTree";
 import { ElkArchitectureGraph } from "./ElkArchitectureGraph";
@@ -8,6 +8,7 @@ import { StartHereTable } from "./StartHereTable";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
 import { ReportDocument } from "./ReportDocument";
+import { ERROR_CODES } from "@/lib/errors";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -21,17 +22,95 @@ const TABS = [
   "Export",
 ] as const;
 
+const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
+
 interface ReportTabsProps {
   report: Report;
   reportId?: string | null;
   variant?: "live" | "preview";
 }
 
+interface ApiErrorLike {
+  code?: string;
+  message?: string;
+}
+
+type MarkdownSupportState = "unknown" | "available" | "unavailable";
+
+export function formatApiError(payload: ApiErrorLike | null | undefined, fallback: string) {
+  if (!payload) return fallback;
+  if (payload.code && payload.message) return `${payload.code}: ${payload.message}`;
+  return payload.message || payload.code || fallback;
+}
+
+export function describeMarkdownExportFailure(
+  payload: ApiErrorLike | null | undefined,
+  status: number,
+  reportId: string
+) {
+  return `Markdown export failed (${reportId}, HTTP ${status}). ${formatApiError(
+    payload,
+    FALLBACK_ANALYSIS_MESSAGE
+  )}`;
+}
+
+function getMarkdownRoute(reportId: string) {
+  return `/api/reports/${reportId}/export/md`;
+}
+
 export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsProps) {
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Overview");
-  const [exporting, setExporting] = useState<"pdf" | "png" | null>(null);
+  const [exporting, setExporting] = useState<"pdf" | "png" | "md" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [markdownSupport, setMarkdownSupport] = useState<MarkdownSupportState>(
+    reportId ? "unknown" : "unavailable"
+  );
+  const [markdownNote, setMarkdownNote] = useState<string | null>(
+    reportId ? "Checking Markdown export availability..." : "Markdown export is available after analyzing a repository."
+  );
   const exportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    const preflightMarkdown = async () => {
+      if (!reportId) {
+        setMarkdownSupport("unavailable");
+        setMarkdownNote("Markdown export is available after analyzing a repository.");
+        return;
+      }
+
+      setMarkdownSupport("unknown");
+      setMarkdownNote("Checking Markdown export availability...");
+
+      try {
+        const res = await fetch(getMarkdownRoute(reportId), { method: "HEAD" });
+
+        if (!alive) return;
+
+        if (res.ok || res.status === 405) {
+          setMarkdownSupport("available");
+          setMarkdownNote(null);
+          return;
+        }
+
+        setMarkdownSupport("unavailable");
+        setMarkdownNote(
+          `Markdown export is currently unavailable (HTTP ${res.status}). You can still export PDF or PNG.`
+        );
+      } catch {
+        if (!alive) return;
+        setMarkdownSupport("unknown");
+        setMarkdownNote("Could not verify Markdown export availability. You can still try exporting.");
+      }
+    };
+
+    void preflightMarkdown();
+
+    return () => {
+      alive = false;
+    };
+  }, [reportId]);
 
   const renderExportCanvas = async () => {
     if (!exportRef.current) {
@@ -107,6 +186,47 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
     }
   };
 
+  const handleExportMarkdown = async () => {
+    if (!reportId) {
+      setExportError("Markdown export is available after analyzing a repository.");
+      return;
+    }
+
+    if (markdownSupport === "unavailable") {
+      setExportError(markdownNote ?? "Markdown export is currently unavailable.");
+      return;
+    }
+
+    try {
+      setExportError(null);
+      setExporting("md");
+
+      const res = await fetch(getMarkdownRoute(reportId));
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        const message = describeMarkdownExportFailure(payload, res.status, reportId);
+        console.error("Markdown export request failed", {
+          reportId,
+          status: res.status,
+          code: payload.code ?? ERROR_CODES.ANALYSIS_FAILED,
+          message: payload.message ?? FALLBACK_ANALYSIS_MESSAGE,
+        });
+        setExportError(message);
+        return;
+      }
+
+      const markdown = await res.text();
+      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+      downloadBlob(blob, `repo-brief-${reportId}.md`);
+      setMarkdownSupport("available");
+      setMarkdownNote(null);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Markdown export failed.");
+    } finally {
+      setExporting(null);
+    }
+  };
+
   return (
     <div className="mt-8">
       <div className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-3">
@@ -132,15 +252,15 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
           >
             {exporting === "png" ? "Exporting PNG..." : "Export Image"}
           </button>
-          {reportId && (
-            <a
-              href={`/api/reports/${reportId}/export/md`}
-              download={`repo-brief-${reportId}.md`}
-              className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-            >
-              Export Markdown
-            </a>
-          )}
+          <button
+            type="button"
+            onClick={handleExportMarkdown}
+            disabled={exporting !== null || !reportId || markdownSupport === "unavailable"}
+            className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+            title={markdownNote ?? undefined}
+          >
+            {exporting === "md" ? "Exporting Markdown..." : "Export Markdown"}
+          </button>
         </div>
       </div>
 
@@ -203,21 +323,15 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
           </div>
         )}
 
-        {activeTab === "Folder Map" && (
-          <FolderMapTree node={report.folder_map} />
-        )}
+        {activeTab === "Folder Map" && <FolderMapTree node={report.folder_map} />}
 
         {activeTab === "Architecture Map" && (
           <ElkArchitectureGraph architecture={report.architecture} />
         )}
 
-        {activeTab === "Start Here" && (
-          <StartHereTable items={report.start_here} />
-        )}
+        {activeTab === "Start Here" && <StartHereTable items={report.start_here} />}
 
-        {activeTab === "Danger Zones" && (
-          <DangerZonesTable items={report.danger_zones} />
-        )}
+        {activeTab === "Danger Zones" && <DangerZonesTable items={report.danger_zones} />}
 
         {activeTab === "Run & Contribute" && (
           <RunContributeSection
@@ -250,19 +364,16 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
                 {exporting === "png" ? "Exporting PNG..." : "Export Full Report (PNG)"}
               </button>
             </div>
-            {reportId ? (
-              <a
-                href={`/api/reports/${reportId}/export/md`}
-                download={`repo-brief-${reportId}.md`}
-                className="inline-flex rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
-              >
-                Export Markdown (optional)
-              </a>
-            ) : (
-              <p className="text-xs text-slate-500">
-                Markdown export is available after analyzing a repository.
-              </p>
-            )}
+            <button
+              type="button"
+              onClick={handleExportMarkdown}
+              disabled={exporting !== null || !reportId || markdownSupport === "unavailable"}
+              className="inline-flex rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+              title={markdownNote ?? undefined}
+            >
+              {exporting === "md" ? "Exporting Markdown..." : "Export Markdown (optional)"}
+            </button>
+            {markdownNote && <p className="text-xs text-slate-500">{markdownNote}</p>}
           </div>
         )}
       </div>

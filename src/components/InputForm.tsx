@@ -2,12 +2,35 @@
 
 import { useState, useRef } from "react";
 import type { Report } from "@/types/report";
+import { ERROR_CODES } from "@/lib/errors";
+
+const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
 
 interface InputFormProps {
   onAnalyzeStart: () => void;
   onAnalyzeComplete: (report: Report, reportId: string) => void;
   onAnalyzeError: (message: string) => void;
   loading: boolean;
+}
+
+interface ApiErrorLike {
+  code?: string;
+  message?: string;
+}
+
+export function formatApiError(payload: ApiErrorLike | null | undefined, fallback: string) {
+  if (!payload) return fallback;
+  if (payload.code && payload.message) return `${payload.code}: ${payload.message}`;
+  return payload.message || payload.code || fallback;
+}
+
+export function formatReportFetchError(
+  payload: ApiErrorLike | null | undefined,
+  status: number,
+  reportId: string
+) {
+  const base = formatApiError(payload, FALLBACK_ANALYSIS_MESSAGE);
+  return `Failed to load analysis report (${reportId}, HTTP ${status}). ${base}`;
 }
 
 export function InputForm({
@@ -37,7 +60,7 @@ export function InputForm({
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        onAnalyzeError(data.message || data.code || "Analysis failed");
+        onAnalyzeError(formatApiError(data, FALLBACK_ANALYSIS_MESSAGE));
         return;
       }
 
@@ -48,14 +71,22 @@ export function InputForm({
       }
 
       const reportRes = await fetch(`/api/reports/${reportId}`);
+      const reportPayload = await reportRes.json().catch(() => ({}));
       if (!reportRes.ok) {
-        onAnalyzeError("Could not fetch report");
+        console.error("Failed to fetch analyzed report", {
+          reportId,
+          status: reportRes.status,
+          code: reportPayload.code ?? ERROR_CODES.ANALYSIS_FAILED,
+          message: reportPayload.message ?? FALLBACK_ANALYSIS_MESSAGE,
+        });
+        onAnalyzeError(formatReportFetchError(reportPayload, reportRes.status, reportId));
         return;
       }
 
-      const report: Report = await reportRes.json();
+      const report: Report = reportPayload;
       onAnalyzeComplete(report, reportId);
-    } catch {
+    } catch (error) {
+      console.error("Unexpected error during analysis submission", error);
       onAnalyzeError("Network error. Please try again.");
     }
   };
