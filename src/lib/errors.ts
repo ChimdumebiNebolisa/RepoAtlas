@@ -73,7 +73,7 @@ const USER_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.REPO_TOO_LARGE]:
     "Repository exceeds the 100MB limit. Try a smaller repo or a specific branch.",
   [ERROR_CODES.CLONE_TIMEOUT]:
-    "Download timed out. The repo may be too large or the network slow. Try again or use a smaller repo.",
+    "Cloning timed out. The repo may be too large or the network slow. Try again or use a smaller repo.",
   [ERROR_CODES.TIMEOUT]:
     "Analysis timed out. The repo may be too large or complex. Try a smaller repo or a specific branch.",
   [ERROR_CODES.REPO_NOT_PUBLIC]:
