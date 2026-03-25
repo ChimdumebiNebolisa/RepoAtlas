@@ -2,6 +2,10 @@
 
 RepoAtlas is a local-first repository analysis app that generates a structured **Repo Brief** for onboarding, reviews, and architecture understanding.
 
+> Last validated against code on **2026-03-25**.
+>
+> This README is intentionally concise (quickstart + currently available endpoints). Deep architecture, assumptions, and future-state details live in [`docs/spec.md`](docs/spec.md).
+
 It analyzes repository files (without executing code) and produces:
 
 - **Folder Map**: recursive directory tree
@@ -72,13 +76,7 @@ Upload a zip of your repository; we extract it, analyze the folder, and return a
 
 ## Architecture
 
-- **Flow:** Zip upload or JSON `zipRef` → ingest (extract) → analyzer (folder map, language packs, scoring) → storage (save report) → API returns report ID.
-- **Frontend**: Next.js App Router + React + Tailwind CSS
-- **API routes**:
-  - `POST /api/analyze`
-- **Analyzer**: in-process TypeScript worker-style module
-- **Storage**: report JSON on filesystem (`reports/`) or Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
-- **Temp workspace**: OS temp directory per analysis run
+For architecture/data-flow details and engineering assumptions, see the deep spec: [`docs/spec.md`](docs/spec.md).
 
 ---
 
@@ -154,47 +152,14 @@ curl -X POST http://localhost:3000/api/analyze \
 
 ## API Reference
 
-### `POST /api/analyze`
+Currently available API endpoints:
 
-**Primary:** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/analyze` | Analyze repo zip input and return `{ reportId }`. |
+| `GET` | `/api/reports/{id}` | Fetch a generated report JSON by ID. |
 
-**Optional (testing):** `Content-Type: application/json` with body:
-
-```json
-{
-  "zipRef": "C:/path/to/local/repo-or-fixture"
-}
-```
-
-Success response:
-
-```json
-{
-  "reportId": "uuid"
-}
-```
-
-Common error codes:
-
-- `INVALID_INPUT`
-- `ZIP_NOT_FOUND`
-- `ZIP_INVALID`
-- `REPO_TOO_LARGE`
-- `TIMEOUT`
-- `ANALYSIS_FAILED`
-
-Common statuses in this route:
-
-- `200` on success (`{ "reportId": "uuid" }`)
-- `400` for malformed payloads or unsupported content type
-- `404` when JSON `zipRef` path is missing
-- `413` when upload exceeds 100MB
-- `500` for unexpected analysis failures
-- `504` when analysis exceeds 120s
-
-### API availability
-
-For the full **current UI flow**, only `POST /api/analyze` is required. The UI keeps the generated report in client state from this response cycle and does not rely on additional `/api/reports/*` routes.
+For payload contracts, status/error mapping, and deeper API behavior, see [`docs/spec.md`](docs/spec.md#8-api-design).
 
 ---
 
