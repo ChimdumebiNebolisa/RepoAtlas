@@ -92,7 +92,7 @@ Single-page application at `/`:
 ### Export Experience
 
 - UI supports client-side export workflows (PDF/PNG snapshots).
-- No `/api/reports/:id/export/md` route exists in the current implementation.
+- Markdown export API is available at `GET /api/reports/:id/export/md`.
 
 ---
 
@@ -440,6 +440,16 @@ export interface Report {
 
 ## 8. API Design
 
+### Source-of-truth route table (from `src/app/api/**/route.ts`)
+
+| Route file | Methods | Public endpoint | Notes |
+|---|---|---|---|
+| `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` | Accepts multipart upload (`file` or `zip`) and JSON `{ "zipRef": "..." }` |
+| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` | Returns persisted report JSON |
+| `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` | Returns `text/markdown` with attachment headers |
+
+Maintenance rule: when route handlers are added/removed/renamed, update this table in the same PR by checking the route files directly.
+
 ### POST /api/analyze
 
 **Request (primary):** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
@@ -473,9 +483,9 @@ export interface Report {
 
 ### API availability
 
-- **Required for full current UI flow:** `POST /api/analyze`.
-- **Not currently implemented in `src/app/api/**`:** `/api/reports/:id`, `/api/reports/:id/export/md`, `/api/upload`.
-- UI report rendering and export actions operate without additional API routes.
+- **Current API routes:** `POST /api/analyze`, `GET /api/reports/:id`, and `GET /api/reports/:id/export/md`.
+- There is no separate `POST /api/upload`; uploads are handled by `POST /api/analyze` via multipart fields `file` or `zip`.
+- UI report rendering/export can use `/api/reports/:id` and `/api/reports/:id/export/md` after analysis returns `reportId`.
 
 ### Retry Behavior
 
