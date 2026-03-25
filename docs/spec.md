@@ -21,7 +21,7 @@ Engineers joining unfamiliar repositories waste significant time exploring ad ho
 
 ### Key Value Proposition
 
-**One input** (GitHub URL or zip upload) → **Structured Repo Brief** with:
+**One input** (zip upload, or JSON `zipRef` for testing) → **Structured Repo Brief** with:
 
 - **Folder Map** – Directory tree of the repo.
 - **Architecture Map** – Dependency graph (Mermaid.js visualization).
@@ -50,15 +50,15 @@ Engineers joining unfamiliar repositories waste significant time exploring ad ho
 ### User Flow
 
 ```
-Input (zip upload) → Validation → Analysis (loading) → Report Tabs → Optional Markdown Export
+Input (zip upload) → Validation → Analysis (loading) → Report Tabs
 ```
 
-1. User uploads a zip of the repository (primary flow). Optional legacy: GitHub URL via API only.
+1. User uploads a zip of the repository (primary flow). Optional testing flow sends JSON `zipRef`.
 2. Client sends zip via multipart; on submit, `POST /api/analyze`.
 3. Server saves zip to temp, extracts, runs analyzer.
 4. UI shows loading state (spinner/skeleton).
 5. On success: `reportId` returned; UI fetches report and renders tabs.
-6. User can export full report as Markdown via "Export Markdown" button.
+6. User can export report views client-side (PDF/PNG) from the UI.
 
 ### UI Page Map
 
@@ -83,18 +83,16 @@ Single-page application at `/`:
 
 | Error | User-facing message | HTTP/Code |
 |-------|---------------------|-----------|
-| Invalid URL | "Please enter a valid GitHub URL (e.g. https://github.com/owner/repo)" | 400 / INVALID_URL |
-| Clone failed | "Could not clone repository. Check URL and network." | 502 / CLONE_FAILED |
+| Invalid input | "Upload a zip file or send JSON with zipRef." | 400 / INVALID_INPUT |
 | Zip invalid | "Invalid or corrupted zip file." | 400 / ZIP_INVALID |
 | Timeout | "Analysis timed out. Try a smaller repository." | 504 / TIMEOUT |
 | Analysis failed | "Analysis failed. Check server logs." | 500 / ANALYSIS_FAILED |
-| Report not found | "Report not found or expired." | 404 / NOT_FOUND |
+| Zip path not found | "Zip path not found. Check the path or re-upload." | 404 / ZIP_NOT_FOUND |
 
 ### Export Experience
 
-- Button: "Export Markdown".
-- Calls `GET /api/reports/:id/export/md`.
-- Browser downloads `repo-brief-{reportId}.md` with full report content in Markdown.
+- UI supports client-side export workflows (PDF/PNG snapshots).
+- No `/api/reports/:id/export/md` route exists in the current implementation.
 
 ---
 
@@ -112,8 +110,6 @@ flowchart TB
 
     subgraph API [API Routes]
         Analyze[POST /api/analyze]
-        GetReport[GET /api/reports/:id]
-        ExportMD[GET /api/reports/:id/export/md]
     end
 
     subgraph Worker [Analyzer Worker]
@@ -135,11 +131,9 @@ flowchart TB
     Index --> Packs
     Packs --> Scoring
     Scoring --> ReportJSON
-    ReportJSON --> GetReport
-    GetReport --> Tabs
+    ReportJSON --> Analyze
+    Analyze --> Tabs
     Tabs --> Export
-    Export --> ExportMD
-    ExportMD --> ReportJSON
 ```
 
 ### Components
@@ -147,7 +141,7 @@ flowchart TB
 | Component | Description |
 |-----------|-------------|
 | **Next.js UI** | React + TypeScript + Tailwind CSS. Single page with input form and tabbed report. |
-| **API Routes** | Next.js Route Handlers (App Router) or API Routes (Pages Router). `app/api/` or `pages/api/`. |
+| **API Routes** | Next.js Route Handler in App Router. Current API surface is `app/api/analyze/route.ts`. |
 | **Analyzer Worker** | Node.js (TypeScript) module. Runs in-process; not a separate Go process. |
 | **Temp Workspace** | `os.tmpdir()` subdir per analysis. Clone or extract zip here. |
 | **Report Storage** | JSON files on disk. Path: `{REPORTS_DIR}/{reportId}.json`. No database. |
@@ -157,17 +151,16 @@ flowchart TB
 1. **Request**: Client `POST /api/analyze` with multipart zip file (primary), or JSON `{ zipRef }` for testing.
 2. **Ingest**: Server extracts uploaded zip (or uses zipRef path) into temp workspace.
 3. **Analysis**: Analyzer walks workspace, runs common pipeline + applicable language packs.
-4. **Report**: Analyzer produces `Report` JSON; server writes to disk, returns `{ reportId }`.
-5. **Render**: Client `GET /api/reports/:id`; UI parses and renders tabs.
-6. **Export**: Client `GET /api/reports/:id/export/md`; server generates Markdown from report, returns file.
+4. **Report**: Analyzer produces `Report` JSON; server writes to disk and returns `{ reportId }`.
+5. **Render**: UI immediately renders report data already returned by the analyze call path.
 
 ---
 
 ## 4. Repo Ingest
 
-**Primary flow:** Zip file is uploaded to `POST /api/analyze` (multipart); server writes to temp, passes path as `zipRef` to ingest, which extracts and analyzes. Optional legacy path: GitHub URL (API only) triggers download of GitHub archive zip then same extract pipeline.
+**Primary flow:** Zip file is uploaded to `POST /api/analyze` (multipart); server writes to temp, passes path as `zipRef` to ingest, which extracts and analyzes.
 
-### GitHub URL Validation Rules (optional / legacy API)
+### GitHub URL Validation Rules (internal / legacy support in ingest module)
 
 **Valid patterns** (regex):
 
@@ -182,7 +175,7 @@ flowchart TB
 
 **Acceptance criteria**: `https://github.com/vercel/next.js` and `https://github.com/vercel/next.js/tree/canary` both accepted; `https://gitlab.com/foo/bar` rejected.
 
-### Clone Strategy (optional / legacy)
+### Clone Strategy (internal / legacy)
 
 - **Command**: `git clone --depth 1 [--branch <ref>] <url> <dest>`
 - **Depth**: Default 1 (shallow). Configurable via env `GIT_CLONE_DEPTH` (default 1).
@@ -193,7 +186,7 @@ flowchart TB
 
 ### Zip Upload Strategy
 
-- **Endpoint**: Multipart form upload to `POST /api/upload` (optional) returns `{ zipRef: string }` (temp path or ID).
+- **Endpoint**: Multipart form upload to `POST /api/analyze` with `file` or `zip` field.
 - **Validation**: Check magic bytes `50 4B 03 04` or `50 4B 05 06` (PK) for zip.
 - **Extraction**: Use `yauzl` or Node `unzip`; extract to `{tempDir}/zip-{uuid}`.
 - **Path traversal**: For each entry, resolve path relative to extract root; reject if resolved path is outside root or contains `..`.
@@ -459,8 +452,6 @@ export interface Report {
 }
 ```
 
-Optional legacy: JSON body may include `githubUrl` instead of `zipRef` (API only; UI uses zip upload).
-
 **Response (200)**:
 
 ```json
@@ -473,44 +464,18 @@ Optional legacy: JSON body may include `githubUrl` instead of `zipRef` (API only
 
 | Status | Body | Code |
 |--------|------|------|
-| 400 | `{ "code": "INVALID_URL", "message": "..." }` | Invalid GitHub URL |
-| 400 | `{ "code": "INVALID_INPUT", "message": "..." }` | Missing both githubUrl and zipRef |
+| 400 | `{ "code": "INVALID_INPUT", "message": "..." }` | Missing upload or `zipRef`; unsupported content type |
 | 400 | `{ "code": "ZIP_INVALID", "message": "..." }` | Invalid zip |
 | 404 | `{ "code": "ZIP_NOT_FOUND", "message": "..." }` | zipRef not found |
-| 502 | `{ "code": "CLONE_FAILED", "message": "..." }` | Git clone failed |
-| 504 | `{ "code": "TIMEOUT", "message": "..." }` | Clone or analysis timeout |
+| 413 | `{ "code": "REPO_TOO_LARGE", "message": "..." }` | Upload/zip exceeds 100MB |
+| 504 | `{ "code": "TIMEOUT", "message": "..." }` | Analysis timeout |
 | 500 | `{ "code": "ANALYSIS_FAILED", "message": "..." }` | Analysis error |
 
-### GET /api/reports/:id
+### API availability
 
-**Response (200)**:
-
-```json
-{ /* full Report object */ }
-```
-
-**Error (404)**:
-
-```json
-{
-  "code": "NOT_FOUND",
-  "message": "Report not found or expired"
-}
-```
-
-### GET /api/reports/:id/export/md
-
-**Response (200)**:
-
-```
-Content-Type: text/markdown
-Content-Disposition: attachment; filename="repo-brief-{id}.md"
-
-# Repo Brief: {name}
-...
-```
-
-**Error (404)**: Same as GET /api/reports/:id.
+- **Required for full current UI flow:** `POST /api/analyze`.
+- **Not currently implemented in `src/app/api/**`:** `/api/reports/:id`, `/api/reports/:id/export/md`, `/api/upload`.
+- UI report rendering and export actions operate without additional API routes.
 
 ### Retry Behavior
 
@@ -598,8 +563,8 @@ else {
 
 ### Integration Tests
 
-- Full analyze flow: POST /api/analyze with fixture URL → GET /api/reports/:id → assert report shape.
-- Export: GET /api/reports/:id/export/md → assert Markdown contains repo name and sections.
+- Full analyze flow: POST /api/analyze with multipart fixture zip or JSON `zipRef` → assert `{ reportId }` response and persisted report artifact.
+- Error mapping: send invalid payloads/content types and assert documented `INVALID_INPUT`, `ZIP_INVALID`, `ZIP_NOT_FOUND`, `REPO_TOO_LARGE`, `TIMEOUT`.
 
 ### Fixtures
 
