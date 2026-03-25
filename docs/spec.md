@@ -24,11 +24,11 @@ Engineers joining unfamiliar repositories waste significant time exploring ad ho
 **One input** (zip upload, or JSON `zipRef` for testing) → **Structured Repo Brief** with:
 
 - **Folder Map** – Directory tree of the repo.
-- **Architecture Map** – Dependency graph (Mermaid.js visualization).
+- **Architecture Map** – Interactive dependency graph in the runtime UI (ELK layout + pan/zoom).
 - **Start Here** – Prioritized reading list with explanations.
 - **Danger Zones** – Risk-ranked files/modules with breakdown.
 - **Run and Contribute** – Commands extracted from configs and docs.
-- **Markdown Export** – Full report as downloadable `.md`.
+- **Markdown Export** – Full report as downloadable `.md`, including Mermaid graph artifact text for markdown consumers.
 
 ### What RepoAtlas Is
 
@@ -68,7 +68,7 @@ Single-page application at `/`:
 |-----|---------|---------------------|
 | Overview | Repo metadata, key docs links, run commands summary | Shows name, URL, analyzed_at; at least placeholder if no run commands |
 | Folder Map | Recursive tree with expand/collapse | Renders `folder_map`; depth limit respected |
-| Architecture Map | Mermaid flowchart of dependencies | Renders `architecture`; collapses if nodes > 50 |
+| Architecture Map | Interactive ELK-based dependency graph (pan/zoom) | Renders `architecture`; collapses if nodes > 50 |
 | Start Here | Sortable table: path, score, explanation | Sorted by score desc; explanations visible |
 | Danger Zones | Sortable table: path, score, breakdown | Sorted by score desc; metrics breakdown visible |
 | Run & Contribute | Run commands + contribute signals (docs, CI) | Lists commands with source; lists found docs/CI |
@@ -494,18 +494,24 @@ export interface Report {
 | `InputForm` | Zip file input, submit; calls POST /api/analyze with multipart |
 | `ReportTabs` | Tab bar + tab content; receives `Report` |
 | `FolderMapTree` | Recursive tree; expand/collapse |
-| `ArchitectureGraph` | Mermaid rendering; collapse to folder if nodes > 50 |
+| `ArchitectureGraph` | Interactive ELK graph rendering; collapse to folder if nodes > 50 |
 | `StartHereTable` | Sortable table; path, score, explanation |
 | `DangerZonesTable` | Sortable table; path, score, breakdown |
 | `RunContributeSection` | Lists run commands + contribute signals |
 
-### Mermaid Rendering Strategy
+### Runtime Graph Rendering Strategy (ELK)
 
-- Use `mermaid` npm package or `@mermaid-js/mermaid-react`.
+- Use `elkjs` for layout and the UI graph component for runtime rendering.
 - Input: `architecture.nodes` and `architecture.edges`.
-- Generate: `flowchart LR` or `flowchart TB` with nodes and edges.
+- Generate positioned nodes/edges for an interactive graph view (zoom/pan, fit-to-view).
 - **Reduction**: If `nodes.length > 50`, collapse to folder level: group by parent dir; edges between folders.
-- Fallback: If Mermaid fails, show raw node/edge list.
+- Fallback: If layout/rendering fails, show raw node/edge list.
+
+### Mermaid in Markdown Export (Artifact-Only)
+
+- Mermaid is **not** the runtime UI renderer.
+- Mermaid output is retained for markdown artifact rendering/export compatibility.
+- Input for markdown export Mermaid remains `architecture.nodes` and `architecture.edges`.
 
 ### Graph Reduction Strategy
 
@@ -590,16 +596,16 @@ else {
 | Milestone | Outputs | Definition of Done |
 |-----------|---------|--------------------|
 | **M1** | Repo skeleton, ingest, basic indexing | Clone works; zip extract works; folder_map and file metadata in report |
-| **M2** | TS/JS pack, architecture graph, Mermaid | Import graph built; Mermaid renders in UI |
+| **M2** | TS/JS pack, architecture graph, ELK UI renderer | Import graph built; interactive ELK graph renders in UI |
 | **M3** | Start Here, Danger Zones, UI tabs | All tabs render; scoring produces ranked lists |
-| **M4** | Markdown export, Python/Java packs | Export downloads .md; Python/Java produce basic graphs |
+| **M4** | Markdown export (including Mermaid artifact), Python/Java packs | Export downloads .md; Python/Java produce basic graphs |
 | **M5** | Tests, fixtures, polish, demo | Unit + integration tests pass; demo script runs; acceptance criteria met |
 
 ---
 
 ## 14. Examples
 
-### Example Mermaid Graph Output
+### Example Markdown Mermaid Graph Artifact
 
 For a minimal TS repo:
 
@@ -609,7 +615,7 @@ src/index.ts  ->  src/api/client.ts
 src/api/client.ts  ->  src/utils.ts
 ```
 
-Generated Mermaid:
+Generated Mermaid (for markdown artifact rendering, not runtime UI):
 
 ```mermaid
 flowchart LR
@@ -686,7 +692,7 @@ flowchart LR
 
 1. **0:00–0:15** – Open RepoAtlas; upload a zip of a repo (e.g. download from GitHub Code → Download ZIP, then select the file).
 2. **0:15–0:45** – Click "Analyze Repository"; show loading state; wait for completion.
-3. **0:45–1:30** – Walk through tabs: Overview (metadata), Folder Map (expand tree), Architecture (Mermaid graph), Start Here (table), Danger Zones (table), Run & Contribute.
+3. **0:45–1:30** – Walk through tabs: Overview (metadata), Folder Map (expand tree), Architecture (interactive ELK graph), Start Here (table), Danger Zones (table), Run & Contribute.
 4. **1:30–2:00** – Click "Export Markdown"; download; show Markdown file structure.
 
 ---
