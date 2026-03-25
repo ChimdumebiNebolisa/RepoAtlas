@@ -32,3 +32,7 @@ yarn-error.log*
 
 # Reports (stored on disk)
 reports
+
+# Keep API report routes tracked
+!src/app/api/reports/
+!src/app/api/reports/**
