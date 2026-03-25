@@ -73,6 +73,8 @@ Upload a zip of your repository; we extract it, analyze the folder, and return a
 ## Architecture
 
 - **Flow:** Zip upload or JSON `zipRef` → ingest (extract) → analyzer (folder map, language packs, scoring) → storage (save report) → API returns report ID.
+- **Runtime Architecture Map UI:** interactive dependency graph using ELK layout + pan/zoom controls.
+- **Markdown artifact rendering:** Mermaid syntax is used only in exported markdown artifacts (not as the runtime UI graph renderer).
 - **Frontend**: Next.js App Router + React + Tailwind CSS
 - **API routes**:
   - `POST /api/analyze`
