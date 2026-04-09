@@ -98,6 +98,9 @@ describe("API integration: analyze -> report -> markdown export", () => {
       params: { id: analyzePayload.reportId as string },
     });
     expect(reportResponse.status).toBe(200);
+
+    const report = await reportResponse.json();
+    expect(report.repo_metadata.name).toContain("repo-ts");
   });
 
   it("returns 404 for unknown report ID", async () => {

@@ -116,13 +116,14 @@ async function getCommitSha(owner: string, repo: string, branch: string): Promis
 export async function ingestRepo(input: {
   githubUrl?: string;
   zipRef?: string;
+  zipName?: string;
 }): Promise<IngestResult> {
   // Primary: zipRef (from multipart upload or JSON). Optional: githubUrl (legacy).
   if (input.githubUrl) {
     return ingestFromGithub(input.githubUrl);
   }
   if (input.zipRef) {
-    return ingestFromZip(input.zipRef);
+    return ingestFromZip(input.zipRef, input.zipName);
   }
   throw new AppError({
     code: ERROR_CODES.INVALID_INPUT,
@@ -339,7 +340,13 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
   };
 }
 
-async function ingestFromZip(zipRef: string): Promise<IngestResult> {
+function getUploadedRepoName(zipPath: string, zipName?: string): string {
+  const preferredName = zipName?.trim();
+  const candidate = preferredName || path.basename(zipPath, path.extname(zipPath));
+  return path.basename(candidate, path.extname(candidate)) || "uploaded-repo";
+}
+
+async function ingestFromZip(zipRef: string, zipName?: string): Promise<IngestResult> {
   const fullPath = path.resolve(zipRef);
   if (!fs.existsSync(fullPath)) {
     throw new AppError({
@@ -358,7 +365,7 @@ async function ingestFromZip(zipRef: string): Promise<IngestResult> {
   if (!isZipFile) {
     return {
       path: fullPath,
-      name: path.basename(fullPath, path.extname(fullPath)),
+      name: getUploadedRepoName(fullPath, zipName),
       branch: null,
       cloneHash: null,
     };
@@ -399,7 +406,7 @@ async function ingestFromZip(zipRef: string): Promise<IngestResult> {
   const entries = fs.readdirSync(tempDir, { withFileTypes: true });
   const singleDir = entries.length === 1 && entries[0].isDirectory() ? entries[0].name : null;
   const repoPath = singleDir ? path.join(tempDir, singleDir) : tempDir;
-  const name = path.basename(fullPath, path.extname(fullPath)) || "uploaded-repo";
+  const name = singleDir || getUploadedRepoName(fullPath, zipName);
 
   return {
     path: repoPath,

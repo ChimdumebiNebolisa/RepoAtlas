@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") ?? "";
     let zipRef: string | undefined;
+    let zipName: string | undefined;
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
         );
       }
       const blob = file as Blob;
+      zipName = "name" in file && typeof file.name === "string" ? file.name : undefined;
       const size = blob.size;
       if (size > MAX_UPLOAD_BYTES) {
         return NextResponse.json(
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
     } else if (contentType.includes("application/json")) {
       const body = await request.json();
       zipRef = body.zipRef;
+      zipName = typeof body.zipName === "string" ? body.zipName : undefined;
       if (!zipRef) {
         return NextResponse.json(
           { code: ERROR_CODES.INVALID_INPUT, message: "Provide zipRef or upload a zip file." },
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const report = await Promise.race([
-      analyzeRepository({ zipRef }),
+      analyzeRepository({ zipRef, zipName }),
       new Promise<never>((_, reject) =>
         setTimeout(
           () =>

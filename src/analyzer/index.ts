@@ -21,6 +21,7 @@ const JAVA_EXTENSIONS = new Set([".java"]);
 export interface AnalyzeInput {
   githubUrl?: string;
   zipRef?: string;
+  zipName?: string;
 }
 
 export interface AnalyzeResult {
