@@ -14,7 +14,7 @@ function isVercel(): boolean {
   return process.env.VERCEL === "1";
 }
 
-function useBlob(): boolean {
+function shouldUseBlobStorage(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
@@ -31,7 +31,7 @@ function ensureReportsDir() {
 export async function saveReport(reportId: string, report: Report): Promise<void> {
   const body = JSON.stringify(report, null, 2);
 
-  if (useBlob()) {
+  if (shouldUseBlobStorage()) {
     const token = getBlobToken();
     await put(`${REPORTS_BLOB_PREFIX}${reportId}.json`, body, {
       access: "public",
@@ -54,7 +54,7 @@ export async function saveReport(reportId: string, report: Report): Promise<void
 }
 
 export async function getReport(reportId: string): Promise<Report | null> {
-  if (useBlob()) {
+  if (shouldUseBlobStorage()) {
     const pathname = `${REPORTS_BLOB_PREFIX}${reportId}.json`;
     const token = getBlobToken();
     const result = await get(pathname, {
