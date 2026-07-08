@@ -6,6 +6,7 @@ import { ElkArchitectureGraph } from "./ElkArchitectureGraph";
 import { StartHereTable } from "./StartHereTable";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
+import { CandidateBriefPanel } from "./CandidateBriefPanel";
 
 interface ReportDocumentProps {
   report: Report;
@@ -26,6 +27,13 @@ export function ReportDocument({ report }: ReportDocumentProps) {
           <dt className="font-medium text-slate-600">Analyzed:</dt>
           <dd>{report.repo_metadata.analyzed_at}</dd>
         </dl>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold text-slate-900">Candidate Brief</h2>
+        <div className="mt-3">
+          <CandidateBriefPanel candidateBrief={report.candidate_brief} />
+        </div>
       </section>
 
       <section>

@@ -2,7 +2,7 @@
  * Markdown export for Repo Brief.
  */
 
-import type { Report } from "@/types/report";
+import type { BriefAnswer, CandidateBrief, EvidenceRef, Report } from "@/types/report";
 
 function treeToMarkdown(node: Report["folder_map"], indent = 0): string {
   const prefix = "  ".repeat(indent);
@@ -31,11 +31,125 @@ function architectureToMarkdown(arch: Report["architecture"]): string {
   return out;
 }
 
+function escapeTableCell(value: string): string {
+  return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
+}
+
+function evidenceList(ids: string[]): string {
+  const unique = Array.from(new Set(ids));
+  if (unique.length === 0) return "";
+  return ` Evidence: ${unique.map((id) => `\`${id}\``).join(", ")}.`;
+}
+
+function briefAnswerToMarkdown(title: string, answer: BriefAnswer): string {
+  let md = `### ${title}\n\n`;
+  md += `${answer.answer}\n\n`;
+  md += `- **Confidence**: ${answer.confidence}\n`;
+  for (const bullet of answer.bullets) {
+    md += `- ${bullet}\n`;
+  }
+  if (answer.evidence_refs.length > 0) {
+    md += `- **Evidence**: ${answer.evidence_refs.map((id) => `\`${id}\``).join(", ")}\n`;
+  }
+  md += "\n";
+  return md;
+}
+
+function evidenceRefToMarkdown(ref: EvidenceRef): string {
+  const parts = [`${ref.kind}: ${ref.label}`];
+  if (ref.path) parts.push(`path=${ref.path}`);
+  if (ref.command) parts.push(`command=${ref.command}`);
+  if (ref.detail) parts.push(ref.detail);
+  return `- \`${ref.id}\` - ${parts.join("; ")}\n`;
+}
+
+function candidateBriefToMarkdown(brief?: CandidateBrief): string {
+  if (!brief) return "";
+
+  let md = "## Candidate Brief\n\n";
+  md += "### Repo Summary\n\n";
+  md += `${brief.repo_summary.headline}\n\n`;
+  md += `${brief.repo_summary.plain_english}\n\n`;
+  md += `- **Confidence**: ${brief.repo_summary.confidence}\n`;
+  md += `- **Primary evidence**: ${brief.repo_summary.primary_evidence
+    .map((id) => `\`${id}\``)
+    .join(", ")}\n\n`;
+
+  md += "### Reading Path\n\n";
+  if (brief.reading_path.length === 0) {
+    md += "_No ranked reading path was generated._\n\n";
+  } else {
+    md += "| Order | Path | Why | Evidence |\n";
+    md += "|-------|------|-----|----------|\n";
+    for (const item of brief.reading_path) {
+      md += `| ${item.order} | \`${item.path}\` | ${escapeTableCell(item.why)} | ${item.evidence_refs
+        .map((id) => `\`${id}\``)
+        .join(", ")} |\n`;
+    }
+    md += "\n";
+  }
+
+  md += "### Interview Talking Points\n\n";
+  md += briefAnswerToMarkdown(
+    "Walk me through this codebase",
+    brief.interview_talking_points.walk_me_through_codebase
+  );
+  md += briefAnswerToMarkdown(
+    "What are the riskiest areas?",
+    brief.interview_talking_points.riskiest_areas
+  );
+  md += briefAnswerToMarkdown(
+    "What would you improve first?",
+    brief.interview_talking_points.improve_first
+  );
+  md += briefAnswerToMarkdown(
+    "How would you contribute in your first week?",
+    brief.interview_talking_points.first_week_contribution
+  );
+
+  md += "### First PR Plan\n\n";
+  for (const idea of brief.first_pr_plan) {
+    md += `- **${idea.title}** (${idea.risk} risk): ${idea.rationale}`;
+    if (idea.suggested_files.length > 0) {
+      md += ` Suggested files: ${idea.suggested_files.map((file) => `\`${file}\``).join(", ")}.`;
+    }
+    md += evidenceList(idea.evidence_refs);
+    md += "\n";
+  }
+  md += "\n";
+
+  md += "### Resume / LinkedIn Bullets\n\n";
+  for (const bullet of brief.resume_bullets) {
+    md += `- **${bullet.audience}**: ${bullet.text}${evidenceList(bullet.evidence_refs)}\n`;
+  }
+  md += "\n";
+
+  md += "### Candidate Brief Warnings\n\n";
+  if (brief.warnings.length === 0) {
+    md += "_No Candidate Brief warnings._\n\n";
+  } else {
+    for (const warning of brief.warnings) {
+      md += `- ${warning.message}${evidenceList(warning.evidence_refs ?? [])}\n`;
+    }
+    md += "\n";
+  }
+
+  md += "### Evidence References\n\n";
+  for (const ref of brief.evidence_refs) {
+    md += evidenceRefToMarkdown(ref);
+  }
+  md += "\n";
+
+  return md;
+}
+
 export function exportReportToMarkdown(report: Report): string {
   let md = `# Repo Brief: ${report.repo_metadata.name}\n\n`;
   md += `- **URL**: ${report.repo_metadata.url}\n`;
   md += `- **Branch**: ${report.repo_metadata.branch}\n`;
   md += `- **Analyzed**: ${report.repo_metadata.analyzed_at}\n\n`;
+
+  md += candidateBriefToMarkdown(report.candidate_brief);
 
   md += "## Folder Map\n\n";
   md += treeToMarkdown(report.folder_map);
