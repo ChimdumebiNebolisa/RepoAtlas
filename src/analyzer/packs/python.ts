@@ -6,20 +6,9 @@ import fs from "fs";
 import path from "path";
 import type { Architecture } from "@/types/report";
 import type { IndexingPipelineResult } from "../pipeline";
+import { shouldSkipPath } from "../ignoreRules";
 
 const PY_EXTENSION = ".py";
-const IGNORED_DIRS = new Set([
-  "venv",
-  ".venv",
-  "site-packages",
-  "dist",
-  "build",
-  "__pycache__",
-  ".pytest_cache",
-  ".tox",
-  "eggs",
-  ".eggs",
-]);
 const ARCH_NODE_CAP = 50;
 const ARCH_EDGE_CAP = 200;
 
@@ -60,9 +49,7 @@ function normalizeRelPath(relPath: string): string {
 }
 
 function isIgnoredPath(relPath: string): boolean {
-  const normalized = normalizeRelPath(relPath);
-  const segments = normalized.split("/");
-  return segments.some((segment) => IGNORED_DIRS.has(segment));
+  return shouldSkipPath(relPath);
 }
 
 function stripExtension(relPath: string): string {

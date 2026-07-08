@@ -6,19 +6,9 @@ import fs from "fs";
 import path from "path";
 import type { Architecture } from "@/types/report";
 import type { IndexingPipelineResult } from "../pipeline";
+import { shouldSkipPath } from "../ignoreRules";
 
 const JAVA_EXTENSION = ".java";
-const IGNORED_DIRS = new Set([
-  "target",
-  "build",
-  ".gradle",
-  ".idea",
-  "out",
-  "bin",
-  ".settings",
-  ".classpath",
-  ".project",
-]);
 
 const PACKAGE_RE = /^\s*package\s+([\w.]+)\s*;/m;
 const IMPORT_RE = /^\s*import\s+(?:static\s+)?([\w.]+(?:\.\*)?)\s*;/gm;
@@ -62,9 +52,7 @@ function normalizeRelPath(relPath: string): string {
 }
 
 function isIgnoredPath(relPath: string): boolean {
-  const normalized = normalizeRelPath(relPath);
-  const segments = normalized.split("/");
-  return segments.some((segment) => IGNORED_DIRS.has(segment));
+  return shouldSkipPath(relPath);
 }
 
 /** Detect Maven modules from pom.xml */
