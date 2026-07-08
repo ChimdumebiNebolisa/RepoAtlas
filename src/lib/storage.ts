@@ -94,3 +94,18 @@ export async function getReport(reportId: string): Promise<Report | null> {
     return null;
   }
 }
+
+export async function deleteReport(reportId: string): Promise<boolean> {
+  if (shouldUseBlobStorage()) {
+    // Blob delete not implemented without @vercel/blob del — filesystem fallback only for v1
+    return false;
+  }
+
+  const filePath = path.join(REPORTS_DIR, `${reportId}.json`);
+  try {
+    await fs.promises.unlink(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}

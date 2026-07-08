@@ -157,7 +157,7 @@ describe("exportReportToMarkdown", () => {
 
     const markdown = exportReportToMarkdown(report);
 
-    expect(markdown).toContain("# Repo Brief: repo-atlas");
+    expect(markdown).toContain("# Repo Analysis: repo-atlas");
     expect(markdown).toContain("## Folder Map");
     expect(markdown).toContain("## Start Here");
     expect(markdown).not.toContain("## Candidate Brief");
