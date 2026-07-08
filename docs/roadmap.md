@@ -12,6 +12,9 @@ This document maps improvement items **1–38** to concrete files, dependencies,
 
 - [Current State](#current-state)
 - [Guiding Principles](#guiding-principles)
+- [Policy Decisions](#policy-decisions)
+- [Spec Sync Checklist](#spec-sync-checklist)
+- [Implementation Workflow](#implementation-workflow)
 - [Milestone Overview](#milestone-overview)
 - [M0 — Product Polish (1–5)](#m0--product-polish-15)
 - [M1 — Security & Reliability (21, 31, 22, 24)](#m1--security--reliability-21-31-22-24)
@@ -25,7 +28,10 @@ This document maps improvement items **1–38** to concrete files, dependencies,
 - [M9 — Portfolio (35–38)](#m9--portfolio-3538)
 - [Schema Evolution](#schema-evolution)
 - [Suggested PR Sequence](#suggested-pr-sequence)
+- [Commit & Push Checkpoints](#commit--push-checkpoints)
+- [Deferred & Future Items](#deferred--future-items)
 - [Definition of Done](#definition-of-done)
+- [Changelog](#changelog)
 
 ---
 
@@ -49,8 +55,11 @@ Zip / zipRef → POST /api/analyze → ingest → pipeline → language packs �
 | Source snippets | Missing | Evidence refs are file paths only |
 | Commit / churn | Missing | Homepage mentions churn; `scoring.ts` does not compute it |
 | README positioning | Stale | Describes "Repo Brief" for onboarding; omits Candidate Brief |
+| Landing page (`page.tsx`) | Stale | "What you get" cards omit Candidate Brief; Danger Zones claims "churn" |
+| `docs/spec.md` | Stale | No `candidate_brief` in data model; still says "Repo Brief" |
 | Demo sample | Partial | `SAMPLE_REPORT` in `page.tsx` lacks `candidate_brief` |
 | E2E tests | Missing | Vitest only |
+| PDF/PNG export | Raster only | `html2canvas` + `jspdf` snapshots — not structured PDF |
 
 **Core insight:** The brief builder (`buildCandidateBrief`) synthesizes everything from `startHere`, `dangerZones`, `runCommands`, `contributeSignals`, `architecture`, and `warnings`. Improving upstream signals improves the UI, markdown export, and PDF in one pass.
 
@@ -66,6 +75,82 @@ Zip / zipRef → POST /api/analyze → ingest → pipeline → language packs �
    - Retire **Repo Brief** and **Interview Mode**
 4. **Do not overpromise** — Remove or gate marketing copy (e.g. "churn") until the signal exists.
 5. **Security before scale** — Zip hardening (21) before optional git ingest modes (13).
+6. **Spec stays canonical** — Any behavior, schema, API, or limit change updates `docs/spec.md` in the same PR (see [Spec Sync Checklist](#spec-sync-checklist)).
+7. **Commit often, push often** — Small checkpoints with tests green; see [Implementation Workflow](#implementation-workflow).
+
+---
+
+## Policy Decisions
+
+Resolve these before implementing the referenced items. Document the chosen option in `docs/spec.md` when it changes enforced behavior.
+
+| Topic | Current state | Decision to make | Recommended default |
+|-------|---------------|------------------|---------------------|
+| **Zip compressed limit** | 100 MB upload (`analyze/route.ts`, `ingest.ts`) | Keep 100 MB or lower | Keep 100 MB compressed |
+| **Zip uncompressed limit** | Not enforced; spec says 50 MB | Enforce on extract | **50 MB cumulative uncompressed** (per spec) |
+| **Zip library** | `adm-zip` + `extractAllTo` | `yauzl` (spec) vs hardened `adm-zip` | **Harden `adm-zip` first** (no new dep); revisit `yauzl` if streaming needed |
+| **Extract error code** | `CLONE_FAILED` 502 on bad extract | Align with spec | **`ZIP_INVALID` 400** for corrupt/invalid; traversal → 400 |
+| **Export PDF** | Raster screenshot | Structured PDF later? | Out of scope for 1–38; note in portfolio screenshots (35) |
+| **Blob access** | `access: "public"` in `storage.ts` | Sharing model | **Private blob + signed URL** before item 30 ships |
+
+---
+
+## Spec Sync Checklist
+
+Per `docs/guardrails.md`, `docs/spec.md` is canonical. When a roadmap PR changes behavior, update the spec in the **same PR**:
+
+| Change type | Update in `docs/spec.md` |
+|-------------|--------------------------|
+| `Report` / `CandidateBrief` fields | §7 Data Models — add field + example JSON |
+| New error codes | Error tables + API reference |
+| Zip limits / validation | §Zip Upload Strategy + security table |
+| New API routes (`DELETE`, share) | Route table + request/response |
+| Candidate Brief as product output | §1 Product Summary, §2 UX tab list |
+| Scoring formula (churn, etc.) | Scoring / Danger Zones section |
+
+Also update `README.md` when user-facing workflow, tabs, or limits change.
+
+---
+
+## Implementation Workflow
+
+Use **frequent bite-sized commits** and **push after every 1–3 commits** on feature branches. Do not batch an entire milestone into one commit.
+
+### Branch naming
+
+```
+cursor/<short-description>-176d
+```
+
+### Commit message format
+
+```
+type(scope): imperative summary
+```
+
+Types: `docs`, `feat`, `fix`, `test`, `refactor`, `chore`. Scopes: `readme`, `ingest`, `analyzer`, `brief`, `ui`, `api`, `export`.
+
+### Push rules
+
+1. **Push after each checkpoint** below, or after every 2–3 related commits.
+2. Run `npm run test` before push when touching `src/analyzer/**`, `src/lib/ingest.ts`, or API routes.
+3. Run `npm run lint` before opening/updating a PR.
+4. Use `git push -u origin <branch>` on first push; plain `git push` after.
+
+### Checkpoint sizing
+
+| Good checkpoint | Too large |
+|-----------------|-----------|
+| One parser (e.g. Makefile commands) | All of item 6 |
+| One UI section microcopy | Entire Candidate Brief panel |
+| One security test case + fixture | Full zip hardening without tests |
+| Schema field + builder + test | M2 in a single commit |
+
+### PR hygiene
+
+- One roadmap PR (PR-1 … PR-19) per branch when possible.
+- Draft PR early after first push; update description as checkpoints land.
+- Mark item checkboxes in commit bodies: `roadmap: item 6 (Makefile parser)`.
 
 ---
 
@@ -88,7 +173,9 @@ Zip / zipRef → POST /api/analyze → ingest → pipeline → language packs �
 
 M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 
-**Highest-leverage first slice:** M0 + M1 + M2 through items 6–8.
+**Highest-leverage first slice:** M0 + M1 + M2 through items 6–8, plus **PR-2b** (preview mock brief).
+
+**Quick trust fixes in PR-1:** Remove false "churn" copy on landing; align `docs/spec.md` with Candidate Brief.
 
 ---
 
@@ -101,21 +188,25 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 **Files**
 
 - `README.md` — hero, features, usage tabs, export, how-it-works
-- `docs/spec.md` — product definition, data model example
+- `src/app/page.tsx` — hero, "What you get" cards (add Candidate Brief card), How it works
+- `docs/spec.md` — product definition, data model example, tab list
 - `src/app/layout.tsx` — metadata description
 
 **Changes**
 
 - Top line: *"RepoAtlas turns unfamiliar codebases into evidence-backed Candidate Briefs for interviews, take-homes, and open-source contribution prep."*
-- Add Candidate Brief to feature list, tab list, export section, architecture flow.
+- Add Candidate Brief to feature list, tab list, export section, architecture flow, **and landing page feature cards**.
 - Document naming: Candidate Brief vs Repo Analysis.
 - Cross-link this roadmap.
+- **Trust fix (can land in same PR):** remove "churn" from Danger Zones card on `page.tsx` until item 14 ships (see guiding principle 4).
 
 **Acceptance**
 
 - README mentions Candidate Brief in at least four sections.
+- Landing page includes a Candidate Brief feature card.
 - Tab list matches `src/components/ReportTabs.tsx` (Candidate Brief is first).
 - No contradiction with zip-primary workflow.
+- `docs/spec.md` §1 and §2 mention Candidate Brief.
 
 **Depends on:** nothing  
 **Enables:** 35–38
@@ -160,7 +251,8 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 **Files**
 
 - `src/components/CandidateBriefPanel.tsx` (lines 94–99)
-- `src/components/ReportDocument.tsx` (if separate fallback exists)
+
+**Note:** `ReportDocument.tsx` delegates to `CandidateBriefPanel` — no separate fallback to update.
 
 **Target copy**
 
@@ -171,7 +263,7 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 - Preview and stale reports show new copy.
 - Message does not use retired term "interview-mode".
 
-**Depends on:** 2  
+**Depends on:** nothing (can ship before item 2)  
 **Enables:** 26, 34
 
 ---
@@ -249,12 +341,15 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 - [ ] Reject `..`, absolute paths, drive prefixes
 - [ ] Resolve each entry under extract root (path jail)
 - [ ] Reject symlinks if the library exposes them
-- [ ] Max cumulative uncompressed size (align with spec: 50–100 MB)
+- [ ] Max cumulative uncompressed size (**50 MB** per spec — see [Policy Decisions](#policy-decisions))
 - [ ] Max file count (align with pipeline cap: 10,000)
 - [ ] Max single-file uncompressed size
+- [ ] Return **`ZIP_INVALID` 400** for corrupt/invalid zip; **400** for path traversal (not `CLONE_FAILED` 502)
 - [ ] Clean up temp dir on any rejection
 
-**Note:** `docs/spec.md` suggests `yauzl` for streaming extract; evaluate vs hardened `adm-zip` wrapper.
+**Library note:** Prefer hardened `adm-zip` wrapper first (no new dependency per guardrails). Revisit `yauzl` if streaming/bomb detection requires it. Record choice in spec.
+
+**Spec sync:** Update `docs/spec.md` §Zip Upload Strategy and error tables.
 
 **Acceptance**
 
@@ -568,7 +663,9 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 | Tests detected | Many warnings |
 | Purpose extracted | Docs-only / empty repo |
 
-**Depends on:** 6, 8, 17  
+**Note on item 17:** Until `test_inventory` ships (item 17), confidence uses pack-level `testFiles` Sets already computed in language packs — not the user-facing test inventory section.
+
+**Depends on:** 6, 8; uses pack `testFiles` until 17  
 **Enables:** 38
 
 ---
@@ -582,7 +679,7 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 - `src/components/CandidateBriefPanel.tsx`
 - New `src/components/BriefSectionSplit.tsx`
 
-**Layout:** left = generated answer; right = evidence cards for that section. Mobile: stacked with toggle.
+**Layout:** left = generated answer; right = evidence cards for that section. Desktop-first; mobile stacks with "View evidence" toggle (avoid dense split on small screens).
 
 **Depends on:** 10, 15  
 **Enables:** 27, 35
@@ -610,7 +707,9 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 
 ### 11. Project Walkthrough Script
 
-**Goal:** Tiered scripts for "tell me about this project."
+**Goal:** Tiered speakable scripts for "tell me about this project."
+
+**Relationship to existing talking points:** Item 11 **extends** — does not replace — `interview_talking_points.walk_me_through_codebase`. Talking points remain Q&A blocks with bullets and evidence. Walkthrough script is **tiered narrative** (30s / 2min / deep) optimized for speaking aloud in an interview.
 
 **Files**
 
@@ -661,8 +760,9 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 
 - `sufficient_evidence: false` → show "Not enough evidence", no fabricated narrative.
 - True hooks cite at least two evidence refs.
+- Snapshot denylist includes unsupported first-person claims ("I led", "we decided") unless quoted from README.
 
-**Depends on:** 9, 11, 17  
+**Depends on:** 9, 11; pack `testFiles` until 17  
 **Enables:** 19, 33
 
 ---
@@ -867,13 +967,24 @@ risk = 0.18*size + 0.22*fan_in + 0.18*fan_out + 0.22*complexity
 **Files**
 
 - `src/app/page.tsx`
-- `fixtures/repo-atlas-mini.zip` or `public/sample.zip`
-- Fix `SAMPLE_REPORT` to include full `candidate_brief`
+- `public/sample.zip` — bundled static zip (preferred for production), **or** dedicated `POST /api/analyze/sample` route
+- Fix `SAMPLE_REPORT` to include full `candidate_brief` for read-only preview mode
+
+**Production path (choose one)**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **A: `public/sample.zip`** | No server filesystem; works on Vercel | Must commit generated zip; keep in sync with fixtures |
+| **B: Pre-saved report ID** | Instant load; no analyze cost | Stale until regenerated |
+| **C: `zipRef` to fixture** | Simple locally | Breaks in production |
+
+**Recommended:** Option A for "Analyze sample" + Option B for homepage preview mock.
 
 **Acceptance**
 
 - One click produces real report ID with populated Candidate Brief.
 - Works in production without local filesystem `zipRef` paths.
+- Preview mock (`SAMPLE_REPORT`) shows full brief without empty state.
 
 **Depends on:** 3; M2 improves quality  
 **Enables:** 34, 36
@@ -906,7 +1017,9 @@ risk = 0.18*size + 0.22*fan_in + 0.18*fan_out + 0.22*complexity
 - `src/app/share/[token]/page.tsx`
 - `storage.ts` — share metadata + expiry
 
-**Policy:** 7-day expiry, opt-in, report JSON only.
+**Policy:** 7-day expiry, opt-in, report JSON only — **never** retain or expose uploaded zip contents.
+
+**Storage security:** Current Blob storage uses `access: "public"`. Before shipping sharing, migrate to **private blobs with signed URLs** (or token-gated API) so report JSON is not world-readable.
 
 **Depends on:** 23
 
@@ -920,14 +1033,14 @@ risk = 0.18*size + 0.22*fan_in + 0.18*fan_out + 0.22*complexity
 
 | Fixture | Purpose |
 |---------|---------|
-| `repo-nextjs` | App router, next deps |
+| `repo-nextjs` | App router, next deps — **evaluate `fixtures/repo-ts` first** (already has `src/app/page.tsx`, API routes) |
 | `repo-node-api` | Express/Fastify style |
 | `repo-fastapi` | FastAPI app |
 | `repo-monorepo` | packages/* layout |
 | `repo-no-readme` | Low-confidence path |
 | `repo-docs-only` | exists — extend coverage |
 
-**Roll out incrementally** as parsers land (item 6, 7).
+**Roll out incrementally** as parsers land (item 6, 7). Extend `repo-ts` before adding `repo-nextjs` if coverage overlaps.
 
 ---
 
@@ -945,7 +1058,7 @@ risk = 0.18*size + 0.22*fan_in + 0.18*fan_out + 0.22*complexity
 - First PR files exist in fixture tree
 - No raw JSON in markdown export
 
-**Depends on:** 11, 32 — start basic version after M2
+**Depends on:** 11, 32 — **start basic snapshots after PR-7** (type + purpose), do not wait for PR-18
 
 ---
 
@@ -975,6 +1088,10 @@ risk = 0.18*size + 0.22*fan_in + 0.18*fan_out + 0.22*complexity
 **Assets:** `docs/images/` or `public/screenshots/`
 
 Include: landing, Candidate Brief, Reading Path, First PR Plan, Evidence (with snippets), export preview.
+
+**Note:** PDF/PNG export is rasterized via `html2canvas` — screenshots should capture UI directly or use demo mode (27) for polish.
+
+**Acceptance:** Regenerate screenshots when Candidate Brief UI changes (add to release checklist).
 
 **Depends on:** 27, M2, M3
 
@@ -1129,27 +1246,269 @@ partial?: boolean;
 
 ## Suggested PR Sequence
 
-| PR | Items | Scope |
-|----|-------|-------|
-| PR-1 | 1, 2, 3, 37 | Docs, naming, fallback, No-AI positioning |
-| PR-2 | 4, 5 | Microcopy, copy buttons |
-| PR-3 | 21, 31 | Zip hardening + security tests |
-| PR-4 | 24 | Shared ignore rules |
-| PR-5 | 6 (pt 1) | Makefile + Python commands |
-| PR-6 | 6 (pt 2) | Java + Docker + README commands |
-| PR-7 | 7, 8 | Project type + purpose |
-| PR-8 | 9, 15 | Technical decisions + snippets |
-| PR-9 | 10, 20, 29 | Evidence UI, confidence, filenames |
-| PR-10 | 17 | Test inventory |
-| PR-11 | 11, 12 | Walkthrough script + behavioral hooks |
-| PR-12 | 16, 19 | Symbols + interview questions |
-| PR-13 | 22, 25 | Partial reports + progress stages |
-| PR-14 | 26, 27 | Sample button + demo mode |
-| PR-15 | 13, 14 | Git history + churn (fix homepage copy) |
-| PR-16 | 18 | Architecture boundaries |
-| PR-17 | 23, 30 | Cleanup + sharing |
-| PR-18 | 32, 33, 34 | Fixtures, snapshots, Playwright |
-| PR-19 | 35, 36, 38 | Screenshots, demo media, trust section |
+| PR | Items | Scope | Notes |
+|----|-------|-------|-------|
+| PR-1 | 1, 2, 3, 37 | Docs, naming, fallback, No-AI | Include churn copy removal on `page.tsx` |
+| PR-2 | 4, 5 | Microcopy, copy buttons | |
+| **PR-2b** | 26 (preview only) | `SAMPLE_REPORT` + mock `candidate_brief` | Quick demo win; optional before PR-14 |
+| PR-3 | 21, 31 | Zip hardening + security tests | Spec sync required |
+| PR-4 | 24 | Shared ignore rules | |
+| PR-5 | 6 (pt 1) | Makefile + Python commands | |
+| PR-6 | 6 (pt 2) | Java + Docker + README commands | |
+| PR-7 | 7, 8 | Project type + purpose | Start snapshot tests here |
+| PR-8 | 9, 15 | Technical decisions + snippets | |
+| PR-9 | 10, 20, 29 | Evidence UI, confidence, filenames | |
+| PR-10 | 17 | Test inventory | |
+| PR-11 | 11, 12 | Walkthrough script + behavioral hooks | |
+| PR-12 | 16, 19 | Symbols + interview questions | |
+| PR-13 | 22, 25 | Partial reports + progress stages | 22 is stretch; can split |
+| PR-14 | 26, 27 | Sample analyze button + demo mode | |
+| PR-15 | 13, 14 | Git history + churn scoring | |
+| PR-16 | 18 | Architecture boundaries | |
+| PR-17 | 23, 30 | Cleanup + sharing | 30 optional / later |
+| PR-18 | 32, 33, 34 | Fixtures, snapshots, Playwright | |
+| PR-19 | 35, 36, 38 | Screenshots, demo media, trust section | |
+
+**Minimum credible v1.1:** PR-1 → PR-3 → PR-5 → PR-7 → PR-2b (preview mock).
+
+---
+
+## Commit & Push Checkpoints
+
+Each PR below lists **ordered checkpoints**. Complete one checkpoint → `git commit` → `git push` (every 1–3 commits). Run tests before push when noted.
+
+### PR-1 — Docs, naming, fallback, No-AI
+
+| # | Action | Commit message (example) | Push |
+|---|--------|--------------------------|------|
+| 1 | README hero + features + Candidate Brief tabs | `docs(readme): position Candidate Brief as primary output` | ✓ |
+| 2 | `docs/spec.md` §1/§2 + data model `candidate_brief` | `docs(spec): add Candidate Brief to product and schema` | ✓ |
+| 3 | `layout.tsx` metadata | `docs(seo): update app metadata for Candidate Brief` | ✓ |
+| 4 | `page.tsx` feature cards + Candidate Brief card | `feat(ui): add Candidate Brief to landing feature cards` | ✓ |
+| 5 | Remove false "churn" from Danger Zones card | `fix(ui): remove unimplemented churn claim from landing` | ✓ |
+| 6 | Rename user-facing Repo Brief → Repo Analysis / Candidate Brief | `refactor(ui): align Repo Brief naming with Candidate Brief` | ✓ |
+| 7 | Export titles + filenames (`export.ts`, `ReportTabs`, md route) | `refactor(export): rename Repo Brief exports to Repo Analysis` | ✓ |
+| 8 | Update export + API tests | `test(export): update naming assertions` | ✓ |
+| 9 | Fallback copy in `CandidateBriefPanel` | `fix(ui): improve Candidate Brief unavailable message` | ✓ |
+| 10 | No-AI subsection in README + landing subline | `docs(readme): add deterministic analysis positioning` | ✓ |
+
+### PR-2 — Microcopy + copy buttons
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | `CopyButton.tsx` component | `feat(ui): add reusable CopyButton` | ✓ |
+| 2 | Candidate Brief section subtitles | `feat(ui): add interview microcopy to brief sections` | ✓ |
+| 3 | Start Here + Danger Zones tab helper text | `feat(ui): add interview framing to analysis tabs` | ✓ |
+| 4 | Copy on resume + LinkedIn bullets | `feat(ui): add copy buttons for resume bullets` | ✓ |
+| 5 | Copy on walkthrough + first-week answers | `feat(ui): add copy buttons for talking points` | ✓ |
+| 6 | Markdown export section intros (optional) | `feat(export): add interview intros to brief markdown` | ✓ |
+
+### PR-2b — Preview mock brief (quick win)
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Add realistic `candidate_brief` to `SAMPLE_REPORT` | `feat(ui): populate sample report with candidate brief` | ✓ |
+| 2 | Verify preview tab renders all sections | `test(ui): assert sample brief renders in preview` | ✓ |
+
+### PR-3 — Zip hardening + security tests
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Scaffold `safeZipExtract.ts` + magic-byte check | `feat(ingest): add zip magic-byte validation` | ✓ |
+| 2 | Path traversal + jail logic | `feat(ingest): reject path traversal in zip entries` | ✓ |
+| 3 | Uncompressed size + file count limits | `feat(ingest): enforce zip bomb limits` | ✓ |
+| 4 | Wire into `ingest.ts`; emit `ZIP_INVALID` 400 | `feat(ingest): use safe extract and ZIP_INVALID errors` | ✓ |
+| 5 | Update `docs/spec.md` limits | `docs(spec): align zip policy with implementation` | ✓ |
+| 6 | Test: path traversal fixture | `test(ingest): reject zip path traversal` | ✓ |
+| 7 | Test: absolute paths + corrupt zip | `test(ingest): reject malicious zip entries` | ✓ |
+| 8 | Test: zip bomb / oversized | `test(ingest): reject zip bomb patterns` | ✓ |
+| 9 | Test: valid fixture still extracts | `test(ingest): extract valid fixture zip` | ✓ |
+
+### PR-4 — Shared ignore rules
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Create `ignoreRules.ts` | `feat(analyzer): add shared path ignore rules` | ✓ |
+| 2 | Wire pipeline folder walk | `refactor(analyzer): use shared ignores in pipeline` | ✓ |
+| 3 | Wire tsjs pack | `refactor(analyzer): use shared ignores in tsjs pack` | ✓ |
+| 4 | Wire python + java packs | `refactor(analyzer): use shared ignores in python/java packs` | ✓ |
+| 5 | Integration test: ignored dirs skipped | `test(analyzer): assert build artifacts ignored` | ✓ |
+
+### PR-5 — Commands pt 1 (Makefile + Python)
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | `commands/makefile.ts` parser | `feat(analyzer): extract commands from Makefile` | ✓ |
+| 2 | Tests for Makefile parser | `test(analyzer): makefile command extraction` | ✓ |
+| 3 | `commands/python.ts` parser | `feat(analyzer): extract commands from pyproject/pipfile` | ✓ |
+| 4 | Tests for Python parser | `test(analyzer): python command extraction` | ✓ |
+| 5 | Integrate into `extractRunCommands()` | `feat(analyzer): merge makefile and python commands` | ✓ |
+| 6 | Integration test on `repo-python` | `test(analyzer): repo-python yields run commands` | ✓ |
+
+### PR-6 — Commands pt 2 (Java + Docker + README)
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | `commands/java.ts` parser | `feat(analyzer): extract maven/gradle commands` | ✓ |
+| 2 | `commands/docker.ts` parser | `feat(analyzer): extract docker-compose commands` | ✓ |
+| 3 | `commands/readme.ts` parser | `feat(analyzer): extract commands from readme fences` | ✓ |
+| 4 | Dedupe + source priority | `refactor(analyzer): dedupe run commands by source priority` | ✓ |
+| 5 | Integration tests java-maven + readme | `test(analyzer): java and readme command extraction` | ✓ |
+
+### PR-7 — Project type + purpose
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Schema: `project_profile`, `project_purpose` | `feat(schema): add project profile and purpose fields` | ✓ |
+| 2 | `projectType.ts` detector | `feat(analyzer): detect project type from signals` | ✓ |
+| 3 | `purpose.ts` extractor | `feat(analyzer): extract purpose from readme and manifests` | ✓ |
+| 4 | Wire in `analyzer/index.ts` | `feat(analyzer): attach profile and purpose to report` | ✓ |
+| 5 | Update `buildRepoSummary()` | `feat(brief): use extracted purpose in repo summary` | ✓ |
+| 6 | UI card in `CandidateBriefPanel` | `feat(ui): show project profile in brief` | ✓ |
+| 7 | Spec + integration tests | `test(analyzer): project type and purpose on fixtures` | ✓ |
+| 8 | **Snapshot v1:** basic brief golden for `repo-ts` | `test(brief): add candidate brief snapshot for repo-ts` | ✓ |
+
+### PR-8 — Decisions + snippets
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Extend `EvidenceRef` with snippet fields | `feat(schema): add line snippets to evidence refs` | ✓ |
+| 2 | `snippets.ts` reader | `feat(analyzer): extract bounded source snippets` | ✓ |
+| 3 | `decisions.ts` detector | `feat(analyzer): detect technical decisions` | ✓ |
+| 4 | Wire evidence + decisions into interview builder | `feat(brief): attach decisions and snippets to brief` | ✓ |
+| 5 | UI: decisions list + snippet in evidence cards | `feat(ui): render decisions and snippets` | ✓ |
+| 6 | Markdown export snippets | `feat(export): include snippets in markdown evidence` | ✓ |
+| 7 | Tests | `test(analyzer): decisions and snippets on repo-ts` | ✓ |
+
+### PR-9 — Evidence UI + confidence + filenames
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | `evidenceIndex.ts` reverse map | `feat(brief): build evidence used-by index` | ✓ |
+| 2 | Badge click → scroll to card | `feat(ui): scroll evidence badge to card` | ✓ |
+| 3 | Group evidence by kind | `feat(ui): group evidence cards by kind` | ✓ |
+| 4 | `buildConfidenceAssessment()` | `feat(brief): explainable confidence reasons` | ✓ |
+| 5 | Confidence UI expandable | `feat(ui): show why confidence is medium` | ✓ |
+| 6 | `exportNames.ts` + filename wiring | `feat(export): repoatlas-candidate-brief filenames` | ✓ |
+| 7 | Tests | `test(export): assert new export filenames` | ✓ |
+
+### PR-10 — Test inventory
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Schema `test_inventory` | `feat(schema): add test inventory field` | ✓ |
+| 2 | `testInventory.ts` aggregator | `feat(analyzer): aggregate test inventory from packs` | ✓ |
+| 3 | Sharpen `first_pr_plan` with targets | `feat(brief): cite test targets in first PR ideas` | ✓ |
+| 4 | UI subsection | `feat(ui): show test inventory in brief` | ✓ |
+| 5 | Integration tests | `test(analyzer): test inventory on repo-ts` | ✓ |
+
+### PR-11 — Walkthrough script + behavioral hooks
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Schema fields | `feat(schema): add walkthrough script and behavioral hooks` | ✓ |
+| 2 | `buildWalkthroughScript()` | `feat(brief): tiered walkthrough script` | ✓ |
+| 3 | `buildBehavioralHooks()` | `feat(brief): evidence-backed behavioral hooks` | ✓ |
+| 4 | UI sections + copy buttons on 30s/2min | `feat(ui): render walkthrough and behavioral sections` | ✓ |
+| 5 | Markdown export | `feat(export): export walkthrough and behavioral sections` | ✓ |
+| 6 | Snapshot tests | `test(brief): snapshot walkthrough script output` | ✓ |
+
+### PR-12 — Symbols + interview questions
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Symbol extraction in tsjs pack | `feat(analyzer): extract TS/JS symbols` | ✓ |
+| 2 | Symbol extraction python + java | `feat(analyzer): extract python/java symbols` | ✓ |
+| 3 | `questions.ts` generator | `feat(analyzer): deterministic interview questions` | ✓ |
+| 4 | Wire into report + brief | `feat(brief): attach symbols and questions` | ✓ |
+| 5 | UI + export | `feat(ui): show interview questions` | ✓ |
+| 6 | Tests | `test(analyzer): interview questions have evidence refs` | ✓ |
+
+### PR-13 — Partial reports + progress (stretch)
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Staged analyzer with partial report builder | `feat(analyzer): checkpoint partial report state` | ✓ |
+| 2 | Timeout returns partial + warning | `feat(api): return partial report on timeout` | ✓ |
+| 3 | Spec update | `docs(spec): document partial report behavior` | ✓ |
+| 4 | Progress stages UI (client simulation OK for v1) | `feat(ui): show analysis progress stages` | ✓ |
+| 5 | Integration test partial path | `test(api): partial report on timeout` | ✓ |
+
+### PR-14 — Sample button + demo mode
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Add `public/sample.zip` | `chore(assets): add sample repo zip for demo` | ✓ |
+| 2 | Sample analyze button on homepage | `feat(ui): add analyze sample button` | ✓ |
+| 3 | `demoMode` toggle in ReportTabs | `feat(ui): add screenshot demo mode` | ✓ |
+| 4 | Demo styles in globals.css | `feat(ui): demo mode typography and layout` | ✓ |
+| 5 | E2E manual test notes in roadmap/README | `docs(roadmap): document demo flow` | ✓ |
+
+### PR-15 — Git history + churn
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Schema `commit_insights` | `feat(schema): add commit insights field` | ✓ |
+| 2 | `gitHistory.ts` local .git mode | `feat(analyzer): analyze local git history` | ✓ |
+| 3 | `githubCommits.ts` API mode | `feat(ingest): fetch github commit history` | ✓ |
+| 4 | Churn metric in `computeDangerZones()` | `feat(analyzer): add churn to danger zone scoring` | ✓ |
+| 5 | Re-enable churn marketing copy with gate | `feat(ui): show churn only when commit insights exist` | ✓ |
+| 6 | Brief historical context in interview.ts | `feat(brief): add recent work areas from git` | ✓ |
+| 7 | Tests with mocked GitHub API | `test(analyzer): commit insights and churn scoring` | ✓ |
+
+### PR-16 — Architecture boundaries
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Schema `architecture_insights` | `feat(schema): add architecture insights` | ✓ |
+| 2 | `boundaries.ts` layer + SCC + hubs | `feat(analyzer): detect layer violations and cycles` | ✓ |
+| 3 | Architecture tab insights panel | `feat(ui): show architecture insights` | ✓ |
+| 4 | Questions use layer violations | `feat(brief): layer questions from violations` | ✓ |
+| 5 | Tests on repo-ts | `test(analyzer): architecture boundary detection` | ✓ |
+
+### PR-17 — Cleanup + sharing
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | `deleteReport` + DELETE route | `feat(api): add report delete endpoint` | ✓ |
+| 2 | TTL sweep helper | `feat(storage): add report TTL cleanup` | ✓ |
+| 3 | README limits documentation | `docs(readme): document report retention policy` | ✓ |
+| 4 | (Later) private blob migration | `feat(storage): private blobs for reports` | ✓ |
+| 5 | (Later) share token route + page | `feat(api): add read-only report sharing` | ✓ |
+
+### PR-18 — Fixtures + snapshots + Playwright
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Add `repo-no-readme` fixture | `test(fixtures): add no-readme fixture` | ✓ |
+| 2 | Add `repo-fastapi` fixture | `test(fixtures): add fastapi fixture` | ✓ |
+| 3 | Extend snapshot coverage per fixture | `test(brief): expand brief snapshots` | ✓ |
+| 4 | Playwright config + homepage smoke | `test(e2e): add playwright smoke test` | ✓ |
+| 5 | E2E sample upload flow | `test(e2e): upload sample zip and view brief` | ✓ |
+
+### PR-19 — Portfolio
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | Capture screenshots to `docs/images/` | `docs(assets): add product screenshots` | ✓ |
+| 2 | Embed screenshots in README | `docs(readme): embed screenshot gallery` | ✓ |
+| 3 | Add demo GIF | `docs(assets): add 60s demo gif` | ✓ |
+| 4 | "What we will not claim" section | `docs(readme): add trust and limits section` | ✓ |
+| 5 | Optional brief panel footer | `feat(ui): add trust footer to candidate brief` | ✓ |
+
+---
+
+## Deferred & Future Items
+
+Not in the original 1–38 scope; track after M1 or when deploying publicly.
+
+| Item | Source | Notes |
+|------|--------|-------|
+| **39. Rate limiting** | `docs/spec.md` — 10 req/hr | Add middleware on `POST /api/analyze`; document in spec |
+| **40. `.gitattributes` language overrides** | `docs/spec.md` | Lower priority; affects language pack selection |
+| **41. Structured PDF export** | Export is raster today | Replace html2canvas path if printable output needed |
+| **42. Progressive SSE analysis** | Spec mentions streaming partial results | Alternative to polling; pairs with item 25 |
+| **43. Overview tab enrichment** | Tab exists but is metadata-only | Surface `project_profile`, commands summary after M2 |
 
 ---
 
@@ -1183,4 +1542,11 @@ flowchart TB
 
 ---
 
-*Last updated: 2026-07-08*
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-07-08 | Initial roadmap (items 1–38) |
+| 2026-07-08 | v1.1: spec sync checklist, policy decisions, review fixes, commit/push checkpoints per PR, PR-2b quick win, deferred items 39–43 |
+
+*Document version: 1.1 — Last updated: 2026-07-08*
