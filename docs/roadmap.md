@@ -11,6 +11,8 @@ This document maps improvement items **1–38** to concrete files, dependencies,
 ## Table of Contents
 
 - [Current State](#current-state)
+- [Items at a Glance (1–38)](#items-at-a-glance-138)
+- [Integration Choke Points](#integration-choke-points)
 - [Guiding Principles](#guiding-principles)
 - [Policy Decisions](#policy-decisions)
 - [Spec Sync Checklist](#spec-sync-checklist)
@@ -30,6 +32,8 @@ This document maps improvement items **1–38** to concrete files, dependencies,
 - [Suggested PR Sequence](#suggested-pr-sequence)
 - [Commit & Push Checkpoints](#commit--push-checkpoints)
 - [Deferred & Future Items](#deferred--future-items)
+- [Out of Scope](#out-of-scope)
+- [Risk Register](#risk-register)
 - [Definition of Done](#definition-of-done)
 - [Changelog](#changelog)
 
@@ -60,8 +64,23 @@ Zip / zipRef → POST /api/analyze → ingest → pipeline → language packs �
 | Demo sample | Partial | `SAMPLE_REPORT` in `page.tsx` lacks `candidate_brief` |
 | E2E tests | Missing | Vitest only |
 | PDF/PNG export | Raster only | `html2canvas` + `jspdf` snapshots — not structured PDF |
+| Analysis timeout | Hard fail | `analyze/route.ts` uses `Promise.race` → 504; no partial report saved today |
+| GitHub URL ingest | Legacy | `ingest.ts` supports GitHub archive download; UI is zip-primary |
+| Legacy reports | No versioning | `candidate_brief` optional on `Report`; old JSON loads without brief |
 
-**Core insight:** The brief builder (`buildCandidateBrief`) synthesizes everything from `startHere`, `dangerZones`, `runCommands`, `contributeSignals`, `architecture`, and `warnings`. Improving upstream signals improves the UI, markdown export, and PDF in one pass.
+**Candidate Brief already ships (do not rebuild):**
+
+| Section | Source in `interview.ts` |
+|---------|--------------------------|
+| Repo summary | `buildRepoSummary()` — signal counts today; purpose extraction is item 8 |
+| Reading path | `buildReadingPath()` from Start Here |
+| Talking points (×4) | walkthrough, risk, improve-first, first-week |
+| First PR plan (×3) | `buildFirstPrPlan()` |
+| Resume / LinkedIn bullets | `buildResumeBullets()` |
+| Evidence index | `buildEvidenceIndex()` |
+| Confidence notes | `buildCandidateWarnings()` + per-answer `confidenceFor()` |
+
+**Core insight:** The brief builder (`buildCandidateBrief`) synthesizes everything from `startHere`, `dangerZones`, `runCommands`, `contributeSignals`, `architecture`, and `warnings`. New report-level fields (`project_profile`, etc.) must be threaded through `src/analyzer/index.ts` into `BuildCandidateBriefInput` — not only added to `Report`.
 
 ---
 
@@ -77,6 +96,75 @@ Zip / zipRef → POST /api/analyze → ingest → pipeline → language packs �
 5. **Security before scale** — Zip hardening (21) before optional git ingest modes (13).
 6. **Spec stays canonical** — Any behavior, schema, API, or limit change updates `docs/spec.md` in the same PR (see [Spec Sync Checklist](#spec-sync-checklist)).
 7. **Commit often, push often** — Small checkpoints with tests green; see [Implementation Workflow](#implementation-workflow).
+8. **Guardrails-aligned** — Follow `docs/guardrails.md` §6 (evidence-only), §9 (documented scoring formulas), §12 (fixture tests for parsers/scoring).
+
+---
+
+## Items at a Glance (1–38)
+
+Quick reference. See milestone sections for files, acceptance criteria, and checkpoints.
+
+| # | Item | Milestone | PR |
+|---|------|-----------|-----|
+| 1 | README + landing positioning | M0 | PR-1 |
+| 2 | Rename Repo Brief → Candidate Brief / Repo Analysis | M0 | PR-1 |
+| 3 | Better fallback messages | M0 | PR-1 |
+| 4 | Interview microcopy | M0 | PR-2 |
+| 5 | Copy buttons | M0 | PR-2 |
+| 6 | Command extraction beyond package.json | M2 | PR-5, PR-6 |
+| 7 | Project type detection | M2 | PR-7 |
+| 8 | Project purpose evidence | M2 | PR-7 |
+| 9 | Technical decision detector | M2 | PR-8 |
+| 10 | Evidence UI (scroll, groups, used-by) | M3 | PR-9 |
+| 11 | Project walkthrough script (tiered) | M4 | PR-11 |
+| 12 | Behavioral interview hooks | M4 | PR-11 |
+| 13 | Commit history (optional git/GitHub) | M6 | PR-15 |
+| 14 | Churn × risk scoring | M6 | PR-15 |
+| 15 | Source snippets in evidence | M2 | PR-8 |
+| 16 | Symbol extraction | M5 | PR-12 |
+| 17 | Test inventory | M5 | PR-10 |
+| 18 | Architecture boundary analysis | M5 | PR-16 |
+| 19 | Interview question generator | M4 | PR-12 |
+| 20 | Explainable confidence | M3 | PR-9 |
+| 21 | Zip extraction hardening | M1 | PR-3 |
+| 22 | Timeout + partial reports | M1 | PR-13 |
+| 23 | Report cleanup / TTL | M7 | PR-17 |
+| 24 | Binary / generated-file filtering | M1 | PR-4 |
+| 25 | Analysis progress stages | M7 | PR-13 |
+| 26 | Sample analyze button | M7 | PR-14, PR-2b |
+| 27 | Screenshot / demo mode | M7 | PR-14 |
+| 28 | Side-by-side answer vs evidence | M3 | PR-9 |
+| 29 | Better export filenames | M3 | PR-9 |
+| 30 | Report sharing | M7 | PR-17 (later) |
+| 31 | Malicious zip tests | M1 | PR-3 |
+| 32 | Fixture repos by type | M8 | PR-18 |
+| 33 | Candidate Brief snapshots | M8 | PR-7+, PR-18 |
+| 34 | Playwright smoke tests | M8 | PR-18 |
+| 35 | Real screenshots | M9 | PR-19 |
+| 36 | Demo GIF / video | M9 | PR-19 |
+| 37 | "No AI required" positioning | M0 | PR-1 |
+| 38 | "What we will not claim" | M9 | PR-19 |
+
+---
+
+## Integration Choke Points
+
+When adding signals, touch these files in order:
+
+```
+1. src/types/report.ts          — schema
+2. src/analyzer/*.ts            — extract / compute
+3. src/analyzer/index.ts        — wire into analyzeRepository()
+4. src/analyzer/interview.ts    — extend BuildCandidateBriefInput + builders
+5. src/components/*             — render
+6. src/lib/export.ts            — markdown
+7. docs/spec.md                 — if behavior/schema changed
+8. *.test.ts                    — unit + integration
+```
+
+**`BuildCandidateBriefInput` today** (`interview.ts`): `repoName`, `startHere`, `dangerZones`, `runCommands`, `contributeSignals`, `architecture`, `warnings`. New fields (profile, purpose, decisions, test inventory) should extend this interface so the brief builder can consume them without reading global report state.
+
+**Pack outputs** (`tsjs.ts`, `python.ts`, `java.ts`): return `testFiles`, import graphs, entrypoints — aggregate at `index.ts` rather than duplicating in interview.ts.
 
 ---
 
@@ -89,7 +177,7 @@ Resolve these before implementing the referenced items. Document the chosen opti
 | **Zip compressed limit** | 100 MB upload (`analyze/route.ts`, `ingest.ts`) | Keep 100 MB or lower | Keep 100 MB compressed |
 | **Zip uncompressed limit** | Not enforced; spec says 50 MB | Enforce on extract | **50 MB cumulative uncompressed** (per spec) |
 | **Zip library** | `adm-zip` + `extractAllTo` | `yauzl` (spec) vs hardened `adm-zip` | **Harden `adm-zip` first** (no new dep); revisit `yauzl` if streaming needed |
-| **Extract error code** | `CLONE_FAILED` 502 on bad extract | Align with spec | **`ZIP_INVALID` 400** for corrupt/invalid; traversal → 400 |
+| **Extract error code** | `CLONE_FAILED` 502 on bad extract | Align with spec | **`ZIP_INVALID` 400** corrupt/invalid; **`REPO_TOO_LARGE` 413** bomb limits; traversal → 400 |
 | **Export PDF** | Raster screenshot | Structured PDF later? | Out of scope for 1–38; note in portfolio screenshots (35) |
 | **Blob access** | `access: "public"` in `storage.ts` | Sharing model | **Private blob + signed URL** before item 30 ships |
 
@@ -107,8 +195,9 @@ Per `docs/guardrails.md`, `docs/spec.md` is canonical. When a roadmap PR changes
 | New API routes (`DELETE`, share) | Route table + request/response |
 | Candidate Brief as product output | §1 Product Summary, §2 UX tab list |
 | Scoring formula (churn, etc.) | Scoring / Danger Zones section |
+| `BuildCandidateBriefInput` changes | Document new brief inputs in §7 or analyzer section |
 
-Also update `README.md` when user-facing workflow, tabs, or limits change.
+Also update `README.md` when user-facing workflow, tabs, or limits change. Pure UI copy changes (item 4) may skip spec updates per guardrails §3.
 
 ---
 
@@ -136,6 +225,32 @@ Types: `docs`, `feat`, `fix`, `test`, `refactor`, `chore`. Scopes: `readme`, `in
 2. Run `npm run test` before push when touching `src/analyzer/**`, `src/lib/ingest.ts`, or API routes.
 3. Run `npm run lint` before opening/updating a PR.
 4. Use `git push -u origin <branch>` on first push; plain `git push` after.
+
+### Verification commands
+
+```bash
+npm run test          # Vitest — required before analyzer/ingest/API pushes
+npm run lint          # Before PR ready for review
+npm run build         # After schema or Next.js changes
+npm run dev           # Manual UI check for items 4, 5, 10, 27
+```
+
+### PR checklist (from guardrails §13)
+
+Each implementation PR should state:
+
+- **Scope:** UI-only / API-only / analyzer-only / mixed
+- **Roadmap items:** e.g. `items 6, 24`
+- **What / why / how tested**
+- **Spec updated:** yes/no + section
+
+### Snapshot stability (items 33+)
+
+Reports include `repo_metadata.analyzed_at` and generated IDs. Snapshot tests should:
+
+- Normalize or strip volatile fields before compare
+- Assert structure + key phrases, not full JSON dumps, until golden files are stable
+- Pin evidence ref IDs only when builder ID scheme is stable
 
 ### Checkpoint sizing
 
@@ -176,6 +291,23 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 **Highest-leverage first slice:** M0 + M1 + M2 through items 6–8, plus **PR-2b** (preview mock brief).
 
 **Quick trust fixes in PR-1:** Remove false "churn" copy on landing; align `docs/spec.md` with Candidate Brief.
+
+**Parallel tracks after PR-3:** PR-4 (ignore rules) can proceed in parallel with PR-5 once zip hardening merges.
+
+### Milestone readiness (exit criteria)
+
+| Milestone | Ship when |
+|-----------|-----------|
+| M0 | PR-1 + PR-2 merged; landing/README/spec aligned |
+| M1 | PR-3 + PR-4 merged; malicious zip tests green |
+| M2 | PR-5–8 merged; `repo-python`/`repo-java-maven` commands; profile on `repo-ts` |
+| M3 | PR-9 merged; evidence scroll + confidence reasons |
+| M4 | PR-11–12 merged; walkthrough + questions on `repo-ts` fixture |
+| M5 | PR-10 + PR-16 merged (or PR-12 for symbols) |
+| M6 | PR-15 merged; churn gated on `commit_insights` |
+| M7 | PR-14 merged; sample button works on Vercel |
+| M8 | PR-18 merged; Playwright smoke green in CI |
+| M9 | PR-19 merged; README screenshots + trust section |
 
 ---
 
@@ -392,6 +524,8 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 
 **Goal:** On timeout, return useful partial output when safe.
 
+**Current behavior:** `src/app/api/analyze/route.ts` wraps `analyzeRepository()` in `Promise.race` at 120s. On timeout → **504 `TIMEOUT`**, no report persisted. Partial reports require refactoring the analyzer to checkpoint before the race rejects.
+
 **Files**
 
 - `src/app/api/analyze/route.ts` — `MAX_ANALYSIS_TIME_MS = 120_000`
@@ -520,7 +654,7 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 - Summary states type **because** of specific files/deps.
 - Conflicting signals → `confidence: low`, no false label.
 
-**Depends on:** 6, language packs  
+**Depends on:** 24 (can start after PR-4; soft dependency on 6 for richer commands)  
 **Enables:** 9, 11, 19
 
 ---
@@ -696,7 +830,12 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 - `src/app/api/reports/[id]/export/md/route.ts`
 - New `src/lib/exportNames.ts`
 
-**Pattern:** `repoatlas-candidate-brief-{slug(repoName)}-{YYYY-MM-DD}.md`
+**Pattern:** `repoatlas-candidate-brief-{slug(repoName)}-{YYYY-MM-DD}.md` (and matching `.pdf` / `.png` from `ReportTabs.tsx`)
+
+**Acceptance**
+
+- Client PDF/PNG and server MD use consistent slug + date.
+- Slug strips path separators and unsafe characters.
 
 **Depends on:** 2  
 **Enables:** 35, 36
@@ -810,8 +949,10 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 
 **v1:** regex/heuristic, not full AST. Cap at 50 symbols; rank by fan-in or start_here overlap.
 
+**Optional for item 11:** feed `walkthrough_script.deep_technical` with top symbols when present.
+
 **Depends on:** 24  
-**Enables:** 11, 19
+**Enables:** 11 (deep section), 19
 
 ---
 
@@ -883,8 +1024,10 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 
 **Mode B: GitHub URL + optional token**
 
+- Extend existing `ingestFromGithub()` in `src/lib/ingest.ts` (downloads archive today; add commit API separately)
 - Recent commits via API, file change frequency
 - No private repos without token
+- UI remains zip-primary; expose Mode B via API/query param only unless product scope expands
 
 **Zip upload default:** `commit_insights: null` with warning that history is unavailable.
 
@@ -901,8 +1044,10 @@ M8 can start earlier (item 31 with M1; item 33 after M2/M4).
 
 - `src/analyzer/scoring.ts` — `computeDangerZones()`
 - `src/types/report.ts` — `metrics.churn`
-- `src/app/page.tsx` — remove or gate churn marketing until implemented
+- `src/app/page.tsx` — churn copy removed in PR-1; **re-add here only with** `commit_insights` gate
 - `src/components/DangerZonesTable.tsx`
+
+**Guardrails §9:** Document the full formula in a code comment and update `docs/spec.md` when weights change.
 
 **Example formula**
 
@@ -1136,6 +1281,33 @@ Include: landing, Candidate Brief, Reading Path, First PR Plan, Evidence (with s
 
 Add fields to `src/types/report.ts` incrementally. All optional for backward compatibility.
 
+**Also extend `BuildCandidateBriefInput`** in `src/analyzer/interview.ts` when new signals feed the brief (do not rely on interview.ts reading the full `Report`).
+
+```ts
+// Extend in interview.ts as items land:
+export interface BuildCandidateBriefInput {
+  repoName: string;
+  startHere: StartHereItem[];
+  dangerZones: DangerZoneItem[];
+  runCommands: RunCommand[];
+  contributeSignals: ContributeSignals;
+  architecture: Architecture;
+  warnings: string[];
+  // item 7:
+  projectProfile?: Report["project_profile"];
+  // item 8:
+  projectPurpose?: Report["project_purpose"];
+  // item 9:
+  technicalDecisions?: Report["technical_decisions"];
+  // item 17:
+  testInventory?: Report["test_inventory"];
+  // item 13:
+  commitInsights?: Report["commit_insights"];
+}
+```
+
+Report-level optional fields on `Report`:
+
 ```ts
 // Item 7
 project_profile?: {
@@ -1257,7 +1429,7 @@ partial?: boolean;
 | PR-6 | 6 (pt 2) | Java + Docker + README commands | |
 | PR-7 | 7, 8 | Project type + purpose | Start snapshot tests here |
 | PR-8 | 9, 15 | Technical decisions + snippets | |
-| PR-9 | 10, 20, 29 | Evidence UI, confidence, filenames | |
+| PR-9 | 10, 20, 29 | Evidence UI, confidence, filenames | Item 28 may split to PR-9b if large |
 | PR-10 | 17 | Test inventory | |
 | PR-11 | 11, 12 | Walkthrough script + behavioral hooks | |
 | PR-12 | 16, 19 | Symbols + interview questions | |
@@ -1392,6 +1564,14 @@ Each PR below lists **ordered checkpoints**. Complete one checkpoint → `git co
 | 6 | `exportNames.ts` + filename wiring | `feat(export): repoatlas-candidate-brief filenames` | ✓ |
 | 7 | Tests | `test(export): assert new export filenames` | ✓ |
 
+### PR-9b — Side-by-side evidence (optional split)
+
+| # | Action | Commit message | Push |
+|---|--------|----------------|------|
+| 1 | `BriefSectionSplit.tsx` layout | `feat(ui): add answer vs evidence split layout` | ✓ |
+| 2 | Wire Reading Path + talking points | `feat(ui): side-by-side evidence on brief sections` | ✓ |
+| 3 | Mobile collapse toggle | `feat(ui): collapsible evidence panel on mobile` | ✓ |
+
 ### PR-10 — Test inventory
 
 | # | Action | Commit message | Push |
@@ -1509,6 +1689,34 @@ Not in the original 1–38 scope; track after M1 or when deploying publicly.
 | **41. Structured PDF export** | Export is raster today | Replace html2canvas path if printable output needed |
 | **42. Progressive SSE analysis** | Spec mentions streaming partial results | Alternative to polling; pairs with item 25 |
 | **43. Overview tab enrichment** | Tab exists but is metadata-only | Surface `project_profile`, commands summary after M2 |
+| **44. Report schema versioning** | `guardrails.md` §10 | `report_version` field + migration notes for stored JSON |
+| **45. CI workflow** | No `.github/workflows` today | Add `npm run test` + lint on PR |
+
+---
+
+## Out of Scope (for items 1–38)
+
+- LLM / AI-generated brief text
+- Executing uploaded repository code
+- Full SAST / vulnerability scanning
+- Replacing CI/CD or live profiling
+- Worker-thread analyzer refactor (unless perf requires — see guardrails §5)
+- Private repo clone as primary UI flow (zip remains primary)
+
+---
+
+## Risk Register
+
+| Risk | Impact | Mitigation in plan |
+|------|--------|-------------------|
+| Zip bomb / traversal | Critical | PR-3 (items 21, 31) before public demo |
+| False marketing claims (churn) | Trust | PR-1 removes; PR-15 re-gates |
+| Brief feels generic | Product | M2 extraction + M4 scripts |
+| Public Blob reports | Privacy | Policy decision; private blobs before item 30 |
+| Snapshot brittleness | CI noise | Snapshot stability rules; normalize dates |
+| Scope creep per PR | Velocity | Checkpoints + one PR per roadmap row |
+| Spec drift | Maintenance | Spec sync checklist every schema PR |
+| `adm-zip` symlink gaps | Security | Document limitation; test; revisit `yauzl` |
 
 ---
 
@@ -1548,5 +1756,6 @@ flowchart TB
 |------|--------|
 | 2026-07-08 | Initial roadmap (items 1–38) |
 | 2026-07-08 | v1.1: spec sync checklist, policy decisions, review fixes, commit/push checkpoints per PR, PR-2b quick win, deferred items 39–43 |
+| 2026-07-08 | v1.2: items-at-a-glance table, integration choke points, guardrails alignment, milestone exit criteria, snapshot/CI notes, out of scope, risk register, PR-9b, schema/input wiring |
 
-*Document version: 1.1 — Last updated: 2026-07-08*
+*Document version: 1.2 — Last updated: 2026-07-08*
