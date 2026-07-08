@@ -26,6 +26,7 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
 - [Tech Stack](#tech-stack)
 - [Requirements](#requirements)
 - [Quick Start](#quick-start)
+- [Screenshots](#screenshots)
 - [Usage](#usage)
 - [API Reference](#api-reference)
 - [Configuration](#configuration)
@@ -50,7 +51,8 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
   - Client-side full report export to PDF and PNG
   - Server-side Markdown export via `GET /api/reports/:id/export/md`
 - Report persistence: report JSON on disk (`reports/`) or Vercel Blob when deployed with `BLOB_READ_WRITE_TOKEN`
-- Read-only sharing: `/report/:id` for shareable report views (report JSON only — never the uploaded zip)
+- Read-only sharing: `/share/:token` (7-day opt-in links; report JSON only)
+- Legacy direct view: `/report/:id` (prefer token sharing for recipients)
 
 See [docs/roadmap.md](docs/roadmap.md) for the full improvement plan.
 
@@ -122,6 +124,28 @@ Open `http://localhost:3000`, upload a zip of your repository, and click `Analyz
 
 ---
 
+## Screenshots
+
+![RepoAtlas landing page](docs/images/landing.png)
+
+![Candidate Brief with reading path and talking points](docs/images/candidate-brief.png)
+
+![Reading path section](docs/images/reading-path.png)
+
+![First PR plan section](docs/images/first-pr-plan.png)
+
+### Demo (60s)
+
+![Upload → Candidate Brief → export flow](docs/demo.gif)
+
+Regenerate assets after UI changes:
+
+```bash
+npm run capture:portfolio
+```
+
+---
+
 ## Usage
 
 ### Web UI
@@ -185,7 +209,9 @@ These routes are implemented from the files in `src/app/api/**/route.ts`:
 | Route file | Methods | Public endpoint |
 | --- | --- | --- |
 | `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` |
-| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` |
+| `src/app/api/reports/[id]/route.ts` | `GET`, `DELETE` | `/api/reports/:id` |
+| `src/app/api/reports/[id]/share/route.ts` | `POST` | `/api/reports/:id/share` |
+| `src/app/api/share/[token]/route.ts` | `GET` | `/api/share/:token` |
 | `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` |
 
 ### `POST /api/analyze`
@@ -236,6 +262,22 @@ Common statuses:
 - `200` with full report JSON
 - `400` for invalid report IDs
 - `404` when the report does not exist
+
+### `POST /api/reports/:id/share`
+
+Creates an opt-in, token-gated share link (7-day expiry). Returns:
+
+```json
+{
+  "token": "…",
+  "sharePath": "/share/…",
+  "expiresAt": "ISO-8601"
+}
+```
+
+### `GET /api/share/:token`
+
+Returns `{ report, share: { expiresAt, createdAt } }` for valid, non-expired tokens.
 
 ### `GET /api/reports/:id/export/md`
 
@@ -311,6 +353,8 @@ Run:
 
 ```bash
 npm run test
+npm run test:e2e
+npm run capture:portfolio
 ```
 
 ---

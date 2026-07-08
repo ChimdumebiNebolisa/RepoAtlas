@@ -31,6 +31,7 @@ interface ReportTabsProps {
   report: Report;
   reportId?: string | null;
   variant?: "live" | "preview";
+  initialDemoMode?: boolean;
 }
 
 interface ApiErrorLike {
@@ -61,9 +62,18 @@ function getMarkdownRoute(reportId: string) {
   return `/api/reports/${reportId}/export/md`;
 }
 
-export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsProps) {
+export function ReportTabs({
+  report,
+  reportId,
+  variant = "live",
+  initialDemoMode = false,
+}: ReportTabsProps) {
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Candidate Brief");
-  const [demoMode, setDemoMode] = useState(false);
+  const [demoMode, setDemoMode] = useState(initialDemoMode);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "png" | "md" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [markdownSupport, setMarkdownSupport] = useState<MarkdownSupportState>(
@@ -245,6 +255,29 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
     }
   };
 
+  const handleCreateShareLink = async () => {
+    if (!reportId || shareLoading) return;
+    setShareLoading(true);
+    setShareError(null);
+    try {
+      const res = await fetch(`/api/reports/${reportId}/share`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setShareError(data.message ?? "Failed to create share link.");
+        return;
+      }
+      const path = data.sharePath as string;
+      const url =
+        typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+      setShareUrl(url);
+      setShareExpiresAt(data.expiresAt ?? null);
+    } catch {
+      setShareError("Failed to create share link.");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   return (
     <div className="mt-8">
       <div className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-3">
@@ -334,15 +367,34 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
               )}
             </dl>
             {reportId && variant === "live" && (
-              <p className="text-sm text-slate-600">
-                Share read-only view:{" "}
-                <a
-                  href={`/report/${reportId}`}
-                  className="font-medium text-emerald-700 hover:underline"
+              <div className="mt-4 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                <p className="font-medium text-slate-900">Share read-only Candidate Brief</p>
+                <p className="text-xs text-slate-600">
+                  Creates a token-gated link (7-day expiry). Shares report JSON only — never your
+                  uploaded zip.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCreateShareLink}
+                  disabled={shareLoading}
+                  className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
                 >
-                  {typeof window !== "undefined" ? `${window.location.origin}/report/${reportId}` : `/report/${reportId}`}
-                </a>
-              </p>
+                  {shareLoading ? "Creating link…" : "Create share link"}
+                </button>
+                {shareError && <p className="text-xs text-red-700">{shareError}</p>}
+                {shareUrl && (
+                  <p className="break-all text-xs text-slate-700">
+                    <a href={shareUrl} className="font-medium text-emerald-700 hover:underline">
+                      {shareUrl}
+                    </a>
+                    {shareExpiresAt && (
+                      <span className="mt-1 block text-slate-500">
+                        Expires {new Date(shareExpiresAt).toLocaleString()}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
             )}
             {report.run_commands.length > 0 && (
               <div>

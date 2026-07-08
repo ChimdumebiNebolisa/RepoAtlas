@@ -5,16 +5,17 @@ import { useParams } from "next/navigation";
 import { ReportTabs } from "@/components/ReportTabs";
 import type { Report } from "@/types/report";
 
-export default function SharedReportPage() {
-  const params = useParams<{ id: string }>();
-  const reportId = params?.id ?? "";
+export default function TokenSharePage() {
+  const params = useParams<{ token: string }>();
+  const token = params?.token ?? "";
   const [report, setReport] = useState<Report | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!reportId) {
-      setError("Missing report id.");
+    if (!token) {
+      setError("Missing share token.");
       setLoading(false);
       return;
     }
@@ -22,16 +23,17 @@ export default function SharedReportPage() {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch(`/api/reports/${reportId}`);
+        const res = await fetch(`/api/share/${token}`);
         const data = await res.json().catch(() => ({}));
         if (!alive) return;
         if (!res.ok) {
-          setError(data.message ?? "Report not found.");
+          setError(data.message ?? "Share link expired or not found.");
           return;
         }
-        setReport(data as Report);
+        setReport(data.report as Report);
+        setExpiresAt(data.share?.expiresAt ?? null);
       } catch {
-        if (alive) setError("Failed to load report.");
+        if (alive) setError("Failed to load shared report.");
       } finally {
         if (alive) setLoading(false);
       }
@@ -40,7 +42,7 @@ export default function SharedReportPage() {
     return () => {
       alive = false;
     };
-  }, [reportId]);
+  }, [token]);
 
   return (
     <main className="min-h-screen bg-[var(--color-background)]">
@@ -48,9 +50,13 @@ export default function SharedReportPage() {
         <header className="mb-6 space-y-1">
           <p className="text-xl font-bold text-slate-900">RepoAtlas</p>
           <p className="text-sm text-slate-600">
-            Shared Candidate Brief — legacy direct link (use token sharing from Overview when
-            possible)
+            Shared Candidate Brief — read-only, token-gated view (report JSON only)
           </p>
+          {expiresAt && (
+            <p className="text-xs text-slate-500">
+              Link expires {new Date(expiresAt).toLocaleString()}
+            </p>
+          )}
         </header>
 
         {loading && <p className="text-sm text-slate-600">Loading report…</p>}
@@ -59,7 +65,9 @@ export default function SharedReportPage() {
             {error}
           </div>
         )}
-        {report && <ReportTabs report={report} reportId={reportId} variant="live" />}
+        {report && (
+          <ReportTabs report={report} variant="preview" initialDemoMode />
+        )}
       </div>
     </main>
   );

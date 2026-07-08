@@ -34,7 +34,7 @@ export async function saveReport(reportId: string, report: Report): Promise<void
   if (shouldUseBlobStorage()) {
     const token = getBlobToken();
     await put(`${REPORTS_BLOB_PREFIX}${reportId}.json`, body, {
-      access: "public",
+      access: "private",
       contentType: "application/json",
       allowOverwrite: true,
       ...(token && { token }),
@@ -58,7 +58,7 @@ export async function getReport(reportId: string): Promise<Report | null> {
     const pathname = `${REPORTS_BLOB_PREFIX}${reportId}.json`;
     const token = getBlobToken();
     const result = await get(pathname, {
-      access: "public",
+      access: "private",
       ...(token && { token }),
     });
     if (!result || result.statusCode !== 200 || !result.stream) {
