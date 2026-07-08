@@ -8,11 +8,13 @@ import { StartHereTable } from "./StartHereTable";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
 import { ReportDocument } from "./ReportDocument";
+import { CandidateBriefPanel } from "./CandidateBriefPanel";
 import { ERROR_CODES } from "@/lib/errors";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 const TABS = [
+  "Candidate Brief",
   "Overview",
   "Folder Map",
   "Architecture Map",
@@ -59,7 +61,7 @@ function getMarkdownRoute(reportId: string) {
 }
 
 export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsProps) {
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Overview");
+  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Candidate Brief");
   const [exporting, setExporting] = useState<"pdf" | "png" | "md" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [markdownSupport, setMarkdownSupport] = useState<MarkdownSupportState>(
@@ -283,6 +285,10 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
       </div>
 
       <div className="py-4">
+        {activeTab === "Candidate Brief" && (
+          <CandidateBriefPanel candidateBrief={report.candidate_brief} />
+        )}
+
         {activeTab === "Overview" && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Repository</h2>
