@@ -11,6 +11,7 @@ import { runTsJsPack } from "./packs/tsjs";
 import { runPythonPack } from "./packs/python";
 import { runJavaPack } from "./packs/java";
 import { computeStartHere, computeDangerZones } from "./scoring";
+import { buildCandidateBrief } from "./interview";
 import { saveReport } from "@/lib/storage";
 import { randomUUID } from "crypto";
 
@@ -94,6 +95,15 @@ export async function analyzeRepository(
       danger_zones: dangerZones,
       run_commands: pipeline.run_commands,
       contribute_signals: pipeline.contribute_signals,
+      candidate_brief: buildCandidateBrief({
+        repoName: workspace.name,
+        startHere,
+        dangerZones,
+        runCommands: pipeline.run_commands,
+        contributeSignals: pipeline.contribute_signals,
+        architecture,
+        warnings,
+      }),
       warnings,
     };
 

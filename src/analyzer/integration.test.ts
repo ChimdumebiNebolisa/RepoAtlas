@@ -22,6 +22,9 @@ describe("analyzeRepository integration (acceptance)", () => {
     expect(result.report.start_here.length).toBeGreaterThanOrEqual(0);
     expect(result.report.architecture.nodes.length).toBeGreaterThan(0);
     expect(result.report.architecture.edges.length).toBeGreaterThan(0);
+    expect(result.report.candidate_brief).toBeDefined();
+    expect(result.report.candidate_brief?.repo_summary).toBeDefined();
+    expect(result.report.candidate_brief?.first_pr_plan).toHaveLength(3);
   }, 30000);
 
   it("Folder Map tab: renders non-empty tree", async () => {
