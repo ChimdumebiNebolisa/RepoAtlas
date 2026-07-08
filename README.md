@@ -30,6 +30,7 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
 - [Development](#development)
+- [Roadmap](#roadmap)
 - [Testing](#testing)
 - [Fixtures](#fixtures)
 - [Limits and Behavior](#limits-and-behavior)
@@ -281,6 +282,10 @@ reports/
 `reports/` is created at runtime when filesystem storage is used.
 
 ---
+
+## Roadmap
+
+Implementation plan for Candidate Brief quality, security, UX, and interview-prep features: [docs/roadmap.md](docs/roadmap.md).
 
 ## Development
 
