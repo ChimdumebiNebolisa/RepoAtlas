@@ -1,15 +1,16 @@
 # RepoAtlas
 
-RepoAtlas is a local-first repository analysis app that generates a structured Repo Brief for onboarding, reviews, and architecture understanding.
+RepoAtlas is a local-first repository analysis app that generates **evidence-backed Candidate Briefs** and structured **Repo Analysis** for interviews, take-homes, onboarding, and architecture reviews — **without AI**.
 
 It analyzes repository files without executing them and produces:
 
+- **Candidate Brief** (primary tab): reading path, interview talking points, first PR ideas, resume bullets, walkthrough script, and evidence index
 - Folder Map: recursive directory tree
 - Architecture Map: interactive ELK-based dependency graph with pan and zoom
 - Start Here: ranked reading path with signal-based explanations
-- Danger Zones: risk-ranked hotspots with metric breakdowns
-- Run and Contribute: extracted run commands, key docs, and CI indicators
-- Export: full report as PDF, PNG, or Markdown
+- Danger Zones: risk-ranked hotspots with metric breakdowns (including churn when git metadata is present)
+- Run and Contribute: extracted run commands from package.json, Makefile, Docker, README, and more
+- Export: full report as PDF, PNG, or Markdown (`repoatlas-candidate-brief-{repo}-{date}.md`)
 
 Deep analysis is currently implemented for TypeScript/JavaScript, Python, and Java repositories.
 
@@ -41,14 +42,17 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
 
 ## Features
 
-- Single-input workflow: upload a zip of your repo and generate a report
-- Deterministic scoring: Start Here and Danger Zones are derived from measurable repo signals
+- Single-input workflow: upload a zip (or try the sample Candidate Brief) and generate a report
+- Deterministic scoring: Start Here and Danger Zones are derived from measurable repo signals — no LLM calls
 - Multi-language packs: TS/JS, Python, and Java packs provide deeper static analysis
 - Interactive visualization: pan and zoom dependency view with ELK layout
 - Portable exports:
   - Client-side full report export to PDF and PNG
   - Server-side Markdown export via `GET /api/reports/:id/export/md`
 - Report persistence: report JSON on disk (`reports/`) or Vercel Blob when deployed with `BLOB_READ_WRITE_TOKEN`
+- Read-only sharing: `/report/:id` for shareable report views (report JSON only — never the uploaded zip)
+
+See [docs/roadmap.md](docs/roadmap.md) for the full improvement plan.
 
 ---
 
@@ -63,11 +67,10 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
    - key docs and CI config signals
    - runnable commands from `package.json` scripts
 5. Language packs for TS/JS, Python, and Java compute imports, entrypoints, complexity, and proximity.
-6. Scoring computes:
-   - `start_here` ranking
-   - `danger_zones` risk score
-7. The report is saved and returned by report ID.
-8. The UI loads the report and supports export.
+6. Scoring computes `start_here` ranking and `danger_zones` risk score (with optional churn dimension).
+7. The interview builder assembles the **Candidate Brief** from extracted signals and evidence refs.
+8. The report is saved and returned by report ID.
+9. The UI loads the report and supports export and sharing.
 
 ---
 
@@ -80,7 +83,9 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
 - API routes:
   - `POST /api/analyze`
   - `GET /api/reports/:id`
+  - `DELETE /api/reports/:id`
   - `GET /api/reports/:id/export/md`
+- Share page: `GET /report/:id` (read-only UI)
 - Analyzer: in-process TypeScript module
 - Storage: report JSON on filesystem (`reports/`) or Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
 - Temp workspace: OS temp directory per analysis run
@@ -124,6 +129,7 @@ Open `http://localhost:3000`, upload a zip of your repository, and click `Analyz
 - Open the homepage
 - Upload a zip of your repository, for example from GitHub: `Code -> Download ZIP`
 - View generated tabs:
+  - **Candidate Brief** (default)
   - Overview
   - Folder Map
   - Architecture Map
@@ -131,6 +137,7 @@ Open `http://localhost:3000`, upload a zip of your repository, and click `Analyz
   - Danger Zones
   - Run and Contribute
   - Export
+- Click **Try sample Candidate Brief** for a zero-upload demo
 
 ### Export options
 
@@ -339,8 +346,17 @@ When analysis cannot perform a deep language pass, warnings are added to the rep
 
 - RepoAtlas performs static file analysis only
 - It does not execute target repository code
+- Zip extraction is hardened: magic-byte validation, path traversal rejection, entry count and uncompressed size limits
 - Temporary workspaces are cleaned up after analysis
-- Input and known failure modes are mapped to typed API errors
+- Input and known failure modes are mapped to typed API errors (`ZIP_INVALID`, `REPO_TOO_LARGE`, etc.)
+
+## No AI Required
+
+RepoAtlas uses deterministic heuristics and extracted file signals only. It does not call external LLM APIs. Every Candidate Brief claim should trace to an evidence ref in the report.
+
+## What We Will Not Claim
+
+RepoAtlas does not assert vulnerabilities, production readiness, business purpose, or code correctness. Danger zones reflect structural risk signals (complexity, coupling, test proximity, churn) — not bug counts.
 
 ---
 

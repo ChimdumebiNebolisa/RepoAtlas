@@ -36,7 +36,10 @@ export function StartHereTable({ items }: StartHereTableProps) {
     <div className="space-y-4">
       <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5">
         <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-          Suggested reading order for onboarding
+          Suggested reading order for interview prep
+        </p>
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+          Use this to decide what to review first before an interview.
         </p>
         <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
           Priority 0–100; 100 is the top recommendation. Hover a score for details.

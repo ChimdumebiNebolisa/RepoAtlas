@@ -5,9 +5,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "RepoAtlas - Repository Brief Generator",
+  title: "RepoAtlas - Candidate Brief Generator",
   description:
-    "Generate a structured Repo Brief from public GitHub repositories",
+    "Generate evidence-backed Candidate Briefs and Repo Analysis from repository uploads — no AI required.",
 };
 
 export default function RootLayout({

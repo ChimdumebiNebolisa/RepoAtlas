@@ -1,10 +1,20 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Report } from "@/types/report";
 import { ERROR_CODES } from "@/lib/errors";
 
 const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
+
+const ANALYSIS_STAGES = [
+  "Uploading…",
+  "Extracting zip…",
+  "Building folder map…",
+  "Running language packs…",
+  "Scoring risk hotspots…",
+  "Building Candidate Brief…",
+  "Saving report…",
+] as const;
 
 interface InputFormProps {
   onAnalyzeStart: () => void;
@@ -40,7 +50,19 @@ export function InputForm({
   loading,
 }: InputFormProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [stageIndex, setStageIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!loading) {
+      setStageIndex(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setStageIndex((prev) => Math.min(prev + 1, ANALYSIS_STAGES.length - 1));
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +128,33 @@ export function InputForm({
     setFile(chosen);
   };
 
+  const handleSample = async () => {
+    if (loading) return;
+    onAnalyzeStart();
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sample: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        onAnalyzeError(formatApiError(data, FALLBACK_ANALYSIS_MESSAGE));
+        return;
+      }
+      const { reportId } = data;
+      const reportRes = await fetch(`/api/reports/${reportId}`);
+      const reportPayload = await reportRes.json().catch(() => ({}));
+      if (!reportRes.ok) {
+        onAnalyzeError(formatReportFetchError(reportPayload, reportRes.status, reportId));
+        return;
+      }
+      onAnalyzeComplete(reportPayload as Report, reportId);
+    } catch {
+      onAnalyzeError("Network error. Please try again.");
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -131,19 +180,29 @@ export function InputForm({
           </span>
         </div>
       </div>
-      <button
-        type="submit"
-        disabled={loading || !file}
-        className="btn btn-primary w-full sm:w-auto"
-      >
-        {loading && (
-          <span
-            className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
-            aria-hidden="true"
-          />
-        )}
-        {loading ? "Analyzing..." : "Analyze Repository"}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={loading || !file}
+          className="btn btn-primary w-full sm:w-auto"
+        >
+          {loading && (
+            <span
+              className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+              aria-hidden="true"
+            />
+          )}
+          {loading ? ANALYSIS_STAGES[stageIndex] : "Analyze Repository"}
+        </button>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={handleSample}
+          className="btn btn-secondary w-full sm:w-auto"
+        >
+          {loading ? ANALYSIS_STAGES[stageIndex] : "Try sample Candidate Brief"}
+        </button>
+      </div>
     </form>
   );
 }

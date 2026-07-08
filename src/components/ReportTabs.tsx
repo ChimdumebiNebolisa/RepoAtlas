@@ -10,6 +10,7 @@ import { RunContributeSection } from "./RunContributeSection";
 import { ReportDocument } from "./ReportDocument";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
 import { ERROR_CODES } from "@/lib/errors";
+import { buildExportFilename } from "@/lib/exportNames";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -62,6 +63,7 @@ function getMarkdownRoute(reportId: string) {
 
 export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsProps) {
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Candidate Brief");
+  const [demoMode, setDemoMode] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "png" | "md" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [markdownSupport, setMarkdownSupport] = useState<MarkdownSupportState>(
@@ -137,6 +139,12 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
     URL.revokeObjectURL(url);
   };
 
+  const exportBasename = buildExportFilename({
+    repoName: report.repo_metadata.name,
+    analyzedAt: report.repo_metadata.analyzed_at,
+    ext: "md",
+  }).replace(/\.md$/, "");
+
   const handleExportPng = async () => {
     try {
       setExportError(null);
@@ -146,7 +154,7 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
         canvas.toBlob(resolve, "image/png", 1)
       );
       if (!blob) throw new Error("Could not generate PNG image.");
-      downloadBlob(blob, `repo-brief-${reportId ?? "sample"}.png`);
+      downloadBlob(blob, `${exportBasename}.png`);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "PNG export failed.");
     } finally {
@@ -180,7 +188,7 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
         heightLeft -= pageHeight - margin * 2;
       }
 
-      pdf.save(`repo-brief-${reportId ?? "sample"}.pdf`);
+      pdf.save(`${exportBasename}.pdf`);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "PDF export failed.");
     } finally {
@@ -219,7 +227,15 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
 
       const markdown = await res.text();
       const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-      downloadBlob(blob, `repo-brief-${reportId}.md`);
+      const disposition = res.headers.get("Content-Disposition");
+      const filename =
+        disposition?.match(/filename="([^"]+)"/)?.[1] ??
+        buildExportFilename({
+          repoName: report.repo_metadata.name,
+          analyzedAt: report.repo_metadata.analyzed_at,
+          ext: "md",
+        });
+      downloadBlob(blob, filename);
       setMarkdownSupport("available");
       setMarkdownNote(null);
     } catch (error) {
@@ -286,7 +302,7 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
 
       <div className="py-4">
         {activeTab === "Candidate Brief" && (
-          <CandidateBriefPanel candidateBrief={report.candidate_brief} />
+          <CandidateBriefPanel candidateBrief={report.candidate_brief} demoMode={demoMode} />
         )}
 
         {activeTab === "Overview" && (
@@ -310,7 +326,24 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
               <dd>{report.repo_metadata.branch}</dd>
               <dt className="font-medium">Analyzed:</dt>
               <dd>{report.repo_metadata.analyzed_at}</dd>
+              {report.partial && (
+                <>
+                  <dt className="font-medium">Status:</dt>
+                  <dd className="text-amber-700">Partial report (analysis timed out)</dd>
+                </>
+              )}
             </dl>
+            {reportId && variant === "live" && (
+              <p className="text-sm text-slate-600">
+                Share read-only view:{" "}
+                <a
+                  href={`/report/${reportId}`}
+                  className="font-medium text-emerald-700 hover:underline"
+                >
+                  {typeof window !== "undefined" ? `${window.location.origin}/report/${reportId}` : `/report/${reportId}`}
+                </a>
+              </p>
+            )}
             {report.run_commands.length > 0 && (
               <div>
                 <h3 className="font-semibold mt-4">Run commands</h3>
@@ -390,9 +423,21 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
         </p>
       )}
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={demoMode}
+            onChange={(e) => setDemoMode(e.target.checked)}
+            className="rounded border-slate-300"
+          />
+          Screenshot / demo mode
+        </label>
+      </div>
+
       <div className="pointer-events-none fixed -left-[10000px] top-0 w-[1100px] bg-white p-8 text-slate-900">
         <div ref={exportRef}>
-          <h1 className="mb-2 text-3xl font-bold">Repo Brief: {report.repo_metadata.name}</h1>
+          <h1 className="mb-2 text-3xl font-bold">Repo Analysis: {report.repo_metadata.name}</h1>
           <p className="mb-6 text-sm text-slate-600">{report.repo_metadata.url}</p>
           <ReportDocument report={report} />
         </div>

@@ -10,19 +10,13 @@
 
 ### Problem
 
-Engineers joining unfamiliar repositories waste significant time exploring ad hoc: finding entrypoints, understanding structure, and identifying high-risk areas. There is no structured, automated way to produce a concise "Repo Brief" for onboarding.
-
-### Target Users
-
-- **New contributors** – Need a reading order and contribution workflow.
-- **Code reviewers** – Need architecture context and risk hotspots.
-- **Architects** – Need dependency maps and module boundaries.
-- **Maintainers** – Need onboarding materials and run/contribute instructions.
+Engineers preparing for interviews, take-homes, and unfamiliar-repo onboarding waste time exploring ad hoc: finding entrypoints, understanding structure, and identifying high-risk areas. There is no structured, automated way to produce an evidence-backed **Candidate Brief** without AI hallucination risk.
 
 ### Key Value Proposition
 
-**One input** (zip upload, or JSON `zipRef` for testing) → **Structured Repo Brief** with:
+**One input** (zip upload, or JSON `zipRef` for testing) → **Candidate Brief** + **Repo Analysis** with:
 
+- **Candidate Brief** – Interview-facing output: reading path, talking points, first PR plan, resume bullets, evidence index (deterministic, no AI).
 - **Folder Map** – Directory tree of the repo.
 - **Architecture Map** – Interactive dependency graph in the runtime UI (ELK layout + pan/zoom).
 - **Start Here** – Prioritized reading list with explanations.
@@ -66,6 +60,7 @@ Single-page application at `/`:
 
 | Tab | Content | Acceptance Criteria |
 |-----|---------|---------------------|
+| Candidate Brief | Repo summary, reading path, talking points, first PR plan, resume bullets, evidence | Default tab; every claim links to evidence refs |
 | Overview | Repo metadata, key docs links, run commands summary | Shows name, URL, analyzed_at; at least placeholder if no run commands |
 | Folder Map | Recursive tree with expand/collapse | Renders `folder_map`; depth limit respected |
 | Architecture Map | Interactive ELK-based dependency graph (pan/zoom) | Renders `architecture`; collapses if nodes > 50 |
@@ -76,7 +71,7 @@ Single-page application at `/`:
 ### Loading States
 
 - **Idle**: Input form visible.
-- **Analyzing**: Spinner + "Analyzing repository..." message. Disable submit.
+- **Analyzing**: Staged progress message (extracting → folder map → languages → risk → brief → saving). Disable submit.
 - **Fetching report**: After `reportId` returned, optional skeleton for tabs until report loads.
 
 ### Error States
