@@ -1,55 +1,54 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { InputForm } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
 import type { Report } from "@/types/report";
 
-function Badge({ label }: { label: string }) {
-  return <span className="badge">{label}</span>;
+const projectTypes = [
+  ["Next.js app", "TSX", "Routes, components, imports, run commands, and likely entry points."],
+  ["Python API", "PY", "Modules, endpoints, imports, tests, and detected launch commands."],
+  ["Java service", "JVM", "Packages, entry points, dependency edges, tests, and build commands."],
+  ["Monorepo", "PKG", "Workspace boundaries, package relationships, and cross-package signals."],
+  ["Docs-only repo", "MD", "Documentation structure, contribution guidance, and available evidence."],
+  ["No README repo", "∅", "Source-led reading paths with explicit confidence gaps."],
+];
+
+const interviewerFeatures = [
+  ["Understand the structure", "See the repository as systems and boundaries, not a flat file list."],
+  ["Find the files to read first", "Follow a ranked path based on entry points, imports, and repository signals."],
+  ["Identify risky areas", "Review structural hotspots without treating the score as a bug count."],
+  ["Extract run and contribution commands", "Collect commands and contribution cues already present in the repository."],
+  ["Prepare technical talking points", "Turn detected signals into specific prompts for an interview walkthrough."],
+  ["Link every claim back to evidence", "Trace conclusions to files, paths, snippets, and detected metadata."],
+];
+
+const briefContents = [
+  "Repo summary",
+  "Reading path",
+  "Walkthrough script",
+  "Interview talking points",
+  "First PR plan",
+  "Resume / LinkedIn bullets",
+  "Evidence index",
+  "Confidence notes",
+];
+
+const guardrails = [
+  "Does not execute uploaded code",
+  "Does not call AI",
+  "Does not claim production readiness",
+  "Does not assert bugs or vulnerabilities",
+  "Does not infer business purpose without evidence",
+  "Danger Zones are structural risk signals, not bug counts",
+];
+
+function Badge({ children }: { children: React.ReactNode }) {
+  return <span className="badge">{children}</span>;
 }
 
-function FeatureCard({
-  title,
-  description,
-  iconPath,
-}: {
-  title: string;
-  description: string;
-  iconPath: string;
-}) {
-  return (
-    <div className="surface surface-lg p-5 transition duration-200 hover:border-emerald-200/80">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-emerald-100 bg-emerald-50 text-emerald-700">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            className="h-4 w-4"
-            aria-hidden="true"
-          >
-            <path d={iconPath} strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
-        {title}
-      </h3>
-      <p className="mt-2 text-sm leading-6 text-slate-700">{description}</p>
-    </div>
-  );
-}
-
-function PreviewMock({ sampleReport }: { sampleReport: Report }) {
-  return (
-    <div className="surface surface-2xl p-6">
-      <div className="surface-header mb-4">
-        <h2 className="text-base font-semibold text-slate-900">Sample Repo</h2>
-        <span className="text-xs text-slate-500">Read-only sample</span>
-      </div>
-      <ReportTabs report={sampleReport} variant="preview" />
-    </div>
-  );
+function Arrow() {
+  return <span aria-hidden="true">→</span>;
 }
 
 export function HomePage({ sampleReport }: { sampleReport: Report }) {
@@ -59,11 +58,18 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const [error, setError] = useState<string | null>(null);
   const [showViewReportButton, setShowViewReportButton] = useState(false);
   const reportSectionRef = useRef<HTMLElement | null>(null);
+  const sampleButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const scrollToReport = () => {
     reportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     setShowViewReportButton(false);
   };
+
+  const runSample = () => sampleButtonRef.current?.click();
 
   const handleAnalyzeComplete = (reportData: Report, id: string) => {
     setReport(reportData);
@@ -73,198 +79,246 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     setShowViewReportButton(true);
   };
 
-  const handleAnalyzeStart = () => {
-    setLoading(true);
-    setError(null);
-  };
-
-  const handleAnalyzeError = (message: string) => {
-    setError(message);
-    setLoading(false);
-  };
-
   return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-[var(--color-background)]">
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(70%_45%_at_10%_0%,rgba(16,185,129,0.16),transparent_72%),radial-gradient(45%_35%_at_90%_8%,rgba(34,197,94,0.12),transparent_72%)]" />
-        <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(to_right,rgba(15,23,42,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.05)_1px,transparent_1px)] [background-size:28px_28px]" />
-      </div>
+    <main className="site-shell">
+      <div className="site-grid" aria-hidden="true" />
 
-      <div className="relative z-10 mx-auto w-full max-w-[var(--container-max)] px-4 py-10 sm:px-6">
-        <header className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-2xl font-bold tracking-tight text-slate-900">RepoAtlas</p>
-            <p className="text-sm text-slate-700">Candidate Brief Generator</p>
-          </div>
-          <div className="hidden items-center gap-2 sm:flex">
-            <Badge label="TS/JS + Python + Java" />
-            <Badge label="Markdown, images & PDFs" />
-          </div>
-        </header>
+      <header className="site-header page-container">
+        <a href="#top" className="brand" aria-label="RepoAtlas home">
+          <span className="brand-mark" aria-hidden="true">R</span>
+          <span>
+            <strong>RepoAtlas</strong>
+            <small>Candidate Brief Generator</small>
+          </span>
+        </a>
+        <div className="header-badges" aria-label="Product capabilities">
+          <Badge>No AI required</Badge>
+          <Badge>TS/JS + Python + Java</Badge>
+          <Badge>Export Markdown/PDF/PNG</Badge>
+        </div>
+      </header>
 
-        <section className="mt-12 space-y-5">
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-[-0.02em] text-slate-950 sm:text-5xl sm:leading-[1.08]">
-            Map{" "}
-            <span className="text-slate-950">any{" "}</span>
-            <span className="bg-gradient-to-r from-emerald-700 to-green-600 bg-clip-text text-transparent">
-              codebase
-            </span>
-            <span className="text-slate-950"> in </span>
-            <span className="bg-gradient-to-r from-emerald-700 to-green-600 bg-clip-text text-transparent">
-              seconds
-            </span>
-            .
-          </h1>
-          <p className="max-w-xl text-base leading-7 text-slate-700">
-            Upload a repo zip and get an evidence-backed Candidate Brief for interviews,
-            take-homes, and onboarding — deterministic signals, no AI required.
+      <section id="top" className="hero page-container">
+        <div className="hero-copy">
+          <p className="eyebrow">Evidence-backed repository analysis</p>
+          <h1>Turn a codebase into an interview-ready Candidate Brief.</h1>
+          <p className="hero-description">
+            Upload a repository zip and RepoAtlas maps the structure, risk areas, run commands,
+            and evidence-backed talking points without executing code or calling AI.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Badge label="Candidate Brief" />
-            <Badge label="No AI required" />
-            <Badge label="Export docs" />
+          <div className="hero-actions">
+            <a className="btn btn-primary" href="#analyze">
+              Analyze Repository <Arrow />
+            </a>
+            <button className="text-action" type="button" onClick={runSample}>
+              Try sample Candidate Brief <Arrow />
+            </button>
           </div>
-        </section>
+          <p className="hero-microcopy">Local-first static analysis. No code execution. No AI calls.</p>
+        </div>
 
-        <section className="mt-[var(--section-gap)] grid gap-6 lg:grid-cols-2 lg:items-start">
-          <div className="surface surface-2xl p-6">
-            <div className="surface-header mb-4">
-              <h2 className="text-base font-semibold text-slate-900">Analyze a repository</h2>
-              <span aria-hidden="true" />
+        <div className="hero-visual" aria-label="Candidate Brief output overview">
+          <div className="brief-sheet">
+            <div className="brief-sheet-header">
+              <span>Candidate Brief</span>
+              <span className="brief-status">evidence linked</span>
             </div>
-            <p className="text-sm text-slate-700">
-              Upload a zip of your repository. Deep analysis is available for TS/JS, Python, and Java repos.
+            <div className="brief-sheet-title">repo-atlas</div>
+            <div className="brief-reading-path">
+              <span>Read first</span>
+              <code>src/analyzer/index.ts</code>
+              <code>src/analyzer/scoring.ts</code>
+              <code>src/components/ReportTabs.tsx</code>
+            </div>
+            <div className="brief-sheet-footer">
+              <span>Reading path</span>
+              <span>Risk signals</span>
+              <span>Talking points</span>
+            </div>
+          </div>
+          <div className="evidence-card">
+            <span className="evidence-card-label">Claim</span>
+            <strong>Every conclusion points back to repository evidence.</strong>
+            <span className="evidence-ref">source / path / signal</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="analyze" className="action-section page-container">
+        <article className="analyze-card">
+          <h2>Start with the zip you already have.</h2>
+          <p>Upload a repository archive for deterministic static analysis across supported project types.</p>
+          <InputForm
+            onAnalyzeStart={() => {
+              setLoading(true);
+              setError(null);
+            }}
+            onAnalyzeComplete={handleAnalyzeComplete}
+            onAnalyzeError={(message) => {
+              setError(message);
+              setLoading(false);
+            }}
+            loading={loading}
+            sampleButtonRef={sampleButtonRef}
+          />
+          <div className="analyze-limits">
+            <span>Reads repository files only</span>
+            <span>100MB maximum zip</span>
+            <span>Analysis up to 2 minutes</span>
+          </div>
+          {showViewReportButton && report && (
+            <button type="button" onClick={scrollToReport} className="btn btn-secondary">
+              View report <Arrow />
+            </button>
+          )}
+          {error && <div role="alert" className="form-error">{error}</div>}
+        </article>
+
+        <aside className="sample-card">
+          <div>
+            <h2>Sample Candidate Brief</h2>
+            <p>Inspect the output before uploading a repository.</p>
+          </div>
+          <ul>
+            {["Reading path", "Risk areas", "Interview talking points", "Evidence refs"].map((item, index) => (
+              <li key={item}><span>{String(index + 1).padStart(2, "0")}</span>{item}</li>
+            ))}
+          </ul>
+          <button className="btn btn-inverse" type="button" onClick={() => scrollTo("sample-report")}>
+            Open sample report <Arrow />
+          </button>
+        </aside>
+      </section>
+
+      <section className="project-types page-container">
+        <div className="section-heading">
+          <h2>Try RepoAtlas on common project types</h2>
+          <p>
+            RepoAtlas adapts the same evidence-first workflow to different repository shapes.
+            These cards describe analysis coverage; they are not live fixture buttons.
+          </p>
+        </div>
+        <div className="project-grid">
+          {projectTypes.map(([type, mark, detail], index) => (
+            <article key={type} className={index === 0 || index === 3 ? "project-card featured" : "project-card"}>
+              <span className="project-mark">{mark}</span>
+              <div><h3>{type}</h3><p>{detail}</p></div>
+              <span className="coverage-label">Analysis profile</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="interviewer-section">
+        <div className="page-container interviewer-layout">
+          <div className="interviewer-intro">
+            <h2>Read your project like an interviewer would.</h2>
+            <p>
+              Move from orientation to defensible technical conversation without pretending the
+              repository says more than it does.
             </p>
-
-            <div className="mt-5">
-              <InputForm
-                onAnalyzeStart={handleAnalyzeStart}
-                onAnalyzeComplete={handleAnalyzeComplete}
-                onAnalyzeError={handleAnalyzeError}
-                loading={loading}
-              />
-              <p className="mt-3 text-xs text-slate-600">
-                Reads repo files only. Never runs code.
-              </p>
-              <p className="mt-1.5 text-xs text-slate-500">
-                Max 100MB · Analysis up to 2 min
-              </p>
-            </div>
-
-            {showViewReportButton && report && (
-              <div className="mt-5">
-                <button
-                  type="button"
-                  onClick={scrollToReport}
-                  className="btn btn-secondary border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                >
-                  View report ↓
-                </button>
-              </div>
-            )}
-
-            {error && (
-              <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                {error}
-              </div>
-            )}
           </div>
-
-          <PreviewMock sampleReport={sampleReport} />
-        </section>
-
-        <section className="mt-[var(--section-gap)]">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-            What you get
-          </h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <FeatureCard
-              title="Folder Map"
-              description="A quick top-down view of key directories and where major functionality lives."
-              iconPath="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
-            />
-            <FeatureCard
-              title="Architecture Map"
-              description="A concise Mermaid-ready outline of system components and relationships."
-              iconPath="M5 5h5v5H5zM14 5h5v5h-5zM14 14h5v5h-5zM10 7.5h4M16.5 10v4"
-            />
-            <FeatureCard
-              title="Start Here"
-              description="A ranked reading path with deterministic signals showing why each file matters."
-              iconPath="M6 4h10l4 4v12H6zM16 4v4h4M9 12h6M9 16h4"
-            />
-            <FeatureCard
-              title="Candidate Brief"
-              description="Evidence-backed interview prep: reading path, talking points, first PR ideas, and exportable bullets."
-              iconPath="M6 4h12v16H6zM9 8h6M9 12h4"
-            />
-            <FeatureCard
-              title="Danger Zones"
-              description="Risk-ranked hotspots for complexity, coupling, weak test proximity, and recent churn when git metadata exists."
-              iconPath="M12 3l9 16H3L12 3Zm0 6v4m0 4h.01"
-            />
-            <FeatureCard
-              title="Run & Contribute"
-              description="Useful run commands and contribution pointers extracted from the repo."
-              iconPath="M8 8 4 12l4 4M16 8l4 4-4 4M10 19l4-14"
-            />
-            <FeatureCard
-              title="Export"
-              description="Download the full report as PDF, PNG, or Markdown — deterministic output, no AI."
-              iconPath="M12 3v12m0 0 4-4m-4 4-4-4M5 15v4h14v-4"
-            />
+          <div className="interviewer-list">
+            {interviewerFeatures.map(([title, description], index) => (
+              <article key={title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <div><h3>{title}</h3><p>{description}</p></div>
+              </article>
+            ))}
           </div>
+        </div>
+      </section>
+
+      <section className="pipeline-section page-container">
+        <div className="section-heading compact">
+          <h2>From archive to evidence-backed brief</h2>
+          <p>A deterministic pipeline keeps each stage inspectable and the final claims grounded.</p>
+        </div>
+        <div className="pipeline" aria-label="RepoAtlas analysis pipeline">
+          {["Zip upload", "Static analysis", "Language packs", "Scoring", "Candidate Brief", "Export / share"].map(
+            (stage, index, stages) => (
+              <div className="pipeline-stage" key={stage}>
+                <span className="pipeline-node">{stage}</span>
+                {index < stages.length - 1 && <span className="pipeline-arrow" aria-hidden="true">→</span>}
+              </div>
+            )
+          )}
+        </div>
+        <div className="pipeline-notes">
+          <span>files only</span>
+          <span>TS/JS, Python, Java</span>
+          <span>structural signals</span>
+          <span>PDF, PNG, Markdown, link</span>
+        </div>
+      </section>
+
+      <section className="brief-section page-container">
+        <div className="brief-intro">
+          <h2>A brief built for the conversation after the code review.</h2>
+          <p>RepoAtlas organizes what it can prove, what deserves attention, and where confidence is limited.</p>
+        </div>
+        <div className="brief-contents">
+          {briefContents.map((item, index) => (
+            <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong></div>
+          ))}
+        </div>
+      </section>
+
+      <section id="sample-report" className="sample-report-section page-container">
+        <div className="sample-report-heading">
+          <div><h2>Sample Repo</h2></div>
+          <button type="button" className="text-action" onClick={runSample}>
+            Generate a live sample <Arrow />
+          </button>
+        </div>
+        <p className="sample-report-copy">
+          Explore the bundled read-only report. PDF and PNG preview exports work here; Markdown
+          export is enabled after analysis.
+        </p>
+        <div className="sample-report-shell"><ReportTabs report={sampleReport} variant="preview" /></div>
+      </section>
+
+      <section className="trust-section page-container">
+        <div className="trust-title">
+          <h2>What RepoAtlas will not claim.</h2>
+          <p>Static signals are useful when their limits stay visible.</p>
+        </div>
+        <div className="guardrail-grid">
+          {guardrails.map((item) => (
+            <div key={item}><span aria-hidden="true">×</span><p>{item}</p></div>
+          ))}
+        </div>
+      </section>
+
+      {report && reportId && (
+        <section ref={reportSectionRef} className="generated-report page-container">
+          <div className="section-heading compact">
+            <h2>Your Candidate Brief</h2>
+            <p>The generated report is ready to inspect, export, or share with a read-only link.</p>
+          </div>
+          <ReportTabs report={report} reportId={reportId} />
         </section>
+      )}
 
-        <section className="surface surface-2xl mt-[var(--section-gap)] p-6 shadow-none">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-            How it works
-          </h2>
-          <ol className="mt-5 grid gap-4 text-sm text-slate-700 sm:grid-cols-3">
-            <li className="panel surface-lg p-4">
-              <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
-                1
-              </div>
-              <p className="font-semibold text-slate-900">Upload a zip of your repo</p>
-              <p className="mt-1 text-xs text-slate-600">
-                Zip the repo folder and upload. No GitHub link required.
-              </p>
-            </li>
-            <li className="panel surface-lg p-4">
-              <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
-                2
-              </div>
-              <p className="font-semibold text-slate-900">
-                RepoAtlas maps structure and import relationships
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                Deterministic signals highlight architecture and coupling.
-              </p>
-            </li>
-            <li className="panel surface-lg p-4">
-              <div className="mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">
-                3
-              </div>
-              <p className="font-semibold text-slate-900">
-                Get a Candidate Brief with reading path, talking points, and risk zones
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                Export Markdown, PDF, or PNG — or share a read-only report link.
-              </p>
-            </li>
-          </ol>
-        </section>
+      <section className="closing-section">
+        <div className="page-container closing-content">
+          <div>
+            <h2>Export the brief. Share the report. Walk into the interview with receipts.</h2>
+            <p>Start with the bundled sample or analyze a repository zip locally.</p>
+          </div>
+          <div className="closing-actions">
+            <a className="btn btn-inverse" href="#sample-report">Try sample Candidate Brief <Arrow /></a>
+            <button className="btn btn-light" type="button" onClick={() => scrollTo("analyze")}>
+              Analyze your repo <Arrow />
+            </button>
+          </div>
+        </div>
+      </section>
 
-        {report && reportId && (
-          <section ref={reportSectionRef} className="mt-[var(--section-gap)]">
-            <ReportTabs report={report} reportId={reportId} />
-          </section>
-        )}
-
-        <footer className="mt-12 border-t border-slate-200 pt-6 text-xs text-slate-600">
-          RepoAtlas generates signals from repo files only. No code execution.
-        </footer>
-      </div>
+      <footer className="site-footer page-container">
+        <span>RepoAtlas</span>
+        <span>Deterministic repository analysis. No code execution. No AI calls.</span>
+      </footer>
     </main>
   );
 }

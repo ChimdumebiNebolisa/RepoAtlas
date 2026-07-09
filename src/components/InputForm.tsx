@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type RefObject } from "react";
 import type { Report } from "@/types/report";
 import { ERROR_CODES } from "@/lib/errors";
 
@@ -21,6 +21,7 @@ interface InputFormProps {
   onAnalyzeComplete: (report: Report, reportId: string) => void;
   onAnalyzeError: (message: string) => void;
   loading: boolean;
+  sampleButtonRef?: RefObject<HTMLButtonElement>;
 }
 
 interface ApiErrorLike {
@@ -48,6 +49,7 @@ export function InputForm({
   onAnalyzeComplete,
   onAnalyzeError,
   loading,
+  sampleButtonRef,
 }: InputFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [stageIndex, setStageIndex] = useState(0);
@@ -156,12 +158,12 @@ export function InputForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="input-form">
       <div>
-        <label htmlFor="zipFile" className="mb-2 block text-sm font-medium text-slate-800">
+        <label htmlFor="zipFile" className="input-label">
           Repository zip file
         </label>
-        <div className="relative flex min-h-[2.5rem] w-full items-stretch overflow-hidden rounded-[var(--radius-md)] border border-[#cbd5e1] bg-white focus-within:border-[#86efac] focus-within:outline-none focus-within:ring-2 focus-within:ring-emerald-500/30">
+        <div className="file-picker">
           <input
             ref={inputRef}
             id="zipFile"
@@ -172,35 +174,30 @@ export function InputForm({
             disabled={loading}
             aria-label="Choose repository zip file"
           />
-          <span className="flex min-h-[2.5rem] flex-1 items-center truncate pl-4 pr-3 text-sm text-slate-500">
+          <span className="file-name">
             {file ? file.name : "No file chosen"}
           </span>
-          <span className="flex min-h-[2.5rem] shrink-0 items-center border-l border-[#cbd5e1] bg-slate-100 px-4 text-sm font-medium text-slate-700">
+          <span className="file-action">
             Choose file
           </span>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="form-actions">
         <button
           type="submit"
           disabled={loading || !file}
-          className="btn btn-primary w-full sm:w-auto"
+          className="btn btn-primary"
         >
-          {loading && (
-            <span
-              className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
-              aria-hidden="true"
-            />
-          )}
           {loading ? ANALYSIS_STAGES[stageIndex] : "Analyze Repository"}
         </button>
         <button
+          ref={sampleButtonRef}
           type="button"
           disabled={loading}
           onClick={handleSample}
-          className="btn btn-secondary w-full sm:w-auto"
+          className="btn btn-secondary"
         >
-          {loading ? ANALYSIS_STAGES[stageIndex] : "Try sample Candidate Brief"}
+          {loading ? ANALYSIS_STAGES[stageIndex] : "Run bundled sample"}
         </button>
       </div>
     </form>
