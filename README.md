@@ -1,8 +1,8 @@
 # RepoAtlas
 
-RepoAtlas is a local-first repository analysis app that generates **evidence-backed Candidate Briefs** and structured **Repo Analysis** for interviews, take-homes, onboarding, and architecture reviews — **without AI**.
+**Deterministic, no-AI repository analysis** — upload a repo zip and get an evidence-backed **Candidate Brief** for interviews, take-homes, onboarding, and open-source contribution prep.
 
-It analyzes repository files without executing them and produces:
+RepoAtlas reads repository files as text only (never executes them) and produces:
 
 - **Candidate Brief** (primary tab): reading path, interview talking points, first PR ideas, resume bullets, walkthrough script, and evidence index
 - Folder Map: recursive directory tree
@@ -27,6 +27,7 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
 - [Requirements](#requirements)
 - [Quick Start](#quick-start)
 - [Screenshots](#screenshots)
+- [Example Candidate Brief](#example-candidate-brief)
 - [Usage](#usage)
 - [API Reference](#api-reference)
 - [Configuration](#configuration)
@@ -51,7 +52,7 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
   - Client-side full report export to PDF and PNG
   - Server-side Markdown export via `GET /api/reports/:id/export/md`
 - Report persistence: report JSON on disk (`reports/`) or Vercel Blob when deployed with `BLOB_READ_WRITE_TOKEN`
-- Read-only sharing: `/share/:token` (7-day opt-in links; report JSON only)
+- Read-only sharing: `/share/:token` (7-day opt-in links; report JSON only — never your uploaded zip)
 - Legacy direct view: `/report/:id` (prefer token sharing for recipients)
 
 See [docs/roadmap.md](docs/roadmap.md) for the full improvement plan.
@@ -87,7 +88,11 @@ See [docs/roadmap.md](docs/roadmap.md) for the full improvement plan.
   - `GET /api/reports/:id`
   - `DELETE /api/reports/:id`
   - `GET /api/reports/:id/export/md`
-- Share page: `GET /report/:id` (read-only UI)
+  - `POST /api/reports/:id/share`
+  - `GET /api/share/:token`
+  - `GET` / `POST /api/cron/cleanup`
+- Share page: `/share/:token` (read-only UI)
+- Legacy report page: `/report/:id`
 - Analyzer: in-process TypeScript module
 - Storage: report JSON on filesystem (`reports/`) or Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
 - Temp workspace: OS temp directory per analysis run
@@ -143,6 +148,14 @@ Regenerate assets after UI changes:
 ```bash
 npm run capture:portfolio
 ```
+
+---
+
+## Example Candidate Brief
+
+Bundled sample output (not from a live deployment): [docs/examples/repoatlas-candidate-brief.md](docs/examples/repoatlas-candidate-brief.md)
+
+You can also click **Try sample Candidate Brief** on the homepage to analyze `fixtures/repo-ts` without uploading a zip.
 
 ---
 

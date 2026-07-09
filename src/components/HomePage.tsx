@@ -200,7 +200,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             />
             <FeatureCard
               title="Danger Zones"
-              description="Risk-ranked hotspots flagged for complexity, coupling, and weak test proximity."
+              description="Risk-ranked hotspots for complexity, coupling, weak test proximity, and recent churn when git metadata exists."
               iconPath="M12 3l9 16H3L12 3Zm0 6v4m0 4h.01"
             />
             <FeatureCard
@@ -210,7 +210,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             />
             <FeatureCard
               title="Export"
-              description="Structured JSON and markdown-friendly output for docs and handoff notes."
+              description="Download the full report as PDF, PNG, or Markdown — deterministic output, no AI."
               iconPath="M12 3v12m0 0 4-4m-4 4-4-4M5 15v4h14v-4"
             />
           </div>
