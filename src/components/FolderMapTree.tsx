@@ -20,40 +20,52 @@ function TreeNode({
   const [expanded, setExpanded] = useState(depth < defaultExpandDepth);
   const isDir = node.type === "dir" && node.children && node.children.length > 0;
   const name = node.path.split("/").pop() || node.path;
+  const rowContent = (
+    <>
+      <span className="absolute -left-[7px] h-2.5 w-2.5 rounded-full bg-slate-200 group-hover:bg-emerald-400" />
+      {isDir ? (
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-600">
+          {expanded ? "-" : "+"}
+        </span>
+      ) : (
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-slate-50 text-[10px] text-slate-500">
+          •
+        </span>
+      )}
+      <span className={node.type === "dir" ? "font-medium text-slate-900" : "text-slate-800"}>
+        {name}
+      </span>
+      {node.type === "dir" && node.children && (
+        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+          {node.children.length}
+        </span>
+      )}
+      {node.type === "file" && depth < 2 && (
+        <span className="truncate text-xs text-slate-500">{node.path}</span>
+      )}
+    </>
+  );
 
   return (
     <div className="relative ml-4 border-l border-slate-200 pl-3">
-      <div
-        className="group flex cursor-pointer items-center gap-2 rounded-md py-1 pr-2 hover:bg-slate-50"
-        style={{ paddingLeft: depth * 12 }}
-        onClick={() => isDir && setExpanded(!expanded)}
-      >
-        <span className="absolute -left-[7px] h-2.5 w-2.5 rounded-full bg-slate-200 group-hover:bg-emerald-400" />
-        {isDir ? (
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-600">
-            {expanded ? "-" : "+"}
-          </span>
-        ) : (
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-slate-50 text-[10px] text-slate-500">
-            •
-          </span>
-        )}
-        <span
-          className={
-            node.type === "dir" ? "font-medium text-slate-900" : "text-slate-800"
-          }
+      {isDir ? (
+        <button
+          type="button"
+          className="group flex w-full items-center gap-2 rounded-md py-1 pr-2 text-left hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+          style={{ paddingLeft: depth * 12 }}
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
         >
-          {name}
-        </span>
-        {node.type === "dir" && node.children && (
-          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-            {node.children.length}
-          </span>
-        )}
-        {node.type === "file" && depth < 2 && (
-          <span className="truncate text-xs text-slate-500">{node.path}</span>
-        )}
-      </div>
+          {rowContent}
+        </button>
+      ) : (
+        <div
+          className="group flex items-center gap-2 rounded-md py-1 pr-2"
+          style={{ paddingLeft: depth * 12 }}
+        >
+          {rowContent}
+        </div>
+      )}
       {isDir && expanded && node.children && (
         <div className="space-y-0.5">
           {node.children.map((child) => (

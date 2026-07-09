@@ -36,7 +36,7 @@ test.describe("Portfolio capture", () => {
       fullPage: true,
     });
 
-    await page.getByRole("button", { name: "Export" }).last().click();
+    await page.getByRole("tab", { name: "Export" }).last().click();
     await page.screenshot({
       path: path.join(IMAGES_DIR, "export-tab.png"),
       fullPage: true,

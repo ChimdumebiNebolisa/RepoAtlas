@@ -54,7 +54,7 @@ function EvidenceBadge({
       type="button"
       onClick={() => onNavigate?.(id)}
       title={tooltip || id}
-      className="inline-flex max-w-full items-center rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-600 hover:bg-slate-50"
+      className="report-action report-action-secondary report-action-compact max-w-full font-mono"
     >
       {demoMode ? "evidence" : id}
     </button>

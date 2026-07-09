@@ -13,10 +13,7 @@ export function StartHereTable({ items }: StartHereTableProps) {
   const [asc, setAsc] = useState(false);
 
   const sorted = [...items].sort((a, b) => {
-    const cmp =
-      sortBy === "score"
-        ? a.score - b.score
-        : a.path.localeCompare(b.path);
+    const cmp = sortBy === "score" ? a.score - b.score : a.path.localeCompare(b.path);
     return asc ? cmp : -cmp;
   });
 
@@ -34,7 +31,7 @@ export function StartHereTable({ items }: StartHereTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5">
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/50">
         <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
           Suggested reading order for interview prep
         </p>
@@ -50,17 +47,29 @@ export function StartHereTable({ items }: StartHereTableProps) {
           <thead>
             <tr className="bg-gray-100 dark:bg-gray-800">
               <th
-                className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
-                onClick={() => toggleSort("path")}
+                className="px-4 py-2 text-left"
+                aria-sort={sortBy === "path" ? (asc ? "ascending" : "descending") : "none"}
               >
-                Path {sortBy === "path" && (asc ? "↑" : "↓")}
+                <button
+                  type="button"
+                  onClick={() => toggleSort("path")}
+                  className="rounded px-1 py-0.5 font-semibold hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:hover:bg-gray-700"
+                >
+                  Path {sortBy === "path" && (asc ? "↑" : "↓")}
+                </button>
               </th>
               <th
-                className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
-                onClick={() => toggleSort("score")}
+                className="px-4 py-2 text-left"
+                aria-sort={sortBy === "score" ? (asc ? "ascending" : "descending") : "none"}
                 title="Relative onboarding priority; 100 = top place to start"
               >
-                Priority (0–100) {sortBy === "score" && (asc ? "↑" : "↓")}
+                <button
+                  type="button"
+                  onClick={() => toggleSort("score")}
+                  className="rounded px-1 py-0.5 font-semibold hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:hover:bg-gray-700"
+                >
+                  Priority (0–100) {sortBy === "score" && (asc ? "↑" : "↓")}
+                </button>
               </th>
               <th className="px-4 py-2 text-left">Signals</th>
             </tr>
@@ -69,9 +78,7 @@ export function StartHereTable({ items }: StartHereTableProps) {
             {sorted.map((item, i) => (
               <tr key={i} className="border-t dark:border-gray-700">
                 <td className="px-4 py-2 font-mono text-sm">
-                  <code className="bg-gray-100 text-slate-900 px-1 rounded">
-                    {item.path}
-                  </code>
+                  <code className="rounded bg-gray-100 px-1 text-slate-900">{item.path}</code>
                 </td>
                 <td className="px-4 py-2">
                   <ScoreCircle

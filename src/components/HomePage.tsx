@@ -60,10 +60,6 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const reportSectionRef = useRef<HTMLElement | null>(null);
   const sampleButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   const scrollToReport = () => {
     reportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     setShowViewReportButton(false);
@@ -184,9 +180,9 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
               <li key={item}><span>{String(index + 1).padStart(2, "0")}</span>{item}</li>
             ))}
           </ul>
-          <button className="btn btn-inverse" type="button" onClick={() => scrollTo("sample-report")}>
+          <a className="btn btn-inverse" href="#sample-report">
             Open sample report <Arrow />
-          </button>
+          </a>
         </aside>
       </section>
 
@@ -308,9 +304,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           </div>
           <div className="closing-actions">
             <a className="btn btn-inverse" href="#sample-report">Try sample Candidate Brief <Arrow /></a>
-            <button className="btn btn-light" type="button" onClick={() => scrollTo("analyze")}>
-              Analyze your repo <Arrow />
-            </button>
+            <a className="btn btn-light" href="#analyze">Analyze Repository <Arrow /></a>
           </div>
         </div>
       </section>

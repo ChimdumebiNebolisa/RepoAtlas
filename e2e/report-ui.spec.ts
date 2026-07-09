@@ -17,31 +17,33 @@ test.describe("Report UI flows", () => {
     await runSampleAnalyzeOnPage(page);
 
     for (const tab of REPORT_TABS) {
-      await page.getByRole("button", { name: tab, exact: true }).last().click();
+      const tabControl = page.getByRole("tab", { name: tab, exact: true }).last();
+      await tabControl.click();
+      await expect(tabControl).toHaveAttribute("aria-selected", "true");
     }
 
-    await page.getByRole("button", { name: "Candidate Brief", exact: true }).last().click();
+    await page.getByRole("tab", { name: "Candidate Brief", exact: true }).last().click();
     await expect(page.getByRole("heading", { name: "Repo Summary" }).last()).toBeVisible();
 
-    await page.getByRole("button", { name: "Folder Map", exact: true }).last().click();
+    await page.getByRole("tab", { name: "Folder Map", exact: true }).last().click();
     await expect(page.locator("section").filter({ hasText: "Generated report ready for" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Start Here", exact: true }).last().click();
+    await page.getByRole("tab", { name: "Start Here", exact: true }).last().click();
     await expect(
       page.getByText("Suggested reading order for interview prep").last()
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Danger Zones", exact: true }).last().click();
+    await page.getByRole("tab", { name: "Danger Zones", exact: true }).last().click();
     await expect(page.getByText("Files that may need extra attention").last()).toBeVisible();
 
-    await page.getByRole("button", { name: "Export", exact: true }).last().click();
+    await page.getByRole("tab", { name: "Export", exact: true }).last().click();
     await expect(page.getByText("Export Report").last()).toBeVisible();
   });
 
   test("Overview tab shows share link creation and opens shared view", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
 
-    await page.getByRole("button", { name: "Overview", exact: true }).last().click();
+    await page.getByRole("tab", { name: "Overview", exact: true }).last().click();
     await expect(page.getByText(/Share read-only Candidate Brief/i)).toBeVisible();
     await page.getByRole("button", { name: /Create share link/i }).click();
 
@@ -74,13 +76,13 @@ test.describe("Report UI flows", () => {
     );
 
     await page.goto(`/report/${reportId}`);
-    await page.getByRole("button", { name: "Overview", exact: true }).click();
+    await page.getByRole("tab", { name: "Overview", exact: true }).click();
     await expect(page.getByText(/Partial report/i)).toBeVisible();
   });
 
   test("homepage preview disables Markdown export (no reportId)", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Export", exact: true }).first().click();
+    await page.getByRole("tab", { name: "Export", exact: true }).first().click();
     const mdButton = page.getByRole("button", { name: /Export Markdown/i }).first();
     await expect(mdButton).toBeDisabled();
   });
