@@ -1,9 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = process.env.PLAYWRIGHT_PORT ?? "3000";
+const PORT = process.env.PLAYWRIGHT_PORT ?? process.env.PORT ?? "3000";
 const baseURL = `http://127.0.0.1:${PORT}`;
 
-const capturePortfolio = process.env.CAPTURE_PORTFOLIO === "1";
+const capturePortfolio =
+  process.env.CAPTURE_PORTFOLIO === "1" ||
+  process.env.npm_lifecycle_event === "capture:portfolio";
+
+// Playwright's web server inherits this process environment on every platform.
+process.env.PORT = PORT;
+process.env.REPORTS_DIR ??= ".playwright-reports";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -21,7 +27,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `npm run build && PORT=${PORT} REPORTS_DIR=.playwright-reports npm run start`,
+    command: "npm run build && npm run start",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

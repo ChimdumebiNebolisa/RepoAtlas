@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "capture:portfolio": "CAPTURE_PORTFOLIO=1 playwright test e2e/portfolio-capture.spec.ts && node scripts/build-demo-gif.mjs"
+    "capture:portfolio": "playwright test e2e/portfolio-capture.spec.ts && node scripts/build-demo-gif.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.1",
