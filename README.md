@@ -378,8 +378,9 @@ npm run test:watch  # Run Vitest in watch mode
 
 ## Testing
 
-- Unit and integration-style tests are written with Vitest
-- Coverage includes analyzer packs, scoring, ingest, API routes, and report export flows
+- Unit and integration-style tests: Vitest (121 tests)
+- End-to-end tests: Playwright (32 tests) — API edge cases, full UI flows, share/export/upload, legacy report fallback
+- Portfolio capture is separate: `npm run capture:portfolio` (not run during default `npm run test:e2e`)
 
 Run:
 

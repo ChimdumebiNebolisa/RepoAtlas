@@ -3,8 +3,11 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = process.env.PLAYWRIGHT_PORT ?? "3000";
 const baseURL = `http://127.0.0.1:${PORT}`;
 
+const capturePortfolio = process.env.CAPTURE_PORTFOLIO === "1";
+
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: capturePortfolio ? undefined : [/portfolio-capture\.spec\.ts/],
   timeout: 120_000,
   expect: { timeout: 60_000 },
   fullyParallel: false,
