@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { ERROR_CODES, toApiErrorPayload } from "@/lib/errors";
 import { exportReportToMarkdown } from "@/lib/export";
+import { buildExportFilename } from "@/lib/exportNames";
 import { getReport } from "@/lib/storage";
 
 const UUID_LIKE_PATTERN =
@@ -42,12 +43,17 @@ export async function GET(
     }
 
     const markdown = exportReportToMarkdown(report);
+    const filename = buildExportFilename({
+      repoName: report.repo_metadata.name,
+      analyzedAt: report.repo_metadata.analyzed_at,
+      ext: "md",
+    });
 
     return new Response(markdown, {
       status: 200,
       headers: {
         "Content-Type": "text/markdown; charset=utf-8",
-        "Content-Disposition": `attachment; filename=\"repo-brief-${id}.md\"`,
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
   } catch (err) {

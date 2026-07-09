@@ -51,19 +51,19 @@ describe("GET /api/reports/[id]/export/md", () => {
 
   it("returns markdown with attachment headers when report exists", async () => {
     getReportMock.mockResolvedValue(sampleReport);
-    exportReportToMarkdownMock.mockReturnValue("# Repo Brief\n");
+    exportReportToMarkdownMock.mockReturnValue("# Repo Analysis\n");
 
     const response = await GET(new Request("http://localhost") as any, {
       params: { id: validId },
     });
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe("# Repo Brief\n");
+    expect(await response.text()).toBe("# Repo Analysis\n");
     expect(response.headers.get("Content-Type")).toBe(
       "text/markdown; charset=utf-8"
     );
     expect(response.headers.get("Content-Disposition")).toBe(
-      `attachment; filename="repo-brief-${validId}.md"`
+      `attachment; filename="repoatlas-candidate-brief-repo-atlas-2026-03-25.md"`
     );
     expect(getReportMock).toHaveBeenCalledWith(validId);
     expect(exportReportToMarkdownMock).toHaveBeenCalledWith(sampleReport);

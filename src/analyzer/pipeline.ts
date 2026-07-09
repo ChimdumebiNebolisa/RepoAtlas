@@ -5,7 +5,9 @@
 
 import fs from "fs";
 import path from "path";
-import type { FolderMapNode, RunCommand, ContributeSignals } from "@/types/report";
+import type { FolderMapNode, ContributeSignals, RunCommand } from "@/types/report";
+import { shouldSkipDir } from "./ignoreRules";
+import { extractAllRunCommands } from "./commands";
 
 const MAX_DEPTH = 10;
 const MAX_FILE_COUNT = 10_000;
@@ -74,9 +76,12 @@ export async function runIndexingPipeline(
     const children: FolderMapNode[] = [];
 
     for (const ent of entries) {
-      if (ent.name === ".git" || ent.name === "node_modules") continue;
+      if (shouldSkipDir(ent.name)) continue;
       const fullPath = path.join(dir, ent.name);
-      const childRel = relPath ? path.join(relPath, ent.name) : ent.name;
+      const childRel = (relPath ? path.join(relPath, ent.name) : ent.name).replace(
+        /\\/g,
+        "/"
+      );
 
       if (ent.isDirectory()) {
         children.push(buildFolderMap(fullPath, childRel, depth + 1));
@@ -122,7 +127,7 @@ export async function runIndexingPipeline(
   }
 
   const { commands: run_commands, warnings: runWarnings } =
-    await extractRunCommands(workspacePath);
+    extractAllRunCommands(workspacePath, key_docs);
   warnings.push(...runWarnings);
 
   const contribute_signals: ContributeSignals = {
@@ -139,32 +144,4 @@ export async function runIndexingPipeline(
     ci_configs,
     warnings,
   };
-}
-
-async function extractRunCommands(
-  workspacePath: string
-): Promise<{ commands: RunCommand[]; warnings: string[] }> {
-  const commands: RunCommand[] = [];
-  const warnings: string[] = [];
-  const pkgPath = path.join(workspacePath, "package.json");
-
-  if (fs.existsSync(pkgPath)) {
-    try {
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-      const scripts = pkg.scripts ?? {};
-      for (const [name, cmd] of Object.entries(scripts)) {
-        if (typeof cmd === "string") {
-          commands.push({
-            source: "package.json",
-            command: `npm run ${name}`,
-            description: name,
-          });
-        }
-      }
-    } catch {
-      warnings.push("Could not parse package.json scripts");
-    }
-  }
-
-  return { commands, warnings };
 }

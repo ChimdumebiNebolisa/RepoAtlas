@@ -1,13 +1,26 @@
 import type {
   Architecture,
+  ArchitectureInsights,
+  BehavioralHook,
   BriefAnswer,
   CandidateBrief,
+  CodeSymbol,
+  CommitInsights,
+  ConfidenceAssessment,
   ContributeSignals,
   DangerZoneItem,
   EvidenceRef,
+  InterviewQuestion,
+  ProjectProfile,
+  ProjectPurpose,
   RunCommand,
   StartHereItem,
+  TechnicalDecision,
+  TestInventory,
+  WalkthroughScript,
 } from "@/types/report";
+import { generateInterviewQuestions } from "./questions";
+import { readFileHeaderSnippet } from "./snippets";
 
 type Confidence = "high" | "medium" | "low";
 type PrRisk = "low" | "medium" | "high";
@@ -20,6 +33,15 @@ export interface BuildCandidateBriefInput {
   contributeSignals: ContributeSignals;
   architecture: Architecture;
   warnings: string[];
+  projectProfile?: ProjectProfile;
+  projectPurpose?: ProjectPurpose;
+  technicalDecisions?: TechnicalDecision[];
+  testInventory?: TestInventory;
+  commitInsights?: CommitInsights;
+  architectureInsights?: ArchitectureInsights;
+  symbols?: CodeSymbol[];
+  workspacePath?: string;
+  keyDocs?: string[];
 }
 
 interface EvidenceIndex {
@@ -45,9 +67,48 @@ function listPaths(paths: string[], emptyText: string): string {
 }
 
 function confidenceFor(input: BuildCandidateBriefInput): Confidence {
-  if (input.startHere.length >= 3 && input.dangerZones.length > 0) return "high";
-  if (input.startHere.length > 0 || input.dangerZones.length > 0) return "medium";
-  return "low";
+  const assessment = buildConfidenceAssessment(input);
+  return assessment.level;
+}
+
+function buildConfidenceAssessment(input: BuildCandidateBriefInput): ConfidenceAssessment {
+  const reasons: string[] = [];
+  const gaps: string[] = [];
+
+  if (input.contributeSignals.key_docs.some((d) => /readme/i.test(d))) {
+    reasons.push("README or key docs detected");
+  } else gaps.push("No README found");
+
+  if (input.runCommands.length > 0) {
+    reasons.push(`${input.runCommands.length} run command(s) extracted`);
+  } else gaps.push("No run commands detected");
+
+  if (input.architecture.edges.length > 0) {
+    reasons.push("Architecture graph has dependency edges");
+  } else gaps.push("No architecture edges");
+
+  const testCount =
+    input.testInventory?.test_file_count ??
+    (input.testInventory ? 0 : undefined);
+  if (testCount !== undefined && testCount > 0) {
+    reasons.push(`${testCount} test file(s) detected`);
+  } else if (input.startHere.length > 0) {
+    gaps.push("Limited or no test files detected");
+  }
+
+  if (input.projectPurpose) {
+    reasons.push(`Purpose extracted from ${input.projectPurpose.source}`);
+  }
+
+  if (input.warnings.length > 3) {
+    gaps.push("Multiple analysis warnings");
+  }
+
+  let level: Confidence = "low";
+  if (reasons.length >= 4 && gaps.length <= 1) level = "high";
+  else if (reasons.length >= 2) level = "medium";
+
+  return { level, reasons, gaps };
 }
 
 function addEvidence(
@@ -131,6 +192,8 @@ function buildEvidenceIndex(input: BuildCandidateBriefInput): EvidenceIndex {
 
   const docRefs = new Map<string, string>();
   input.contributeSignals.key_docs.forEach((doc, index) => {
+    const snippet =
+      input.workspacePath && readFileHeaderSnippet(input.workspacePath, doc);
     docRefs.set(
       doc,
       addEvidence(
@@ -139,6 +202,7 @@ function buildEvidenceIndex(input: BuildCandidateBriefInput): EvidenceIndex {
           kind: "doc",
           label: `Project document: ${doc}`,
           path: doc,
+          ...snippet,
         },
         "doc",
         index + 1
@@ -233,16 +297,19 @@ function buildRepoSummary(
     ...refValues(evidence.docRefs, 1),
   ].filter((id): id is string => Boolean(id));
 
-  const headline =
-    topStart != null
-      ? `${input.repoName} has a ranked onboarding path starting at ${topStart.path}`
+  const headline = input.projectProfile
+    ? `${input.repoName} appears to be a ${input.projectProfile.label}`
+    : topStart != null
+      ? `${input.repoName} has a ranked reading path starting at ${topStart.path}`
       : `${input.repoName} has limited deterministic onboarding signals`;
 
-  const plainEnglish =
-    `RepoAtlas found ${input.startHere.length} reading candidates, ` +
-    `${input.dangerZones.length} risk-ranked files, ${input.runCommands.length} run commands, ` +
-    `${input.contributeSignals.key_docs.length} key docs, and ${input.contributeSignals.ci_configs.length} CI configs. ` +
-    `Use this brief to discuss the repository from observed files, commands, docs, architecture edges, and risk signals only.`;
+  const plainEnglish = input.projectPurpose
+    ? `${input.projectPurpose.text} (extracted from ${input.projectPurpose.path}). ` +
+      `RepoAtlas also found ${input.startHere.length} reading candidates, ${input.dangerZones.length} risk-ranked files, and ${input.runCommands.length} run commands.`
+    : `RepoAtlas found ${input.startHere.length} reading candidates, ` +
+      `${input.dangerZones.length} risk-ranked files, ${input.runCommands.length} run commands, ` +
+      `${input.contributeSignals.key_docs.length} key docs, and ${input.contributeSignals.ci_configs.length} CI configs. ` +
+      `Use this brief to discuss the repository from observed files, commands, docs, architecture edges, and risk signals only.`;
 
   return {
     headline,
@@ -552,6 +619,120 @@ function buildCandidateWarnings(
   return warnings;
 }
 
+function buildWalkthroughScript(
+  input: BuildCandidateBriefInput,
+  evidence: EvidenceIndex
+): WalkthroughScript | undefined {
+  const profile = input.projectProfile?.label ?? "this codebase";
+  const purpose = input.projectPurpose?.text;
+  const topPaths = input.startHere.slice(0, 3).map((s) => s.path);
+  const cmds = input.runCommands.slice(0, 2).map((c) => c.command);
+  const symbolNames = (input.symbols ?? []).slice(0, 5).map((s) => s.name);
+
+  if (input.startHere.length === 0 && !purpose) {
+    return {
+      thirty_second: "Not enough evidence for a walkthrough script.",
+      two_minute: "Not enough evidence for a walkthrough script.",
+      deep_technical: "Not enough evidence.",
+      tradeoffs_to_mention: [],
+      improvements_next: ["Add README and run commands for stronger briefs."],
+      evidence_refs: [evidence.architectureRef],
+    };
+  }
+
+  const thirty_second =
+    `${profile}${purpose ? `: ${purpose.slice(0, 80)}` : ""}. ` +
+    `Start at ${topPaths[0] ?? "the folder map"}, validate with ${cmds[0] ?? "detected project files"}.`;
+
+  const two_minute =
+    `${thirty_second} Review ${listPaths(topPaths, "ranked files")}, ` +
+    `then discuss architecture (${input.architecture.nodes.length} nodes) and top risk file ` +
+    `${input.dangerZones[0]?.path ?? "if present"}.`;
+
+  const deep =
+    `${two_minute}` +
+    (symbolNames.length ? ` Key surfaces include ${symbolNames.join(", ")}.` : "");
+
+  const tradeoffs = (input.technicalDecisions ?? []).slice(0, 3).map((d) => d.decision);
+  const improvements = input.dangerZones.slice(0, 2).map(
+    (dz) => `Review test coverage and complexity around ${dz.path}`
+  );
+
+  return {
+    thirty_second,
+    two_minute,
+    deep_technical: deep,
+    tradeoffs_to_mention: tradeoffs,
+    improvements_next: improvements.length ? improvements : ["Clarify run/test workflow in docs."],
+    evidence_refs: [
+      ...refValues(evidence.startHereRefs, 2),
+      evidence.architectureRef,
+      ...refValues(evidence.commandRefs, 1),
+    ],
+  };
+}
+
+function buildBehavioralHooks(
+  input: BuildCandidateBriefInput,
+  evidence: EvidenceIndex
+): BehavioralHook[] {
+  const hooks: BehavioralHook[] = [];
+
+  if (input.dangerZones[0] && (input.testInventory?.test_file_count ?? 0) > 0) {
+    hooks.push({
+      prompt: "Challenge I solved",
+      answer_starter: `I would discuss how the team manages complexity in ${input.dangerZones[0].path} while maintaining tests nearby.`,
+      evidence_refs: [
+        evidence.dangerZoneRefs.get(input.dangerZones[0].path) ?? evidence.architectureRef,
+      ],
+      sufficient_evidence: true,
+    });
+  } else {
+    hooks.push({
+      prompt: "Challenge I solved",
+      answer_starter: "Not enough evidence",
+      evidence_refs: [],
+      sufficient_evidence: false,
+    });
+  }
+
+  if ((input.technicalDecisions ?? []).length >= 2) {
+    hooks.push({
+      prompt: "Tradeoff I made",
+      answer_starter: `Technical choices include ${input.technicalDecisions!.map((d) => d.decision).join(" and ")} — I would explain why those fit the repo signals.`,
+      evidence_refs: [],
+      sufficient_evidence: true,
+    });
+  } else {
+    hooks.push({
+      prompt: "Tradeoff I made",
+      answer_starter: "Not enough evidence",
+      evidence_refs: [],
+      sufficient_evidence: false,
+    });
+  }
+
+  if (input.warnings.length > 0) {
+    hooks.push({
+      prompt: "What I learned",
+      answer_starter: `Static analysis surfaced gaps: ${input.warnings[0]}`,
+      evidence_refs: evidence.warningRefs.slice(0, 1),
+      sufficient_evidence: true,
+    });
+  }
+
+  if (input.runCommands.length > 0) {
+    hooks.push({
+      prompt: "How I debugged/validated it",
+      answer_starter: `I would validate using ${input.runCommands[0].command} and cross-check docs.`,
+      evidence_refs: refValues(evidence.commandRefs, 1),
+      sufficient_evidence: true,
+    });
+  }
+
+  return hooks;
+}
+
 export function buildCandidateBrief(input: BuildCandidateBriefInput): CandidateBrief {
   const evidence = buildEvidenceIndex(input);
   const readingPath = buildReadingPath(input.startHere, evidence);
@@ -560,6 +741,15 @@ export function buildCandidateBrief(input: BuildCandidateBriefInput): CandidateB
   const riskAnswer = buildRiskAnswer(input, evidence);
   const improveFirst = buildImproveFirstAnswer(firstPrPlan, evidence);
   const firstWeek = buildFirstWeekAnswer(input, evidence, firstPrPlan);
+  const confidence_assessment = buildConfidenceAssessment(input);
+  const walkthrough_script = buildWalkthroughScript(input, evidence);
+  const behavioral_hooks = buildBehavioralHooks(input, evidence);
+  const interview_questions = generateInterviewQuestions({
+    projectProfile: input.projectProfile,
+    dangerZones: input.dangerZones,
+    testInventory: input.testInventory,
+    architectureInsights: input.architectureInsights,
+  });
 
   return {
     repo_summary: buildRepoSummary(input, evidence),
@@ -574,5 +764,9 @@ export function buildCandidateBrief(input: BuildCandidateBriefInput): CandidateB
     resume_bullets: buildResumeBullets(input, evidence),
     evidence_refs: evidence.refs,
     warnings: buildCandidateWarnings(input, evidence),
+    confidence_assessment,
+    walkthrough_script,
+    behavioral_hooks,
+    interview_questions,
   };
 }

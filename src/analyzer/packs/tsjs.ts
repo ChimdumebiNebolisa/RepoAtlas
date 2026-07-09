@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import type { Architecture } from "@/types/report";
 import type { IndexingPipelineResult } from "../pipeline";
+import { shouldSkipPath } from "../ignoreRules";
 
 const STATIC_IMPORT_RE =
   /\bimport\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
@@ -24,7 +25,6 @@ const SCRIPT_PATH_RE =
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 const RESOLUTION_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 const INDEX_CANDIDATES = ["/index.ts", "/index.tsx", "/index.js", "/index.jsx"];
-const IGNORED_DIRS = new Set(["node_modules", ".next", "dist", "build", "coverage"]);
 const ENTRY_SCRIPT_NAMES = new Set(["dev", "start", "build"]);
 const ARCH_NODE_CAP = 50;
 const ARCH_EDGE_CAP = 200;
@@ -56,29 +56,27 @@ function resolveImport(
 
   if (ext) {
     const candidate = path.join(workspacePath, baseResolved);
-    if (fs.existsSync(candidate)) return baseResolved;
+    if (fs.existsSync(candidate)) return normalizeRelPath(baseResolved);
     return null;
   }
 
   for (const extension of RESOLUTION_EXTENSIONS) {
     const resolvedPath = baseResolved + extension;
     const candidate = path.join(workspacePath, resolvedPath);
-    if (fs.existsSync(candidate)) return path.normalize(resolvedPath);
+    if (fs.existsSync(candidate)) return normalizeRelPath(resolvedPath);
   }
 
   for (const indexPath of INDEX_CANDIDATES) {
     const resolvedPath = baseResolved + indexPath;
     const candidate = path.join(workspacePath, resolvedPath);
-    if (fs.existsSync(candidate)) return path.normalize(resolvedPath);
+    if (fs.existsSync(candidate)) return normalizeRelPath(resolvedPath);
   }
 
   return null;
 }
 
 function isIgnoredPath(relPath: string): boolean {
-  const normalized = normalizeRelPath(relPath);
-  const segments = normalized.split("/");
-  return segments.some((segment) => IGNORED_DIRS.has(segment));
+  return shouldSkipPath(relPath);
 }
 
 function normalizeRelPath(relPath: string): string {
@@ -396,6 +394,9 @@ export function runTsJsPack(
   const files = Array.from(pipeline.file_metadata.keys()).filter((f) =>
     CODE_EXTENSIONS.includes(path.extname(f)) && !isIgnoredPath(f)
   );
+  const fileByNormalized = new Map(
+    files.map((file) => [normalizeRelPath(file), file])
+  );
 
   for (const f of files) {
     const normalized = normalizeRelPath(f);
@@ -425,7 +426,10 @@ export function runTsJsPack(
 
     const targets = new Set<string>();
     for (const imp of extractImportSpecifiers(content)) {
-      const resolved = resolveImport(f, imp, workspacePath);
+      const resolvedPath = resolveImport(f, imp, workspacePath);
+      const resolved = resolvedPath
+        ? fileByNormalized.get(normalizeRelPath(resolvedPath))
+        : undefined;
       if (
         resolved &&
         pipeline.file_metadata.has(resolved) &&

@@ -3,7 +3,8 @@
  */
 
 import path from "path";
-import type { StartHereItem, DangerZoneItem } from "@/types/report";
+import type { CommitInsights, StartHereItem, DangerZoneItem } from "@/types/report";
+import { churnScoreForFile } from "./gitHistory";
 import type { IndexingPipelineResult } from "./pipeline";
 import type { TsJsPackResult } from "./packs/tsjs";
 import type { PythonPackResult } from "./packs/python";
@@ -296,7 +297,8 @@ export function computeDangerZones(
   pipeline: IndexingPipelineResult,
   tsjs?: TsJsPackResult | null,
   python?: PythonPackResult | null,
-  java?: JavaPackResult | null
+  java?: JavaPackResult | null,
+  commitInsights?: CommitInsights | null
 ): DangerZoneItem[] {
   const tsjsFiles = tsjs
     ? Array.from(pipeline.file_metadata.keys()).filter((f) =>
@@ -325,6 +327,10 @@ export function computeDangerZones(
   const fanOutValues = files.map((f) => pack(f).fanOut.get(f) ?? 0);
   const complexityValues = files.map((f) => pack(f).complexity.get(f) ?? 0);
   const testProximityValues = files.map((f) => pack(f).testProximity?.get(f) ?? 0);
+  const churnValues = files.map((f) =>
+    commitInsights ? churnScoreForFile(f, commitInsights) : 0
+  );
+  const hasChurn = commitInsights?.mode !== "unavailable" && churnValues.some((v) => v > 0);
 
   const items: DangerZoneItem[] = [];
 
@@ -334,19 +340,27 @@ export function computeDangerZones(
     const fanOut = pack(f).fanOut.get(f) ?? 0;
     const complexity = pack(f).complexity.get(f) ?? 0;
     const testProximity = pack(f).testProximity?.get(f) ?? 0;
+    const churn = commitInsights ? churnScoreForFile(f, commitInsights) : 0;
 
     const sizeP = percentileRank(sizeValues, size);
     const fanInP = percentileRank(fanInValues, fanIn);
     const fanOutP = percentileRank(fanOutValues, fanOut);
     const complexityP = percentileRank(complexityValues, complexity);
     const weakTestP = 100 - percentileRank(testProximityValues, testProximity);
+    const churnP = hasChurn ? percentileRank(churnValues, churn) : 0;
 
-    const weightedRisk =
-      0.2 * sizeP +
-      0.25 * fanInP +
-      0.2 * fanOutP +
-      0.25 * complexityP +
-      0.1 * weakTestP;
+    const weightedRisk = hasChurn
+      ? 0.18 * sizeP +
+        0.22 * fanInP +
+        0.18 * fanOutP +
+        0.22 * complexityP +
+        0.1 * weakTestP +
+        0.1 * churnP
+      : 0.2 * sizeP +
+        0.25 * fanInP +
+        0.2 * fanOutP +
+        0.25 * complexityP +
+        0.1 * weakTestP;
     const riskScore = Math.round(Math.max(0, Math.min(100, weightedRisk)));
 
     const parts: string[] = [
@@ -356,6 +370,9 @@ export function computeDangerZones(
       `complexity p${Math.round(complexityP)} (${complexity})`,
       `test proximity ${testProximity}`,
     ];
+    if (hasChurn && churn > 0) {
+      parts.push(`recent churn p${Math.round(churnP)}`);
+    }
     if (testProximity === 0) {
       parts.push("no nearby tests");
     } else if (testProximity < 80) {
@@ -366,7 +383,14 @@ export function computeDangerZones(
       path: f,
       score: riskScore,
       breakdown: parts.join(", "),
-      metrics: { size, fan_in: fanIn, fan_out: fanOut, complexity, test_proximity: testProximity },
+      metrics: {
+        size,
+        fan_in: fanIn,
+        fan_out: fanOut,
+        complexity,
+        test_proximity: testProximity,
+        ...(churn > 0 ? { churn } : {}),
+      },
     });
   }
 

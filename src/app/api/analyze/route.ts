@@ -5,7 +5,6 @@ import path from "path";
 import os from "os";
 import { analyzeRepository } from "@/analyzer";
 import {
-  AppError,
   ERROR_CODES,
   toApiErrorPayload,
   toAppError,
@@ -69,8 +68,13 @@ export async function POST(request: NextRequest) {
       zipRef = tempZipPath;
     } else if (contentType.includes("application/json")) {
       const body = await request.json();
-      zipRef = body.zipRef;
-      zipName = typeof body.zipName === "string" ? body.zipName : undefined;
+      if (body.sample === true) {
+        zipRef = path.join(process.cwd(), "fixtures", "repo-ts");
+        zipName = "repo-ts";
+      } else {
+        zipRef = body.zipRef;
+        zipName = typeof body.zipName === "string" ? body.zipName : undefined;
+      }
       if (!zipRef) {
         return NextResponse.json(
           { code: ERROR_CODES.INVALID_INPUT, message: "Provide zipRef or upload a zip file." },
@@ -84,22 +88,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const report = await Promise.race([
-      analyzeRepository({ zipRef, zipName }),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new AppError({
-                code: ERROR_CODES.TIMEOUT,
-                status: 504,
-                message: "Analysis timed out.",
-              })
-            ),
-          MAX_ANALYSIS_TIME_MS
-        )
-      ),
-    ]);
+    const report = await analyzeRepository(
+      { zipRef, zipName },
+      { deadlineMs: MAX_ANALYSIS_TIME_MS }
+    );
 
     if (!report.reportId) {
       return NextResponse.json(

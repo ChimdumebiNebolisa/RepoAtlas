@@ -3,6 +3,8 @@
  * See docs/spec.md Section 7 (Data Models).
  */
 
+export const REPORT_VERSION = 2;
+
 export interface RepoMetadata {
   name: string;
   url: string;
@@ -19,14 +21,14 @@ export type FolderMapNode = {
 };
 
 export interface ArchitectureNode {
-  id: string; // file path or module id
-  label: string; // display name
+  id: string;
+  label: string;
   type?: "file" | "module" | "folder";
 }
 
 export interface ArchitectureEdge {
-  from: string; // node id
-  to: string; // node id
+  from: string;
+  to: string;
   type?: "import" | "dependency";
 }
 
@@ -51,11 +53,12 @@ export interface DangerZoneItem {
     fan_out?: number;
     complexity?: number;
     test_proximity?: number;
+    churn?: number;
   };
 }
 
 export interface RunCommand {
-  source: string; // e.g. "package.json", "README"
+  source: string;
   command: string;
   description?: string;
 }
@@ -76,11 +79,16 @@ export interface EvidenceRef {
     | "architecture"
     | "start_here"
     | "danger_zone"
-    | "warning";
+    | "warning"
+    | "decision"
+    | "symbol";
   label: string;
   path?: string;
   command?: string;
   detail?: string;
+  line_start?: number;
+  line_end?: number;
+  snippet?: string;
 }
 
 export interface BriefAnswer {
@@ -88,6 +96,88 @@ export interface BriefAnswer {
   bullets: string[];
   evidence_refs: string[];
   confidence: "high" | "medium" | "low";
+}
+
+export interface ProjectProfile {
+  type: string;
+  label: string;
+  confidence: "high" | "medium" | "low";
+  signals: string[];
+  evidence_refs: string[];
+}
+
+export interface ProjectPurpose {
+  text: string;
+  source: "readme_heading" | "readme_intro" | "package.json" | "pyproject" | "app_metadata";
+  path: string;
+  extracted: true;
+  evidence_refs: string[];
+}
+
+export interface TechnicalDecision {
+  category: "framework" | "database" | "auth" | "deployment" | "testing" | "styling" | "storage";
+  decision: string;
+  signals: string[];
+  evidence_refs: string[];
+}
+
+export interface ConfidenceAssessment {
+  level: "high" | "medium" | "low";
+  reasons: string[];
+  gaps: string[];
+}
+
+export interface WalkthroughScript {
+  thirty_second: string;
+  two_minute: string;
+  deep_technical: string;
+  tradeoffs_to_mention: string[];
+  improvements_next: string[];
+  evidence_refs: string[];
+}
+
+export interface BehavioralHook {
+  prompt: string;
+  answer_starter: string;
+  evidence_refs: string[];
+  sufficient_evidence: boolean;
+}
+
+export interface InterviewQuestion {
+  question: string;
+  rationale: string;
+  evidence_refs: string[];
+}
+
+export interface CodeSymbol {
+  name: string;
+  kind: "function" | "class" | "component" | "route" | "export";
+  path: string;
+  line?: number;
+}
+
+export interface TestInventory {
+  test_file_count: number;
+  frameworks: string[];
+  tested_areas: string[];
+  untested_high_risk_files: string[];
+  suggested_test_targets: string[];
+  evidence_refs: string[];
+}
+
+export interface ArchitectureInsights {
+  layers: string[];
+  violations: Array<{ from: string; to: string; reason: string }>;
+  circular_deps: string[][];
+  hubs: string[];
+}
+
+export interface CommitInsights {
+  mode: "local_git" | "github_api" | "unavailable";
+  recent_work_areas: string[];
+  high_churn_files: string[];
+  co_changed_pairs: Array<{ files: [string, string]; count: number }>;
+  evidence_refs: string[];
 }
 
 export interface CandidateBrief {
@@ -133,9 +223,16 @@ export interface CandidateBrief {
     message: string;
     evidence_refs?: string[];
   }>;
+
+  confidence_assessment?: ConfidenceAssessment;
+  walkthrough_script?: WalkthroughScript;
+  behavioral_hooks?: BehavioralHook[];
+  interview_questions?: InterviewQuestion[];
 }
 
 export interface Report {
+  report_version?: number;
+  partial?: boolean;
   repo_metadata: RepoMetadata;
   folder_map: FolderMapNode;
   architecture: Architecture;
@@ -144,5 +241,12 @@ export interface Report {
   run_commands: RunCommand[];
   contribute_signals: ContributeSignals;
   candidate_brief?: CandidateBrief;
+  project_profile?: ProjectProfile;
+  project_purpose?: ProjectPurpose;
+  technical_decisions?: TechnicalDecision[];
+  symbols?: CodeSymbol[];
+  test_inventory?: TestInventory;
+  architecture_insights?: ArchitectureInsights;
+  commit_insights?: CommitInsights;
   warnings: string[];
 }

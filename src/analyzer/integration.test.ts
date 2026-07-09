@@ -8,6 +8,9 @@ describe("analyzeRepository integration (acceptance)", () => {
   const javaMavenFixturePath = path.resolve(__dirname, "../../fixtures/repo-java-maven");
   const pythonFixturePath = path.resolve(__dirname, "../../fixtures/repo-python");
   const docsOnlyFixturePath = path.resolve(__dirname, "../../fixtures/repo-docs-only");
+  const fastapiFixturePath = path.resolve(__dirname, "../../fixtures/repo-fastapi");
+  const nodeApiFixturePath = path.resolve(__dirname, "../../fixtures/repo-node-api");
+  const monorepoFixturePath = path.resolve(__dirname, "../../fixtures/repo-monorepo");
 
   it("produces report for local fixture (zipRef)", async () => {
     const result = await analyzeRepository({
@@ -124,6 +127,37 @@ describe("analyzeRepository integration (acceptance)", () => {
     expect(
       result.report.warnings.some((w) => w.includes("Deep Java analysis unavailable"))
     ).toBe(false);
+  }, 30000);
+
+  it("FastAPI fixture: produces Python architecture and candidate brief", async () => {
+    const result = await analyzeRepository({ zipRef: fastapiFixturePath });
+    expect(result.report.repo_metadata.name).toContain("repo-fastapi");
+    expect(result.report.architecture.nodes.length).toBeGreaterThan(0);
+    expect(result.report.candidate_brief).toBeDefined();
+    expect(result.report.start_here.some((item) => item.path.includes("main.py"))).toBe(true);
+    expect(
+      result.report.warnings.some((w) => w.includes("Deep Python analysis unavailable"))
+    ).toBe(false);
+  }, 30000);
+
+  it("Node API fixture: produces JS architecture and run commands", async () => {
+    const result = await analyzeRepository({ zipRef: nodeApiFixturePath });
+    expect(result.report.repo_metadata.name).toContain("repo-node-api");
+    expect(result.report.architecture.nodes.length).toBeGreaterThan(0);
+    expect(result.report.run_commands.length).toBeGreaterThan(0);
+    expect(result.report.candidate_brief).toBeDefined();
+    expect(
+      result.report.warnings.some((w) => w.includes("Deep analysis unavailable"))
+    ).toBe(false);
+  }, 30000);
+
+  it("Monorepo fixture: produces folder map and project profile", async () => {
+    const result = await analyzeRepository({ zipRef: monorepoFixturePath });
+    expect(result.report.repo_metadata.name).toContain("repo-monorepo");
+    expect(result.report.folder_map.children?.length).toBeGreaterThan(0);
+    expect(result.report.candidate_brief).toBeDefined();
+    const paths = JSON.stringify(result.report.folder_map);
+    expect(paths).toMatch(/packages/);
   }, 30000);
 
   it("Python fixture: produces architecture, start here, and danger zones", async () => {

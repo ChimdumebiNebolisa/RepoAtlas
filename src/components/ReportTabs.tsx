@@ -9,7 +9,9 @@ import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
 import { ReportDocument } from "./ReportDocument";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
+import { DeepAnalysisSection } from "./DeepAnalysisSection";
 import { ERROR_CODES } from "@/lib/errors";
+import { buildExportFilename } from "@/lib/exportNames";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -30,6 +32,7 @@ interface ReportTabsProps {
   report: Report;
   reportId?: string | null;
   variant?: "live" | "preview";
+  initialDemoMode?: boolean;
 }
 
 interface ApiErrorLike {
@@ -60,8 +63,18 @@ function getMarkdownRoute(reportId: string) {
   return `/api/reports/${reportId}/export/md`;
 }
 
-export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsProps) {
+export function ReportTabs({
+  report,
+  reportId,
+  variant = "live",
+  initialDemoMode = false,
+}: ReportTabsProps) {
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Candidate Brief");
+  const [demoMode, setDemoMode] = useState(initialDemoMode);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "png" | "md" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [markdownSupport, setMarkdownSupport] = useState<MarkdownSupportState>(
@@ -137,6 +150,12 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
     URL.revokeObjectURL(url);
   };
 
+  const exportBasename = buildExportFilename({
+    repoName: report.repo_metadata.name,
+    analyzedAt: report.repo_metadata.analyzed_at,
+    ext: "md",
+  }).replace(/\.md$/, "");
+
   const handleExportPng = async () => {
     try {
       setExportError(null);
@@ -146,7 +165,7 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
         canvas.toBlob(resolve, "image/png", 1)
       );
       if (!blob) throw new Error("Could not generate PNG image.");
-      downloadBlob(blob, `repo-brief-${reportId ?? "sample"}.png`);
+      downloadBlob(blob, `${exportBasename}.png`);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "PNG export failed.");
     } finally {
@@ -180,7 +199,7 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
         heightLeft -= pageHeight - margin * 2;
       }
 
-      pdf.save(`repo-brief-${reportId ?? "sample"}.pdf`);
+      pdf.save(`${exportBasename}.pdf`);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "PDF export failed.");
     } finally {
@@ -219,13 +238,44 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
 
       const markdown = await res.text();
       const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-      downloadBlob(blob, `repo-brief-${reportId}.md`);
+      const disposition = res.headers.get("Content-Disposition");
+      const filename =
+        disposition?.match(/filename="([^"]+)"/)?.[1] ??
+        buildExportFilename({
+          repoName: report.repo_metadata.name,
+          analyzedAt: report.repo_metadata.analyzed_at,
+          ext: "md",
+        });
+      downloadBlob(blob, filename);
       setMarkdownSupport("available");
       setMarkdownNote(null);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "Markdown export failed.");
     } finally {
       setExporting(null);
+    }
+  };
+
+  const handleCreateShareLink = async () => {
+    if (!reportId || shareLoading) return;
+    setShareLoading(true);
+    setShareError(null);
+    try {
+      const res = await fetch(`/api/reports/${reportId}/share`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setShareError(data.message ?? "Failed to create share link.");
+        return;
+      }
+      const path = data.sharePath as string;
+      const url =
+        typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+      setShareUrl(url);
+      setShareExpiresAt(data.expiresAt ?? null);
+    } catch {
+      setShareError("Failed to create share link.");
+    } finally {
+      setShareLoading(false);
     }
   };
 
@@ -286,7 +336,7 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
 
       <div className="py-4">
         {activeTab === "Candidate Brief" && (
-          <CandidateBriefPanel candidateBrief={report.candidate_brief} />
+          <CandidateBriefPanel candidateBrief={report.candidate_brief} demoMode={demoMode} />
         )}
 
         {activeTab === "Overview" && (
@@ -310,7 +360,52 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
               <dd>{report.repo_metadata.branch}</dd>
               <dt className="font-medium">Analyzed:</dt>
               <dd>{report.repo_metadata.analyzed_at}</dd>
+              {report.partial && (
+                <>
+                  <dt className="font-medium">Status:</dt>
+                  <dd className="text-amber-700">Partial report (analysis timed out)</dd>
+                </>
+              )}
             </dl>
+            {reportId && variant === "live" && (
+              <div className="mt-4 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                <p className="font-medium text-slate-900">Share read-only Candidate Brief</p>
+                <p className="text-xs text-slate-600">
+                  Creates a token-gated link (7-day expiry). Shares report JSON only — never your
+                  uploaded zip.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCreateShareLink}
+                  disabled={shareLoading}
+                  className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                >
+                  {shareLoading ? "Creating link…" : "Create share link"}
+                </button>
+                {shareError && <p className="text-xs text-red-700">{shareError}</p>}
+                {shareUrl && (
+                  <p className="break-all text-xs text-slate-700">
+                    <a href={shareUrl} className="font-medium text-emerald-700 hover:underline">
+                      {shareUrl}
+                    </a>
+                    {shareExpiresAt && (
+                      <span className="mt-1 block text-slate-500">
+                        Expires {new Date(shareExpiresAt).toLocaleString()}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="mt-6">
+              <h3 className="mb-3 text-lg font-semibold text-slate-900">Deep analysis</h3>
+              <DeepAnalysisSection
+                projectProfile={report.project_profile}
+                testInventory={report.test_inventory}
+                architectureInsights={report.architecture_insights}
+                commitInsights={report.commit_insights}
+              />
+            </div>
             {report.run_commands.length > 0 && (
               <div>
                 <h3 className="font-semibold mt-4">Run commands</h3>
@@ -390,9 +485,21 @@ export function ReportTabs({ report, reportId, variant = "live" }: ReportTabsPro
         </p>
       )}
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={demoMode}
+            onChange={(e) => setDemoMode(e.target.checked)}
+            className="rounded border-slate-300"
+          />
+          Screenshot / demo mode
+        </label>
+      </div>
+
       <div className="pointer-events-none fixed -left-[10000px] top-0 w-[1100px] bg-white p-8 text-slate-900">
         <div ref={exportRef}>
-          <h1 className="mb-2 text-3xl font-bold">Repo Brief: {report.repo_metadata.name}</h1>
+          <h1 className="mb-2 text-3xl font-bold">Repo Analysis: {report.repo_metadata.name}</h1>
           <p className="mb-6 text-sm text-slate-600">{report.repo_metadata.url}</p>
           <ReportDocument report={report} />
         </div>

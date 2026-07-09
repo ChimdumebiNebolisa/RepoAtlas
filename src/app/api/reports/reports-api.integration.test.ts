@@ -65,7 +65,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(exportResponse.headers.get("content-type")).toContain("text/markdown");
 
     const markdown = await exportResponse.text();
-    expect(markdown).toContain("# Repo Brief:");
+    expect(markdown).toContain("# Repo Analysis:");
     expect(markdown).toContain("## Candidate Brief");
     expect(markdown).toContain("### Evidence References");
     expect(markdown).toContain("## Folder Map");

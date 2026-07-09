@@ -4,12 +4,12 @@
  * Vercel-compatible: no git binary required.
  */
 
-import AdmZip from "adm-zip";
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import os from "os";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { safeExtractZip } from "@/lib/safeZipExtract";
 
 const FETCH_TIMEOUT_MS = 60_000;
 const MAX_REPO_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
@@ -296,19 +296,19 @@ async function ingestFromGithub(githubUrl: string): Promise<IngestResult> {
   }
 
   try {
-    const zip = new AdmZip(Buffer.from(buffer));
-    zip.extractAllTo(tempDir, true);
+    safeExtractZip(Buffer.from(buffer), tempDir);
   } catch (err) {
     try {
       await fs.promises.rm(tempDir, { recursive: true, force: true });
     } catch {
       /* ignore */
     }
+    if (err instanceof AppError) throw err;
     const msg = err instanceof Error ? err.message : "Unknown error";
     throw new AppError({
-      code: ERROR_CODES.CLONE_FAILED,
-      status: 502,
-      message: "Could not clone the repository.",
+      code: ERROR_CODES.ZIP_INVALID,
+      status: 400,
+      message: "Invalid or corrupted zip file.",
       meta: { rawMessage: msg },
       cause: err,
     });
@@ -385,18 +385,19 @@ async function ingestFromZip(zipRef: string, zipName?: string): Promise<IngestRe
   fs.mkdirSync(tempDir, { recursive: true });
 
   try {
-    const zip = new AdmZip(fullPath);
-    zip.extractAllTo(tempDir, true);
+    const { safeExtractZipFromFile } = await import("@/lib/safeZipExtract");
+    safeExtractZipFromFile(fullPath, tempDir);
   } catch (err) {
     try {
       await fs.promises.rm(tempDir, { recursive: true, force: true });
     } catch {
       /* ignore */
     }
+    if (err instanceof AppError) throw err;
     const msg = err instanceof Error ? err.message : "Unknown error";
     throw new AppError({
-      code: ERROR_CODES.CLONE_FAILED,
-      status: 502,
+      code: ERROR_CODES.ZIP_INVALID,
+      status: 400,
       message: "Could not extract the repository.",
       meta: { rawMessage: msg },
       cause: err,

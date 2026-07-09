@@ -1,0 +1,13 @@
+{
+  "name": "repo-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/api",
+    "packages/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w packages/web",
+    "build": "npm run build -w packages/web",
+    "test": "npm run test -w packages/api"
+  }
+}
