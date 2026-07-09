@@ -1,377 +1,216 @@
 # RepoAtlas
 
-RepoAtlas is a local-first repository analysis app that generates a structured Repo Brief for onboarding, reviews, and architecture understanding.
+RepoAtlas turns unfamiliar codebases into evidence-backed Candidate Briefs for interviews, take-homes, and open-source contribution prep.
 
-It analyzes repository files without executing them and produces:
+## Problem It Solves
 
-- Folder Map: recursive directory tree
-- Architecture Map: interactive ELK-based dependency graph with pan and zoom
-- Start Here: ranked reading path with signal-based explanations
-- Danger Zones: risk-ranked hotspots with metric breakdowns
-- Run and Contribute: extracted run commands, key docs, and CI indicators
-- Export: full report as PDF, PNG, or Markdown
+Candidates, new contributors, and reviewers often explore repositories ad hoc. They jump between the README, entrypoints, tests, configuration, and large files without a clear reading order or a defensible explanation of what they found.
 
-Deep analysis is currently implemented for TypeScript/JavaScript, Python, and Java repositories.
+RepoAtlas compresses that process into a structured brief. It analyzes repository files without executing project code, ranks useful starting points, identifies risk signals, and turns those findings into interview-ready talking points with references back to the analyzed evidence.
 
-The primary workflow is zip upload through the web UI. RepoAtlas extracts the archive, analyzes the repository, stores the report, and returns a report ID that the UI can load or export.
+## Demo
 
----
+RepoAtlas currently runs locally:
 
-## Table of Contents
+1. Download or create a zip of a repository.
+2. Start RepoAtlas and upload the zip.
+3. Open the Candidate Brief tab.
+4. Review the repo summary, reading path, interview talking points, first PR plan, and evidence references.
+5. Explore the supporting Folder Map, Architecture Map, Start Here, Danger Zones, and Run & Contribute tabs.
+6. Export the complete report as Markdown, PDF, or PNG.
 
-- [Features](#features)
-- [How It Works](#how-it-works)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Requirements](#requirements)
-- [Quick Start](#quick-start)
-- [Usage](#usage)
-- [API Reference](#api-reference)
-- [Configuration](#configuration)
-- [Project Structure](#project-structure)
-- [Development](#development)
-- [Testing](#testing)
-- [Fixtures](#fixtures)
-- [Limits and Behavior](#limits-and-behavior)
-- [Security Notes](#security-notes)
-- [Libraries and Licenses](#libraries-and-licenses)
-- [License](#license)
-
----
+Screenshots coming soon.
 
 ## Features
 
-- Single-input workflow: upload a zip of your repo and generate a report
-- Deterministic scoring: Start Here and Danger Zones are derived from measurable repo signals
-- Multi-language packs: TS/JS, Python, and Java packs provide deeper static analysis
-- Interactive visualization: pan and zoom dependency view with ELK layout
-- Portable exports:
-  - Client-side full report export to PDF and PNG
-  - Server-side Markdown export via `GET /api/reports/:id/export/md`
-- Report persistence: report JSON on disk (`reports/`) or Vercel Blob when deployed with `BLOB_READ_WRITE_TOKEN`
+- **Candidate Brief**: deterministic interview-prep output built from analyzed repository signals
+- **Evidence-backed repo summary**: describes only what the available files and analysis support
+- **Ranked reading path**: prioritizes docs, entrypoints, routes, and central modules
+- **Interview talking points**:
+  - Walk me through this codebase
+  - What are the riskiest areas?
+  - What would you improve first?
+  - How would you contribute in your first week?
+- **First PR plan**: three scoped contribution ideas based on docs, commands, CI, warnings, architecture, tests, and danger-zone signals
+- **Resume and LinkedIn bullets**: concise descriptions of the RepoAtlas analysis without invented product impact
+- **Evidence references and confidence notes**: connect generated statements to files, commands, docs, CI, architecture, scores, and warnings
+- **Folder Map**: recursive repository tree
+- **Architecture Map**: interactive ELK-based dependency graph with pan and zoom
+- **Start Here**: deterministic onboarding priority with explanations
+- **Danger Zones**: risk-ranked files using size, coupling, complexity, and test-proximity signals
+- **Run & Contribute**: detected `package.json` scripts, key docs, and CI configuration
+- **Export**: Markdown, PDF, and PNG reports including the Candidate Brief
 
----
+Deep language analysis currently supports TypeScript/JavaScript, Python, and Java.
 
 ## How It Works
 
-1. A user uploads a zip file from the web UI.
-2. `POST /api/analyze` receives the file, saves it to a temp path, and starts analysis.
-3. Repo ingest extracts the zip to a temporary workspace.
-4. The indexing pipeline collects:
-   - folder tree
-   - file metadata and language hints
-   - key docs and CI config signals
-   - runnable commands from `package.json` scripts
-5. Language packs for TS/JS, Python, and Java compute imports, entrypoints, complexity, and proximity.
-6. Scoring computes:
-   - `start_here` ranking
-   - `danger_zones` risk score
-7. The report is saved and returned by report ID.
-8. The UI loads the report and supports export.
+1. The user uploads a repository zip.
+2. `POST /api/analyze` saves the upload to a temporary path.
+3. The ingest layer extracts the repository into a temporary workspace.
+4. The indexing pipeline collects the folder tree, file metadata, language hints, key docs, CI configs, and `package.json` scripts.
+5. Supported language packs analyze imports, entrypoints, complexity proxies, and test proximity.
+6. Scoring produces the Start Here ranking and Danger Zones.
+7. A deterministic Candidate Brief builder repackages those signals into interview-prep output with evidence references.
+8. The report is stored as JSON and the API returns a report ID.
+9. The UI fetches the stored report and renders the report tabs and export controls.
 
----
+No AI model or API key is required.
 
-## Architecture
+## Candidate Brief Output
 
-- Flow: zip upload or JSON `zipRef` -> ingest -> analyzer -> storage -> API returns report ID -> UI fetches and exports by report ID
-- Runtime Architecture Map UI: interactive dependency graph using ELK layout with pan and zoom controls
-- Markdown artifact rendering: Mermaid syntax is used only in exported markdown artifacts, not as the runtime graph renderer
-- Frontend: Next.js App Router, React, Tailwind CSS
-- API routes:
-  - `POST /api/analyze`
-  - `GET /api/reports/:id`
-  - `GET /api/reports/:id/export/md`
-- Analyzer: in-process TypeScript module
-- Storage: report JSON on filesystem (`reports/`) or Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
-- Temp workspace: OS temp directory per analysis run
+The stored report includes an optional `candidate_brief` object. Its shape is similar to:
 
----
+```json
+{
+  "repo_summary": {
+    "headline": "A concise evidence-backed orientation",
+    "plain_english": "A summary based on detected repository signals",
+    "primary_evidence": ["start-1", "risk-1", "arch-1"],
+    "confidence": "high"
+  },
+  "reading_path": [
+    {
+      "order": 1,
+      "path": "README.md",
+      "why": "root README documentation",
+      "evidence_refs": ["start-1"]
+    }
+  ],
+  "interview_talking_points": {
+    "walk_me_through_codebase": {},
+    "riskiest_areas": {},
+    "improve_first": {},
+    "first_week_contribution": {}
+  },
+  "first_pr_plan": [],
+  "resume_bullets": [],
+  "evidence_refs": [],
+  "warnings": []
+}
+```
+
+This is an example schema, not output claimed from a specific external repository.
 
 ## Tech Stack
 
-- Application framework: Next.js 14, React 18, TypeScript 5
-- Styling: Tailwind CSS, PostCSS, Autoprefixer
-- Graph and layout: `elkjs`, `react-zoom-pan-pinch`
-- Export: `html2canvas`, `jspdf`, Markdown formatter
-- Testing: Vitest
-- Linting: ESLint via `next lint`
+- Next.js 14 App Router
+- React 18
+- TypeScript 5
+- Tailwind CSS
+- ELK.js for graph layout
+- `react-zoom-pan-pinch` for architecture navigation
+- Vitest for tests
+- `html2canvas` and jsPDF for PNG/PDF export
+- Mermaid syntax in Markdown architecture exports
+- `adm-zip` for zip extraction
+- Vercel Blob as optional report storage when `BLOB_READ_WRITE_TOKEN` is configured
 
----
+## Architecture
 
-## Requirements
+```mermaid
+flowchart LR
+    Upload["Upload zip"] --> API["POST /api/analyze"]
+    API --> Ingest["Extract repository"]
+    Ingest --> Index["Index files, docs, CI, commands"]
+    Index --> Packs["TS/JS, Python, Java packs"]
+    Packs --> Scoring["Start Here + Danger Zones"]
+    Scoring --> Brief["Deterministic Candidate Brief"]
+    Brief --> Storage["Filesystem or Vercel Blob"]
+    Storage --> ReportAPI["GET /api/reports/:id"]
+    ReportAPI --> UI["Report tabs"]
+    UI --> Export["Markdown / PDF / PNG"]
+```
+
+The analyzer runs in-process as TypeScript. Local reports are stored under `reports/` unless another `REPORTS_DIR` is configured. Vercel deployments require Blob storage configuration.
+
+## Setup
+
+Requirements:
 
 - Node.js 18+
 - npm 9+
-- Windows, macOS, or Linux with local filesystem and temp directory access
-
----
-
-## Quick Start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`, upload a zip of your repository, and click `Analyze Repository`.
+Open `http://localhost:3000`.
 
----
-
-## Usage
-
-### Web UI
-
-- Open the homepage
-- Upload a zip of your repository, for example from GitHub: `Code -> Download ZIP`
-- View generated tabs:
-  - Overview
-  - Folder Map
-  - Architecture Map
-  - Start Here
-  - Danger Zones
-  - Run and Contribute
-  - Export
-
-### Export options
-
-- PDF: full report snapshot export
-- PNG: full report snapshot export
-- Markdown: `GET /api/reports/:id/export/md`, also available from UI export controls
-
-### API: multipart upload or JSON `zipRef`
-
-Primary upload flow:
+Run verification separately:
 
 ```bash
-curl -X POST http://localhost:3000/api/analyze \
-  -F "file=@/path/to/repo.zip"
+npm test
+npm run build
 ```
 
-Testing or CLI flow:
+## How To Use
 
-```bash
-curl -X POST http://localhost:3000/api/analyze \
-  -H "Content-Type: application/json" \
-  -d "{\"zipRef\":\"C:/path/to/local/repo-or-fixture\"}"
-```
+1. Zip the repository you want to inspect. A GitHub repository can be downloaded through `Code -> Download ZIP`.
+2. Open RepoAtlas locally.
+3. Select the zip and click **Analyze Repository**.
+4. Wait for the analyzer to produce and store the report.
+5. Start with **Candidate Brief**:
+   - use the repo summary for a plain-language orientation
+   - follow the reading path through the highest-priority files
+   - rehearse the interview talking points
+   - review the three proposed first PR ideas
+   - inspect evidence IDs before repeating a claim
+6. Use the supporting tabs to inspect the underlying folder, architecture, score, command, doc, and CI signals.
+7. Export the report as Markdown, PDF, or PNG.
 
-After analysis, fetch the report JSON:
+The primary UI flow is zip upload. JSON `{ "zipRef": "..." }` input remains available for local testing and CLI-style use.
 
-```bash
-curl http://localhost:3000/api/reports/<report-id>
-```
+## Key Technical Decisions
 
-Export the report as Markdown:
+- **Deterministic v1 instead of AI**: interview claims are generated from measured repository signals, avoiding an unconstrained rewrite layer that could hallucinate.
+- **Evidence references instead of generic summaries**: Candidate Brief sections cite evidence IDs that resolve to files, commands, docs, CI, architecture facts, scores, or warnings.
+- **Local zip upload instead of required GitHub authentication**: the main workflow works without OAuth or private-repository credentials.
+- **Portable report export**: the same Candidate Brief can be reviewed in the UI or exported as an interview-prep artifact.
+- **No repository code execution**: RepoAtlas reads files as static input and does not run the analyzed project's scripts.
+- **Graceful degradation**: unsupported languages still receive the universal folder/docs/CI layer, while warnings explain missing deep analysis.
 
-```bash
-curl -OJ http://localhost:3000/api/reports/<report-id>/export/md
-```
+## Limits
 
----
+- RepoAtlas does not execute the analyzed repository.
+- It is not a vulnerability scanner and does not claim that danger-zone files contain bugs.
+- It is not a full semantic code-understanding engine.
+- Deep analysis is currently focused on TypeScript/JavaScript, Python, and Java.
+- Candidate Brief quality depends on the files, docs, commands, imports, tests, and configuration available in the uploaded repository.
+- Run-command extraction currently reads `package.json` scripts only.
+- Architecture graphs are reduced to folder or package level and capped for readability.
+- Upload size is limited to approximately 100 MB, indexing is capped at 10,000 files, directory depth is capped at 10, and analysis is limited to 120 seconds.
+- An optional AI rewrite layer is future work, not current behavior.
 
-## API Reference
+## Future Work
 
-### Source-of-truth route table
+- Extract run commands from Makefile, `pyproject.toml`, `pom.xml`, `build.gradle`, and README instructions
+- Improve test coverage and test-gap signals
+- Add an optional AI rewrite layer that can only rewrite statements linked to evidence references
+- Add screenshots and a short demo video
+- Improve the existing internal GitHub URL ingestion path before exposing it as a primary UI workflow
 
-These routes are implemented from the files in `src/app/api/**/route.ts`:
+## API
 
-| Route file | Methods | Public endpoint |
+Implemented routes:
+
+| Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` |
-| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` |
-| `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` |
-
-### `POST /api/analyze`
-
-- Accepts `multipart/form-data` with a single zip file in `file` or `zip`
-- Also accepts JSON with `zipRef` for local testing
-- Max upload size: 100 MB
-
-Example JSON body:
-
-```json
-{
-  "zipRef": "C:/path/to/local/repo-or-fixture"
-}
-```
-
-Success response:
-
-```json
-{
-  "reportId": "uuid"
-}
-```
-
-Common error codes exposed by the current route:
-
-- `INVALID_INPUT`
-- `ZIP_NOT_FOUND`
-- `REPO_TOO_LARGE`
-- `TIMEOUT`
-- `ANALYSIS_FAILED`
-
-Common statuses:
-
-- `200` on success
-- `400` for malformed payloads or unsupported content type
-- `404` when JSON `zipRef` does not exist
-- `413` when upload exceeds 100 MB
-- `500` for unexpected failures
-- `504` when analysis exceeds 120 seconds
-
-### `GET /api/reports/:id`
-
-Returns a previously generated report by ID.
-
-Common statuses:
-
-- `200` with full report JSON
-- `400` for invalid report IDs
-- `404` when the report does not exist
-
-### `GET /api/reports/:id/export/md`
-
-Returns the report as downloadable Markdown with `text/markdown` content type.
-
-Common statuses:
-
-- `200` with markdown body and download headers
-- `400` for invalid report IDs
-- `404` when the report does not exist
-
----
-
-## Configuration
-
-- Vercel production: set `BLOB_READ_WRITE_TOKEN`
-- Local development: `REPORTS_DIR` is optional when not using Blob storage and defaults to `<project-root>/reports`
-- Local Blob testing: `BLOB_READ_WRITE_TOKEN` can also be set locally if you want to exercise Blob storage
-
-No `.env` file is required for local development by default.
-
----
-
-## Project Structure
-
-```text
-src/
-  app/
-    api/
-      analyze/route.ts
-      reports/[id]/route.ts
-      reports/[id]/export/md/route.ts
-  analyzer/
-    packs/
-    index.ts
-    pipeline.ts
-    scoring.ts
-  components/
-  lib/
-    ingest.ts
-    storage.ts
-    export.ts
-    errors.ts
-  types/
-    report.ts
-fixtures/
-reports/
-```
-
-`reports/` is created at runtime when filesystem storage is used.
-
----
-
-## Development
-
-```bash
-npm run dev         # Start Next.js dev server
-npm run build       # Build for production
-npm run start       # Run production build
-npm run lint        # Run ESLint
-npm run test        # Run Vitest once
-npm run test:watch  # Run Vitest in watch mode
-```
-
----
+| `POST` | `/api/analyze` | Accept multipart zip upload or JSON `zipRef`; returns `{ reportId }` |
+| `GET` | `/api/reports/:id` | Return a stored report |
+| `GET` | `/api/reports/:id/export/md` | Return the report as downloadable Markdown |
 
 ## Testing
 
-- Unit and integration-style tests are written with Vitest
-- Coverage includes analyzer packs, scoring, ingest, API routes, and report export flows
-
-Run:
+Fixture repositories cover TypeScript, Python, Java, Maven, and docs-only cases.
 
 ```bash
-npm run test
+npm test
 ```
 
----
-
-## Fixtures
-
-Fixture repositories in `fixtures/`:
-
-- `fixtures/repo-ts`
-- `fixtures/repo-python`
-- `fixtures/repo-java`
-- `fixtures/repo-java-maven`
-- `fixtures/repo-docs-only`
-
-These are used for local regression checks and analyzer test coverage.
-
----
-
-## Limits and Behavior
-
-Current enforced or expected limits:
-
-- Analysis timeout: 120 seconds
-- Repository size guard: approximately 100 MB
-- File indexing cap: 10,000 files
-- Directory map depth cap: 10
-
-When analysis cannot perform a deep language pass, warnings are added to the report output.
-
----
-
-## Security Notes
-
-- RepoAtlas performs static file analysis only
-- It does not execute target repository code
-- Temporary workspaces are cleaned up after analysis
-- Input and known failure modes are mapped to typed API errors
-
----
-
-## Libraries and Licenses
-
-The following are the direct libraries currently declared in `package.json`.
-
-### Runtime dependencies
-
-- `next`: application framework and server runtime
-- `react`, `react-dom`: UI rendering
-- `elkjs`: graph layout engine for the architecture map
-- `react-zoom-pan-pinch`: pan and zoom controls for graph navigation
-- `html2canvas`: DOM capture for image and PDF export
-- `jspdf`: PDF generation
-- `mermaid`: Markdown export diagram syntax generation
-- `adm-zip`: zip extraction for uploaded repositories
-- `@vercel/blob`: optional report storage when deployed on Vercel
-
-### Development dependencies
-
-- `typescript`: type checking and TS tooling
-- `vitest`: test runner
-- `eslint`, `eslint-config-next`: linting
-- `tailwindcss`, `postcss`, `autoprefixer`: styling pipeline
-- `@types/node`, `@types/react`, `@types/react-dom`, `@types/adm-zip`: TypeScript definitions
-
-Third-party dependencies are distributed under their own licenses. Check each package's npm page or repository for license details.
-
----
+The suite covers language packs, scoring, deterministic Candidate Brief generation, ingest behavior, report APIs, and Markdown export.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for the full text.
+RepoAtlas is licensed under the MIT License. See [LICENSE](LICENSE).

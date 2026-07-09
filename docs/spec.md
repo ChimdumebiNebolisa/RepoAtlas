@@ -1,430 +1,274 @@
 # RepoAtlas Engineering Specification
 
-**Version:** 1.0  
-**Status:** Implementation-ready  
-**Target:** Local dev first, then container deployment  
-
----
+**Version:** 1.1  
+**Status:** Current implementation  
+**Primary workflow:** Local zip upload  
 
 ## 1. Product Summary
 
-### Problem
+RepoAtlas is a static repository-analysis application focused on job-search and interview preparation. It turns an uploaded repository zip into an evidence-backed Candidate Brief plus supporting repository maps and scores.
 
-Engineers joining unfamiliar repositories waste significant time exploring ad hoc: finding entrypoints, understanding structure, and identifying high-risk areas. There is no structured, automated way to produce a concise "Repo Brief" for onboarding.
+### Target Use Cases
 
-### Target Users
+- Understand an unfamiliar repository before an interview.
+- Prepare to explain a take-home codebase.
+- Evaluate an open-source repository before contributing.
+- Produce a portable technical brief for review.
 
-- **New contributors** – Need a reading order and contribution workflow.
-- **Code reviewers** – Need architecture context and risk hotspots.
-- **Architects** – Need dependency maps and module boundaries.
-- **Maintainers** – Need onboarding materials and run/contribute instructions.
+### Candidate Brief
 
-### Key Value Proposition
+The deterministic Candidate Brief includes:
 
-**One input** (zip upload, or JSON `zipRef` for testing) → **Structured Repo Brief** with:
+- plain-English repo summary
+- ranked reading path
+- interview talking points
+- three first PR ideas
+- resume and LinkedIn bullets
+- evidence references
+- warnings and confidence notes
 
-- **Folder Map** – Directory tree of the repo.
-- **Architecture Map** – Interactive dependency graph in the runtime UI (ELK layout + pan/zoom).
-- **Start Here** – Prioritized reading list with explanations.
-- **Danger Zones** – Risk-ranked files/modules with breakdown.
-- **Run and Contribute** – Commands extracted from configs and docs.
-- **Markdown Export** – Full report as downloadable `.md`, including Mermaid graph artifact text for markdown consumers.
+Candidate Brief statements are assembled from existing report signals. RepoAtlas does not use an AI model or require an API key.
 
-### What RepoAtlas Is
+### Supporting Report Views
 
-- A **static analysis tool** that ingests repositories and produces structured briefs.
-- Supports **language packs** (TS/JS, Python, Java) for deeper analysis.
-- Works for **any repo** at a basic level; provides richer signals for supported languages.
+- Folder Map
+- Architecture Map
+- Start Here
+- Danger Zones
+- Run & Contribute
+- Export
 
-### What RepoAtlas Is Not
+### Non-Goals
 
-- Not a runtime profiler or debugger.
-- Not a security vulnerability scanner.
-- Not a CI/CD replacement.
-- Does **not** execute or run repository code.
-
----
+- Runtime profiling or debugging
+- Vulnerability scanning
+- Executing repository code
+- Full semantic understanding of arbitrary languages
+- Unconstrained AI-generated claims
+- Private GitHub authentication
 
 ## 2. User Experience
 
-### User Flow
+### Primary Flow
 
+```text
+Zip upload -> POST /api/analyze -> reportId -> GET /api/reports/:id -> report tabs
 ```
-Input (zip upload) → Validation → Analysis (loading) → Report Tabs
-```
 
-1. User uploads a zip of the repository (primary flow). Optional testing flow sends JSON `zipRef`.
-2. Client sends zip via multipart; on submit, `POST /api/analyze`.
-3. Server saves zip to temp, extracts, runs analyzer.
-4. UI shows loading state (spinner/skeleton).
-5. On success: `reportId` returned; UI fetches report and renders tabs.
-6. User can export report views client-side (PDF/PNG) from the UI.
+1. User uploads a repository zip from `/`.
+2. `InputForm` posts multipart data to `POST /api/analyze`.
+3. The API saves the upload to a temporary zip path.
+4. `analyzeRepository` ingests and analyzes the repository.
+5. The report is stored on the filesystem or Vercel Blob.
+6. The analyze endpoint returns `{ reportId }`.
+7. The UI fetches `GET /api/reports/:id`.
+8. Candidate Brief is the first and default report tab.
 
-### UI Page Map
+JSON `{ "zipRef": "..." }` is supported for tests and local CLI-style requests. The web UI does not currently expose GitHub URL input.
 
-Single-page application at `/`:
+### UI Tabs
 
-| Tab | Content | Acceptance Criteria |
-|-----|---------|---------------------|
-| Overview | Repo metadata, key docs links, run commands summary | Shows name, URL, analyzed_at; at least placeholder if no run commands |
-| Folder Map | Recursive tree with expand/collapse | Renders `folder_map`; depth limit respected |
-| Architecture Map | Interactive ELK-based dependency graph (pan/zoom) | Renders `architecture`; collapses if nodes > 50 |
-| Start Here | Sortable table: path, score, explanation | Sorted by score desc; explanations visible |
-| Danger Zones | Sortable table: path, score, breakdown | Sorted by score desc; metrics breakdown visible |
-| Run & Contribute | Run commands + contribute signals (docs, CI) | Lists commands with source; lists found docs/CI |
+| Tab | Current content |
+| --- | --- |
+| Candidate Brief | Summary, reading path, interview talking points, first PR plan, resume/LinkedIn bullets, confidence notes, evidence |
+| Overview | Repository metadata and run-command summary |
+| Folder Map | Expandable repository tree |
+| Architecture Map | ELK-positioned folder/package dependency graph with pan and zoom |
+| Start Here | Sortable deterministic reading-priority table |
+| Danger Zones | Sortable risk table with metric breakdown |
+| Run & Contribute | Detected commands, key docs, and CI configs |
+| Export | PDF, PNG, and Markdown controls |
 
-### Loading States
+Older stored reports may not include `candidate_brief`. The Candidate Brief component shows a clear fallback instead of crashing.
 
-- **Idle**: Input form visible.
-- **Analyzing**: Spinner + "Analyzing repository..." message. Disable submit.
-- **Fetching report**: After `reportId` returned, optional skeleton for tabs until report loads.
+### Export
 
-### Error States
-
-| Error | User-facing message | HTTP/Code |
-|-------|---------------------|-----------|
-| Invalid input | "Upload a zip file or send JSON with zipRef." | 400 / INVALID_INPUT |
-| Zip invalid | "Invalid or corrupted zip file." | 400 / ZIP_INVALID |
-| Timeout | "Analysis timed out. Try a smaller repository." | 504 / TIMEOUT |
-| Analysis failed | "Analysis failed. Check server logs." | 500 / ANALYSIS_FAILED |
-| Zip path not found | "Zip path not found. Check the path or re-upload." | 404 / ZIP_NOT_FOUND |
-
-### Export Experience
-
-- UI supports client-side export workflows (PDF/PNG snapshots).
-- Markdown export API is available at `GET /api/reports/:id/export/md`.
-
----
+- PDF and PNG are generated client-side from `ReportDocument` with `html2canvas` and jsPDF.
+- `ReportDocument` includes Candidate Brief before the supporting maps and tables.
+- Markdown is generated server-side by `exportReportToMarkdown`.
+- Markdown includes Candidate Brief, evidence references, architecture Mermaid, and existing report sections.
+- Missing `candidate_brief` is supported and does not prevent legacy report export.
 
 ## 3. System Architecture
 
-### High-Level Diagram
-
 ```mermaid
-flowchart TB
-    subgraph UI [Next.js UI]
-        Input[Input Form]
-        Tabs[Report Tabs]
-        Export[Export Button]
-    end
-
-    subgraph API [API Routes]
-        Analyze[POST /api/analyze]
-    end
-
-    subgraph Worker [Analyzer Worker]
-        Ingest[Repo Ingest]
-        Index[Indexing Pipeline]
-        Packs[Language Packs]
-        Scoring[Start Here + Danger Zones]
-    end
-
-    subgraph Storage [Storage]
-        TempWorkspace[Temp Workspace]
-        ReportJSON[(Report JSON on disk)]
-    end
-
-    Input --> Analyze
-    Analyze --> Ingest
-    Ingest --> TempWorkspace
-    Ingest --> Index
-    Index --> Packs
-    Packs --> Scoring
-    Scoring --> ReportJSON
-    ReportJSON --> Analyze
-    Analyze --> Tabs
-    Tabs --> Export
+flowchart LR
+    Input["Zip upload"] --> Analyze["POST /api/analyze"]
+    Analyze --> Ingest["ingestRepo"]
+    Ingest --> Pipeline["Indexing pipeline"]
+    Pipeline --> Packs["Language packs"]
+    Packs --> Scores["Start Here + Danger Zones"]
+    Scores --> Brief["buildCandidateBrief"]
+    Brief --> Save["saveReport"]
+    Save --> ReportAPI["GET /api/reports/:id"]
+    ReportAPI --> Tabs["ReportTabs"]
+    Tabs --> Exports["Markdown / PDF / PNG"]
 ```
 
-### Components
+### Runtime Components
 
-| Component | Description |
-|-----------|-------------|
-| **Next.js UI** | React + TypeScript + Tailwind CSS. Single page with input form and tabbed report. |
-| **API Routes** | Next.js Route Handler in App Router. Current API surface is `app/api/analyze/route.ts`. |
-| **Analyzer Worker** | Node.js (TypeScript) module. Runs in-process; not a separate Go process. |
-| **Temp Workspace** | `os.tmpdir()` subdir per analysis. Clone or extract zip here. |
-| **Report Storage** | JSON files on disk. Path: `{REPORTS_DIR}/{reportId}.json`. No database. |
+| Component | Implementation |
+| --- | --- |
+| UI | Next.js App Router, React, TypeScript, Tailwind |
+| Analyzer | In-process TypeScript module |
+| Graph layout | ELK.js plus `react-zoom-pan-pinch` |
+| Zip extraction | `adm-zip` |
+| Local storage | JSON files under `REPORTS_DIR` or `<project>/reports` |
+| Hosted storage | Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set |
+| Tests | Vitest |
 
-### Data Flow
+## 4. Ingest and Limits
 
-1. **Request**: Client `POST /api/analyze` with multipart zip file (primary), or JSON `{ zipRef }` for testing.
-2. **Ingest**: Server extracts uploaded zip (or uses zipRef path) into temp workspace.
-3. **Analysis**: Analyzer walks workspace, runs common pipeline + applicable language packs.
-4. **Report**: Analyzer produces `Report` JSON; server writes to disk and returns `{ reportId }`.
-5. **Render**: UI immediately renders report data already returned by the analyze call path.
+### Zip Upload
 
----
+- `POST /api/analyze` accepts multipart field `file` or `zip`.
+- The route rejects uploads larger than 100 MB based on the uploaded blob size.
+- The route writes the blob to the OS temp directory.
+- `ingestFromZip` uses `adm-zip` to extract the archive into a temporary directory.
+- If the archive contains a single top-level directory, analysis uses that directory as the repository root.
+- Temporary uploaded and extracted files are cleaned up after analysis.
 
-## 4. Repo Ingest
+Current code does not implement a separate explicit zip magic-byte validator, uncompressed zip-bomb accounting, or custom path-traversal validation layer. Those controls must not be claimed as implemented until code and tests exist.
 
-**Primary flow:** Zip file is uploaded to `POST /api/analyze` (multipart); server writes to temp, passes path as `zipRef` to ingest, which extracts and analyzes.
+### Internal GitHub Ingest
 
-### GitHub URL Validation Rules (internal / legacy support in ingest module)
+`src/lib/ingest.ts` retains an internal GitHub archive-download path used by `analyzeRepository` when `githubUrl` is supplied directly. The current `/api/analyze` route and web UI do not expose that input.
 
-**Valid patterns** (regex):
+The implementation downloads a GitHub branch archive rather than running `git clone`.
 
-```
-^https?://github\.com/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_.-]+)(?:\.git)?(?:(?:/tree|/blob)/([^/]+))?/?$
-```
+### Enforced Limits
 
-- Captures: `owner`, `repo`, optional `ref` (branch/tag).
-- Reject: non-GitHub hosts, invalid characters, empty owner/repo.
+| Limit | Value | Current behavior |
+| --- | --- | --- |
+| Upload/archive size | 100 MB | Reject upload or local zip above the limit |
+| Indexed files | 10,000 | Stop recording metadata and add a warning |
+| Folder depth | 10 | Stop recursively expanding deeper directories |
+| Analysis request | 120 seconds | Reject API request with timeout error |
+| GitHub archive fetch | 60 seconds | Abort internal archive download |
 
-**Normalization**: Strip fragment (`#...`), query (`?...#`); use `ref` if present, else `main` or `master`.
+## 5. Common Indexing Pipeline
 
-**Acceptance criteria**: `https://github.com/vercel/next.js` and `https://github.com/vercel/next.js/tree/canary` both accepted; `https://gitlab.com/foo/bar` rejected.
+`src/analyzer/pipeline.ts` produces:
 
-### Clone Strategy (internal / legacy)
+- recursive folder map
+- file metadata: path, byte size, extension, language hint
+- key docs matching README, CONTRIBUTING, LICENSE, and CHANGELOG names
+- CI paths matching GitHub Actions, GitLab CI, Jenkins, and Azure Pipelines patterns
+- run commands from `package.json` scripts
+- warnings
 
-- **Command**: `git clone --depth 1 [--branch <ref>] <url> <dest>`
-- **Depth**: Default 1 (shallow). Configurable via env `GIT_CLONE_DEPTH` (default 1).
-- **Timeout**: 60 seconds. Abort and clean up on timeout.
-- **Destination**: `{tempDir}/repo-{uuid}`
+Run-command extraction does not currently parse Makefile, `pyproject.toml`, `pom.xml`, `build.gradle`, or README command blocks.
 
-**Acceptance criteria**: Clone completes for public repos within 60s; timeout returns TIMEOUT error.
+Language detection is extension-based. There is no `.gitattributes` override.
 
-### Zip Upload Strategy
+## 6. Language Packs
 
-- **Endpoint**: Multipart form upload to `POST /api/analyze` with `file` or `zip` field.
-- **Validation**: Check magic bytes `50 4B 03 04` or `50 4B 05 06` (PK) for zip.
-- **Extraction**: Use `yauzl` or Node `unzip`; extract to `{tempDir}/zip-{uuid}`.
-- **Path traversal**: For each entry, resolve path relative to extract root; reject if resolved path is outside root or contains `..`.
-- **Size limit**: Max uncompressed size 50MB; abort extraction if exceeded.
+### TypeScript and JavaScript
 
-**Acceptance criteria**: Valid zip extracts; zip with `../../../etc/passwd` entries rejected; oversized zip aborted.
+- Handles `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, and `.cjs`.
+- Extracts static imports, dynamic imports, and `require()` calls.
+- Resolves relative imports to repository files.
+- Detects Next.js App Router pages, layouts, route handlers, common source entry files, and script-referenced files for selected scripts.
+- Detects common test filename and `__tests__` patterns.
+- Computes fan-in, fan-out, line-count, nesting, complexity proxy, and test proximity.
+- Reduces architecture to folder nodes.
 
-### Workspace Cleanup Rules
+### Python
 
-- Delete temp dir on analysis completion (success or failure).
-- Optional TTL: if analysis crashes, orphan dirs cleaned by cron/job after 1 hour.
-- Report files: retained on disk; no automatic expiry in MVP.
+- Handles `.py`.
+- Extracts common absolute and relative import forms.
+- Resolves repository package imports with root and `src/` layout heuristics.
+- Detects common entry filenames plus selected `pyproject.toml` and `setup.py` script definitions.
+- Detects common test filename and directory patterns.
+- Computes fan-in, fan-out, line-count, indentation nesting, complexity proxy, and test proximity.
+- Reduces architecture to folder nodes.
 
-### Limits
+The current entrypoint detector does not inspect `if __name__ == "__main__"` blocks directly.
 
-| Limit | Value | Behavior |
-|-------|-------|----------|
-| Max repo size (clone/extract) | 100MB | Abort clone/extract if exceeded |
-| Max file count | 10,000 | Stop indexing; add warning to report |
-| Max analysis time | 120s | Abort; return partial report + TIMEOUT warning if supported |
+### Java
 
----
+- Handles `.java`.
+- Builds a fully-qualified-name index and resolves repository imports.
+- Detects `main()` methods, Spring Boot applications, Spring controllers, and JAX-RS annotations.
+- Detects common unit and integration test suffixes.
+- Computes fan-in, fan-out, line-count, nesting, complexity proxy, and test proximity.
+- Reduces architecture to package nodes.
 
-## 5. Analyzer Design
+Maven and Gradle module settings are inspected internally, but their detected module lists are not currently persisted or used in the report. JAR manifest entrypoints are not detected.
 
-### Common Indexing Pipeline (All Repos)
+### Mixed-Language Repositories
 
-| Step | Description | Output |
-|------|-------------|--------|
-| Folder tree | Recursive `fs.readdirSync` with depth limit (default 10) | `FolderMapNode[]` |
-| File metadata | For each file: path, size, extension | `FileMetadata[]` |
-| Language detection | Extension → language map; `.gitattributes` overrides if present | `language` per file |
-| Key docs discovery | Glob: `README*`, `CONTRIBUTING*`, `LICENSE*`, `CHANGELOG*` | `keyDocs: string[]` |
-| CI discovery | Glob: `.github/workflows/*.yml`, `.gitlab-ci.yml`, `Jenkinsfile` | `ciConfigs: string[]` |
-| Run command extraction | Parse `package.json` scripts, `Makefile`, `pyproject.toml`, `pom.xml`, `build.gradle`; scan README for common patterns | `RunCommand[]` |
+All applicable language packs run, and scoring can use signals from each pack. The persisted architecture currently selects the first available graph in this order:
 
-### Language Pack: TS/JS
+1. TypeScript/JavaScript
+2. Python
+3. Java
 
-| Aspect | Rules |
-|--------|-------|
-| **Import extraction** | Regex: `import\s+.*\s+from\s+['"]([^'"]+)['"]`, `require\s*\(\s*['"]([^'"]+)['"]\s*\)`, `import\s+['"]([^'"]+)['"]`. Resolve relative paths (., ..) to absolute repo paths. |
-| **Entrypoint heuristics** | `package.json` `main`, `bin` values; files named `index.{js,ts,mjs,cjs}`; `__main__` in JS (rare). |
-| **Test proximity** | Test files: `*.test.{js,ts}`, `*.spec.{js,ts}`, `__tests__/*`, `*.test.{jsx,tsx}`. Proximity = same dir or nearest test dir distance. |
-| **Complexity proxy** | Line-based: `(if|else|for|while|switch|catch|\?\s*:|\&\&|\|\|)` count per file. Or AST cyclomatic if `@babel/parser` available. |
-| **Graph collapse** | Module = file; folder = directory. Collapse: group nodes by parent dir; edge A→B becomes dir(A)→dir(B). |
+## 7. Scoring
 
-**Acceptance criteria**: TS repo with `src/index.ts` importing `./utils` produces edge `index.ts → utils.ts`; `index.ts` detected as entrypoint.
+### Start Here
 
-### Language Pack: Python
+`computeStartHere` ranks up to 12 candidates using explicit additive signals:
 
-| Aspect | Rules |
-|--------|-------|
-| **Import extraction** | Regex: `import\s+([a-zA-Z0-9_.]+)`, `from\s+([a-zA-Z0-9_.]+)\s+import`. Resolve relative (`.` package) to file path. |
-| **Entrypoint heuristics** | `if __name__ == "__main__"`; `setup.py` entry_points; `pyproject.toml` `[project.scripts]`; `-m` targets from docs. |
-| **Test proximity** | `test_*.py`, `*_test.py`, `tests/` dir. |
-| **Complexity proxy** | McCabe complexity via AST or line-based proxy (same as TS). |
-| **Graph collapse** | Module = file; package = dir with `__init__.py`. |
+- root and nested README files
+- CONTRIBUTING and other key docs
+- Next.js pages, layouts, and route handlers
+- language-specific entrypoints
+- fan-in
+- distance from entrypoints through resolved imports
+- Java build definitions
+- test-file penalty
 
-**Acceptance criteria**: `main.py` with `from utils import foo` produces edge; `main.py` with `if __name__ == "__main__"` marked as entrypoint.
+Scores are normalized within the ranked result set to 0 through 100. Explanations list the signals that contributed to each result.
 
-### Language Pack: Java
+### Danger Zones
 
-| Aspect | Rules |
-|--------|-------|
-| **Import extraction** | Regex: `import\s+([a-zA-Z0-9_.]+)\s*;`. Map to file path via package/class convention. |
-| **Entrypoint heuristics** | `public static void main`; `@SpringBootApplication`; JAR manifest `Main-Class`. |
-| **Test proximity** | `*Test.java`, `*IT.java`, `src/test/java` layout. |
-| **Complexity proxy** | Cyclomatic via line-based or simple AST. |
-| **Graph collapse** | Class = file; package = folder. |
+For supported source files:
 
-**Acceptance criteria**: Java file with `public static void main` marked as entrypoint; imports produce edges.
-
----
-
-## 6. Algorithms and Scoring
-
-### Start Here Ranking
-
-**Candidates**: Key docs (README, CONTRIBUTING, etc.), entrypoint files, root README, config files (package.json, pyproject.toml, etc.).
-
-**StartHereScore formula**:
-
-```
-StartHereScore = (
-  (is_root_readme ? 40 : 0) +
-  (is_key_doc ? 30 : 0) +
-  (is_entrypoint ? 50 : 0) +
-  min(20, fan_in) +  // popularity proxy, cap at 20
-  (is_root_config ? 15 : 0)
-)
+```text
+risk =
+  0.20 * size percentile +
+  0.25 * fan-in percentile +
+  0.20 * fan-out percentile +
+  0.25 * complexity percentile +
+  0.10 * weak-test percentile
 ```
 
-- Normalize to 0–100 by dividing by max observed score in repo, then * 100.
-- Sort candidates by score descending.
+Scores are clamped to 0 through 100 and sorted descending. Each item includes raw metrics and a breakdown.
 
-**Explanation strings** (derived from signals):
+Danger Zones are risk signals, not bug or vulnerability claims. Git churn is not currently included.
 
-| Condition | Explanation |
-|-----------|-------------|
-| Root README | "Root README" |
-| package.json main | "Main entrypoint (package.json main)" |
-| index.ts/js | "Module entrypoint (index file)" |
-| CONTRIBUTING | "Contribution guide" |
-| High fan-in | "Frequently imported" |
-| Root config | "Root configuration" |
+## 8. Candidate Brief
 
-**Acceptance criteria**: Root README and main entrypoint appear in top 3 with appropriate explanations.
+`src/analyzer/interview.ts` builds the Candidate Brief after Start Here and Danger Zones are computed.
 
-### Danger Zones Ranking
+### Inputs
 
-**Metrics**:
+- repository name
+- Start Here items
+- Danger Zone items
+- run commands
+- key docs and CI configs
+- architecture node/edge counts
+- analyzer warnings
 
-| Metric | Definition | Source |
-|--------|------------|--------|
-| Size | LOC or file size in bytes | File metadata |
-| Fan-in | Number of files importing this file | Import graph |
-| Fan-out | Number of files this file imports | Import graph |
-| Complexity | Complexity proxy value | Language pack |
-| Test proximity penalty | 0 if nearby test else 1 | Test proximity |
-| Churn (optional) | Commit count in last N commits | Git log, if available |
+### Deterministic Rules
 
-**Normalization**: For each metric, compute percentile rank (0–100) within repo.
+- Reading path uses the top Start Here items.
+- Risk talking points use the top Danger Zones.
+- First PR ideas are selected from missing or available commands, contribution docs, CI, weak test proximity, top risk files, architecture, and warnings.
+- Resume and LinkedIn bullets describe the static analysis performed and do not invent product impact.
+- Evidence IDs resolve to files, commands, docs, CI, architecture summaries, ranked items, or warnings.
+- Sparse reports degrade to lower confidence and explicit warnings.
 
-**RiskScore formula**:
+The builder must not claim bugs, vulnerabilities, production readiness, or unsupported business purpose.
 
-```
-RiskScore = (
-  0.20 * size_percentile +
-  0.25 * fan_in_percentile +
-  0.20 * fan_out_percentile +
-  0.25 * complexity_percentile +
-  0.10 * (100 - test_proximity_score)  // no tests = higher risk
-)
-```
+## 9. Report Data Model
 
-- Clamp to 0–100.
-- Sort by RiskScore descending.
-
-**Explanation breakdown**: e.g. "High fan-in (15), high complexity (42), no nearby tests".
-
-**Acceptance criteria**: File with high fan-in, high complexity, no tests ranks in top 5 danger zones with correct breakdown.
-
----
-
-## 7. Data Models
-
-### Report JSON Schema
-
-```json
-{
-  "repo_metadata": {
-    "name": "string",
-    "url": "string",
-    "branch": "string",
-    "clone_hash": "string | null",
-    "analyzed_at": "string (ISO 8601)"
-  },
-  "folder_map": { },
-  "architecture": {
-    "nodes": [],
-    "edges": []
-  },
-  "start_here": [],
-  "danger_zones": [],
-  "run_commands": [],
-  "contribute_signals": {
-    "key_docs": [],
-    "ci_configs": []
-  },
-  "warnings": []
-}
-```
-
-### TypeScript Types
+`src/types/report.ts` is authoritative.
 
 ```typescript
-export interface RepoMetadata {
-  name: string;
-  url: string;
-  branch: string;
-  clone_hash: string | null;
-  analyzed_at: string; // ISO 8601
-}
-
-export type FolderMapNode = {
-  path: string;
-  type: 'file' | 'dir';
-  children?: FolderMapNode[];
-};
-
-export interface ArchitectureNode {
-  id: string;      // file path or module id
-  label: string;   // display name
-  type?: 'file' | 'module' | 'folder';
-}
-
-export interface ArchitectureEdge {
-  from: string;    // node id
-  to: string;      // node id
-  type?: 'import' | 'dependency';
-}
-
-export interface Architecture {
-  nodes: ArchitectureNode[];
-  edges: ArchitectureEdge[];
-}
-
-export interface StartHereItem {
-  path: string;
-  score: number;
-  explanation: string;
-}
-
-export interface DangerZoneItem {
-  path: string;
-  score: number;
-  breakdown: string;
-  metrics: {
-    size?: number;
-    fan_in?: number;
-    fan_out?: number;
-    complexity?: number;
-    test_proximity?: number;
-  };
-}
-
-export interface RunCommand {
-  source: string;      // e.g. "package.json", "README"
-  command: string;
-  description?: string;
-}
-
-export interface ContributeSignals {
-  key_docs: string[];
-  ci_configs: string[];
-}
-
-export interface Report {
+interface Report {
   repo_metadata: RepoMetadata;
   folder_map: FolderMapNode;
   architecture: Architecture;
@@ -432,302 +276,129 @@ export interface Report {
   danger_zones: DangerZoneItem[];
   run_commands: RunCommand[];
   contribute_signals: ContributeSignals;
+  candidate_brief?: CandidateBrief;
   warnings: string[];
 }
 ```
 
----
+Candidate Brief shape:
 
-## 8. API Design
-
-### Source-of-truth route table (from `src/app/api/**/route.ts`)
-
-| Route file | Methods | Public endpoint | Notes |
-|---|---|---|---|
-| `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` | Accepts multipart upload (`file` or `zip`) and JSON `{ "zipRef": "..." }` |
-| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` | Returns persisted report JSON |
-| `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` | Returns `text/markdown` with attachment headers |
-
-Maintenance rule: when route handlers are added/removed/renamed, update this table in the same PR by checking the route files directly.
-
-### POST /api/analyze
-
-**Request (primary):** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
-
-**Request (testing/CLI):** `Content-Type: application/json` with body:
-
-```json
-{
-  "zipRef": "path-to-local-repo-or-fixture"
+```typescript
+interface CandidateBrief {
+  repo_summary: {
+    headline: string;
+    plain_english: string;
+    primary_evidence: string[];
+    confidence: "high" | "medium" | "low";
+  };
+  reading_path: Array<{
+    order: number;
+    title: string;
+    path: string;
+    why: string;
+    evidence_refs: string[];
+  }>;
+  interview_talking_points: {
+    walk_me_through_codebase: BriefAnswer;
+    riskiest_areas: BriefAnswer;
+    improve_first: BriefAnswer;
+    first_week_contribution: BriefAnswer;
+  };
+  first_pr_plan: Array<{
+    title: string;
+    rationale: string;
+    suggested_files: string[];
+    evidence_refs: string[];
+    risk: "low" | "medium" | "high";
+  }>;
+  resume_bullets: Array<{
+    audience: "resume" | "linkedin";
+    text: string;
+    evidence_refs: string[];
+  }>;
+  evidence_refs: EvidenceRef[];
+  warnings: Array<{
+    message: string;
+    evidence_refs?: string[];
+  }>;
 }
 ```
 
-**Response (200)**:
+The field is optional so older persisted reports remain readable.
 
-```json
-{
-  "reportId": "uuid-string"
-}
+## 10. API
+
+| Method | Endpoint | Current behavior |
+| --- | --- | --- |
+| `POST` | `/api/analyze` | Accept multipart zip or JSON `zipRef`; return `{ reportId }` |
+| `GET` | `/api/reports/:id` | Return persisted report JSON |
+| `GET` | `/api/reports/:id/export/md` | Return Markdown attachment |
+
+The analyze endpoint does not return the full report. `InputForm` uses the returned ID to fetch the report separately.
+
+Report IDs must be UUID-like for report and export retrieval.
+
+## 11. Storage
+
+- Local filesystem storage is used by default.
+- `REPORTS_DIR` can override the local directory.
+- Vercel Blob is used when `BLOB_READ_WRITE_TOKEN` is configured.
+- A Vercel runtime without Blob configuration rejects report persistence.
+- Stored JSON is read without runtime schema validation.
+
+## 12. Safety
+
+- Repository source is read as text.
+- RepoAtlas does not import, require, execute, or run repository project code.
+- Known input and analysis failures are mapped to typed API errors.
+- Temporary workspaces are cleaned up after analysis.
+- No rate limiter is currently implemented.
+- No explicit custom zip traversal or uncompressed-size defense is currently implemented beyond the archive library and compressed-size limit.
+
+## 13. Testing
+
+Vitest coverage includes:
+
+- TS/JS, Python, and Java language packs
+- Start Here and Danger Zone scoring
+- deterministic Candidate Brief generation and evidence integrity
+- ingest validation helpers
+- report retrieval API
+- Markdown export with and without Candidate Brief
+- multipart and JSON `zipRef` integration flow
+
+Fixtures:
+
+- `fixtures/repo-ts`
+- `fixtures/repo-python`
+- `fixtures/repo-java`
+- `fixtures/repo-java-maven`
+- `fixtures/repo-docs-only`
+
+Required verification:
+
+```bash
+npm test
+npm run build
 ```
 
-**Error responses**:
+## 14. Current Limits and Future Work
 
-| Status | Body | Code |
-|--------|------|------|
-| 400 | `{ "code": "INVALID_INPUT", "message": "..." }` | Missing upload or `zipRef`; unsupported content type |
-| 400 | `{ "code": "ZIP_INVALID", "message": "..." }` | Invalid zip |
-| 404 | `{ "code": "ZIP_NOT_FOUND", "message": "..." }` | zipRef not found |
-| 413 | `{ "code": "REPO_TOO_LARGE", "message": "..." }` | Upload/zip exceeds 100MB |
-| 504 | `{ "code": "TIMEOUT", "message": "..." }` | Analysis timeout |
-| 500 | `{ "code": "ANALYSIS_FAILED", "message": "..." }` | Analysis error |
+Current limits:
 
-### API availability
+- no repository code execution
+- no vulnerability scanning
+- no full semantic analysis
+- no AI rewrite layer
+- no primary GitHub URL UI
+- command extraction limited to `package.json`
+- architecture graph reduction and caps
 
-- **Current API routes:** `POST /api/analyze`, `GET /api/reports/:id`, and `GET /api/reports/:id/export/md`.
-- There is no separate `POST /api/upload`; uploads are handled by `POST /api/analyze` via multipart fields `file` or `zip`.
-- UI report rendering/export can use `/api/reports/:id` and `/api/reports/:id/export/md` after analysis returns `reportId`.
+Realistic next steps:
 
-### Retry Behavior
-
-- Client: Retry on 5xx with exponential backoff (e.g. 1s, 2s, 4s); max 3 retries.
-- Server: No automatic retry for clone; single attempt.
-
----
-
-## 9. Frontend Implementation Plan
-
-### Pages and Components
-
-| Component | Responsibility |
-|-----------|----------------|
-| `Page` | Root layout; input form + report tabs container |
-| `InputForm` | Zip file input, submit; calls POST /api/analyze with multipart |
-| `ReportTabs` | Tab bar + tab content; receives `Report` |
-| `FolderMapTree` | Recursive tree; expand/collapse |
-| `ArchitectureGraph` | Interactive ELK graph rendering; collapse to folder if nodes > 50 |
-| `StartHereTable` | Sortable table; path, score, explanation |
-| `DangerZonesTable` | Sortable table; path, score, breakdown |
-| `RunContributeSection` | Lists run commands + contribute signals |
-
-### Runtime Graph Rendering Strategy (ELK)
-
-- Use `elkjs` for layout and the UI graph component for runtime rendering.
-- Input: `architecture.nodes` and `architecture.edges`.
-- Generate positioned nodes/edges for an interactive graph view (zoom/pan, fit-to-view).
-- **Reduction**: If `nodes.length > 50`, collapse to folder level: group by parent dir; edges between folders.
-- Fallback: If layout/rendering fails, show raw node/edge list.
-
-### Mermaid in Markdown Export (Artifact-Only)
-
-- Mermaid is **not** the runtime UI renderer.
-- Mermaid output is retained for markdown artifact rendering/export compatibility.
-- Input for markdown export Mermaid remains `architecture.nodes` and `architecture.edges`.
-
-### Graph Reduction Strategy
-
-```
-if (nodes.length <= 50) use file-level graph
-else {
-  group nodes by directory (e.g. src/utils, src/api)
-  create folder nodes
-  edge (A, B) => edge (dir(A), dir(B))
-  deduplicate edges
-}
-```
-
-### Report Caching
-
-- Store report in React state after fetch.
-- Optional: `localStorage.setItem(`repoatlas:${reportId}`, JSON.stringify(report))` for revisit during session.
-- No persistent cross-session cache in MVP.
-
----
-
-## 10. Security and Safety
-
-| Concern | Mitigation |
-|---------|------------|
-| Path traversal (zip) | Resolve all extracted paths; reject `..`; jail to extract root |
-| Code execution | Never `require()`, `import()`, or `exec()` repo code; parse as text only |
-| Network | Only `git clone` to GitHub; no arbitrary HTTP/fetch from analyzer |
-| Rate limiting | Per-IP: 10 analyses per hour; return 429 with `Retry-After` |
-| Zip bombs | Enforce max uncompressed size (50MB); abort if exceeded |
-
-**Acceptance criteria**: Zip with `../../etc/passwd` does not write outside extract dir; analyzer never executes repo code.
-
----
-
-## 11. Performance
-
-| Strategy | Description |
-|----------|-------------|
-| Progressive analysis | Optional: emit folder_map first, then architecture, then scoring; UI can show partial results |
-| Clone cache | Optional: cache by `owner/repo@commit`; reuse if same commit requested within TTL |
-| Timeouts | Clone: 60s; analysis: 120s; abort and clean up on timeout |
-| Graceful degradation | On timeout: return partial report with `warnings: ["Analysis timed out; partial results"]` |
-
----
-
-## 12. Testing Plan
-
-### Unit Tests
-
-- Parsers: import extraction (TS/JS, Python, Java regex).
-- Language detection: extension → language.
-- Scoring: `StartHereScore` and `RiskScore` with mock inputs.
-- Path traversal: zip extraction rejects malicious paths.
-
-### Integration Tests
-
-- Full analyze flow: POST /api/analyze with multipart fixture zip or JSON `zipRef` → assert `{ reportId }` response and persisted report artifact.
-- Error mapping: send invalid payloads/content types and assert documented `INVALID_INPUT`, `ZIP_INVALID`, `ZIP_NOT_FOUND`, `REPO_TOO_LARGE`, `TIMEOUT`.
-
-### Fixtures
-
-| Fixture | Description | Path |
-|---------|-------------|------|
-| `fixtures/repo-ts` | Small TS repo (5 files): index, utils, 1 test | `fixtures/repo-ts/` |
-| `fixtures/repo-python` | Small Python repo: main, utils, test | `fixtures/repo-python/` |
-| `fixtures/repo-java` | Small Java repo: Main, Util, Test | `fixtures/repo-java/` |
-
-### Acceptance Tests
-
-- **Folder Map tab**: Renders non-empty tree for fixture.
-- **Architecture tab**: Renders at least one node and edge for TS fixture.
-- **Start Here tab**: Root README and entrypoint in list.
-- **Danger Zones tab**: At least one file with score and breakdown.
-- **Run & Contribute tab**: At least run commands or contribute signals.
-- **Export**: Markdown download succeeds and contains expected sections.
-
----
-
-## 13. Milestones
-
-| Milestone | Outputs | Definition of Done |
-|-----------|---------|--------------------|
-| **M1** | Repo skeleton, ingest, basic indexing | Clone works; zip extract works; folder_map and file metadata in report |
-| **M2** | TS/JS pack, architecture graph, ELK UI renderer | Import graph built; interactive ELK graph renders in UI |
-| **M3** | Start Here, Danger Zones, UI tabs | All tabs render; scoring produces ranked lists |
-| **M4** | Markdown export (including Mermaid artifact), Python/Java packs | Export downloads .md; Python/Java produce basic graphs |
-| **M5** | Tests, fixtures, polish, demo | Unit + integration tests pass; demo script runs; acceptance criteria met |
-
----
-
-## 14. Examples
-
-### Example Markdown Mermaid Graph Artifact
-
-For a minimal TS repo:
-
-```
-src/index.ts  ->  src/utils.ts
-src/index.ts  ->  src/api/client.ts
-src/api/client.ts  ->  src/utils.ts
-```
-
-Generated Mermaid (for markdown artifact rendering, not runtime UI):
-
-```mermaid
-flowchart LR
-    A["src/index.ts"]
-    B["src/utils.ts"]
-    C["src/api/client.ts"]
-    A --> B
-    A --> C
-    C --> B
-```
-
-### Example Report JSON (Tiny Repo)
-
-```json
-{
-  "repo_metadata": {
-    "name": "tiny-app",
-    "url": "https://github.com/example/tiny-app",
-    "branch": "main",
-    "clone_hash": "abc123",
-    "analyzed_at": "2025-02-14T12:00:00.000Z"
-  },
-  "folder_map": {
-    "path": ".",
-    "type": "dir",
-    "children": [
-      {
-        "path": "README.md",
-        "type": "file"
-      },
-      {
-        "path": "src",
-        "type": "dir",
-        "children": [
-          { "path": "src/index.ts", "type": "file" },
-          { "path": "src/utils.ts", "type": "file" }
-        ]
-      }
-    ]
-  },
-  "architecture": {
-    "nodes": [
-      { "id": "src/index.ts", "label": "index.ts" },
-      { "id": "src/utils.ts", "label": "utils.ts" }
-    ],
-    "edges": [
-      { "from": "src/index.ts", "to": "src/utils.ts", "type": "import" }
-    ]
-  },
-  "start_here": [
-    { "path": "README.md", "score": 100, "explanation": "Root README" },
-    { "path": "src/index.ts", "score": 85, "explanation": "Main entrypoint (package.json main)" }
-  ],
-  "danger_zones": [
-    {
-      "path": "src/utils.ts",
-      "score": 72,
-      "breakdown": "High fan-in (1), no nearby tests",
-      "metrics": { "fan_in": 1, "fan_out": 0, "complexity": 5, "test_proximity": 0 }
-    }
-  ],
-  "run_commands": [
-    { "source": "package.json", "command": "npm run dev", "description": "Start dev server" }
-  ],
-  "contribute_signals": {
-    "key_docs": ["README.md"],
-    "ci_configs": [".github/workflows/ci.yml"]
-  },
-  "warnings": []
-}
-```
-
-### Demo Script (2 Minutes)
-
-1. **0:00–0:15** – Open RepoAtlas; upload a zip of a repo (e.g. download from GitHub Code → Download ZIP, then select the file).
-2. **0:15–0:45** – Click "Analyze Repository"; show loading state; wait for completion.
-3. **0:45–1:30** – Walk through tabs: Overview (metadata), Folder Map (expand tree), Architecture (interactive ELK graph), Start Here (table), Danger Zones (table), Run & Contribute.
-4. **1:30–2:00** – Click "Export Markdown"; download; show Markdown file structure.
-
----
-
-## 15. Implementation Checklist
-
-- [ ] Create `docs/spec.md` and paste the generated spec.
-- [ ] Create repo skeleton: Next.js app, API route placeholders, analyzer worker folder, shared types.
-- [ ] Implement repo ingest: GitHub clone path, zip upload path (optional).
-- [ ] Implement analyzer indexing pipeline (all repos).
-- [ ] Implement TS/JS language pack: imports, entrypoints, test proximity, complexity proxy.
-- [ ] Implement Start Here and Danger Zones scoring with explanation strings.
-- [ ] Build UI tabs and render report JSON.
-- [ ] Add Markdown export.
-- [ ] Add tests and fixtures.
-- [ ] Record demo and ensure acceptance tests pass.
-
----
-
-## 16. Non-Goals (Explicit)
-
-- Database or persistent storage beyond JSON on disk
-- Serverless or edge deployment assumptions
-- Security vulnerability scanning
-- Executing or profiling repository code
-- Full AST parsing for all languages (use heuristics where AST is costly)
-- Real-time collaboration
-- Private GitHub repo support (MVP: public only)
+- stronger command extraction for Makefile, `pyproject.toml`, `pom.xml`, `build.gradle`, and README
+- improved test-gap signals
+- explicit zip safety validation and tests
+- optional evidence-constrained AI rewriting
+- screenshots and demo video
+- improved GitHub URL ingestion before exposing it in the UI

@@ -180,7 +180,7 @@ export function exportReportToMarkdown(report: Report): string {
   md += "## Run & Contribute\n\n";
   md += "### Run Commands\n\n";
   for (const cmd of report.run_commands) {
-    md += `- \`${cmd.command}\` (from ${cmd.source})${cmd.description ? ` — ${cmd.description}` : ""}\n`;
+    md += `- \`${cmd.command}\` (from ${cmd.source})${cmd.description ? ` - ${cmd.description}` : ""}\n`;
   }
   md += "\n### Key Docs\n\n";
   for (const doc of report.contribute_signals.key_docs) {

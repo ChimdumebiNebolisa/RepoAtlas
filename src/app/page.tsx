@@ -140,6 +140,150 @@ const SAMPLE_REPORT: Report = {
     key_docs: ["README.md", "docs/guardrails.md"],
     ci_configs: [".github/workflows/ci.yml"],
   },
+  candidate_brief: {
+    repo_summary: {
+      headline: "repo-atlas has a ranked onboarding path starting at README.md",
+      plain_english:
+        "This read-only sample presents RepoAtlas as a static analysis app with UI, API, analyzer, scoring, and export layers.",
+      primary_evidence: ["start-1", "risk-1", "arch-1"],
+      confidence: "high",
+    },
+    reading_path: [
+      {
+        order: 1,
+        title: "README.md",
+        path: "README.md",
+        why: "Project scope, setup, and quick start for onboarding.",
+        evidence_refs: ["start-1"],
+      },
+      {
+        order: 2,
+        title: "page.tsx",
+        path: "src/app/page.tsx",
+        why: "Main app shell, upload flow, and report wiring.",
+        evidence_refs: ["start-2"],
+      },
+      {
+        order: 3,
+        title: "route.ts",
+        path: "src/app/api/analyze/route.ts",
+        why: "API entry point for repository analysis.",
+        evidence_refs: ["start-3"],
+      },
+    ],
+    interview_talking_points: {
+      walk_me_through_codebase: {
+        answer:
+          "Start with the page and analyze route, then follow the request into the analyzer, scoring, report tabs, and export layer.",
+        bullets: [
+          "The UI uploads a repository zip.",
+          "The API invokes the in-process analyzer.",
+          "The report tabs render deterministic analysis results.",
+        ],
+        evidence_refs: ["start-2", "start-3", "arch-1"],
+        confidence: "high",
+      },
+      riskiest_areas: {
+        answer:
+          "The sample risk ranking points to scoring and language-pack logic because those files combine branching and dependency signals.",
+        bullets: [
+          "src/analyzer/scoring.ts has the highest sample risk score.",
+          "src/analyzer/packs/tsjs.ts has high sample fan-out.",
+        ],
+        evidence_refs: ["risk-1", "risk-2"],
+        confidence: "medium",
+      },
+      improve_first: {
+        answer:
+          "Start with a scoped test or documentation improvement around a risk-ranked analyzer file.",
+        bullets: ["Keep the first change evidence-backed and limited in scope."],
+        evidence_refs: ["risk-1"],
+        confidence: "medium",
+      },
+      first_week_contribution: {
+        answer:
+          "Read the ranked files, validate the detected npm commands, inspect the top risk area, and propose one small test or documentation PR.",
+        bullets: ["Run npm run test and npm run build before proposing changes."],
+        evidence_refs: ["start-1", "cmd-1", "risk-1"],
+        confidence: "high",
+      },
+    },
+    first_pr_plan: [
+      {
+        title: "Add coverage around scoring behavior",
+        rationale:
+          "The sample ranks scoring.ts as a high-risk file, making focused test coverage a realistic contribution.",
+        suggested_files: ["src/analyzer/scoring.ts"],
+        evidence_refs: ["risk-1"],
+        risk: "medium",
+      },
+      {
+        title: "Verify documented run commands",
+        rationale:
+          "The sample detects development, test, and build scripts that can be checked against setup guidance.",
+        suggested_files: ["README.md"],
+        evidence_refs: ["cmd-1", "doc-1"],
+        risk: "low",
+      },
+      {
+        title: "Align contributor guidance with CI",
+        rationale:
+          "A CI configuration is present, so contributor notes can reference the same validation path.",
+        suggested_files: ["README.md", ".github/workflows/ci.yml"],
+        evidence_refs: ["doc-1", "ci-1"],
+        risk: "low",
+      },
+    ],
+    resume_bullets: [
+      {
+        audience: "resume",
+        text: "Analyzed RepoAtlas with deterministic static signals to produce a reading path, risk areas, contribution ideas, and evidence-backed interview talking points.",
+        evidence_refs: ["start-1", "risk-1", "arch-1"],
+      },
+      {
+        audience: "linkedin",
+        text: "Used RepoAtlas to turn repository structure, commands, architecture, and risk signals into an evidence-backed Candidate Brief.",
+        evidence_refs: ["start-1", "cmd-1", "arch-1"],
+      },
+    ],
+    evidence_refs: [
+      { id: "start-1", kind: "start_here", label: "README", path: "README.md" },
+      { id: "start-2", kind: "start_here", label: "App page", path: "src/app/page.tsx" },
+      {
+        id: "start-3",
+        kind: "start_here",
+        label: "Analyze route",
+        path: "src/app/api/analyze/route.ts",
+      },
+      {
+        id: "risk-1",
+        kind: "danger_zone",
+        label: "Scoring risk signal",
+        path: "src/analyzer/scoring.ts",
+      },
+      {
+        id: "risk-2",
+        kind: "danger_zone",
+        label: "TS/JS pack risk signal",
+        path: "src/analyzer/packs/tsjs.ts",
+      },
+      { id: "cmd-1", kind: "command", label: "Test command", command: "npm run test" },
+      { id: "doc-1", kind: "doc", label: "Project README", path: "README.md" },
+      {
+        id: "ci-1",
+        kind: "ci",
+        label: "CI configuration",
+        path: ".github/workflows/ci.yml",
+      },
+      {
+        id: "arch-1",
+        kind: "architecture",
+        label: "Sample architecture graph",
+        detail: "UI, API, analyzer, scoring, report, and export relationships.",
+      },
+    ],
+    warnings: [],
+  },
   warnings: [],
 };
 
@@ -197,7 +341,7 @@ export default function Home() {
         <header className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <p className="text-2xl font-bold tracking-tight text-slate-900">RepoAtlas</p>
-            <p className="text-sm text-slate-700">Repository Brief Generator</p>
+            <p className="text-sm text-slate-700">Evidence-backed Candidate Briefs</p>
           </div>
           <div className="hidden items-center gap-2 sm:flex">
             <Badge label="TS/JS + Python + Java" />
@@ -207,25 +351,20 @@ export default function Home() {
 
         <section className="mt-12 space-y-5">
           <h1 className="max-w-3xl text-4xl font-semibold tracking-[-0.02em] text-slate-950 sm:text-5xl sm:leading-[1.08]">
-            Map{" "}
-            <span className="text-slate-950">any{" "}</span>
+            Understand an{" "}
             <span className="bg-gradient-to-r from-emerald-700 to-green-600 bg-clip-text text-transparent">
-              codebase
+              unfamiliar codebase
             </span>
-            <span className="text-slate-950"> in </span>
-            <span className="bg-gradient-to-r from-emerald-700 to-green-600 bg-clip-text text-transparent">
-              seconds
-            </span>
-            .
+            <span className="text-slate-950"> before the interview.</span>
           </h1>
           <p className="max-w-xl text-base leading-7 text-slate-700">
-            Understand unfamiliar code faster, onboard new teammates with confidence, and
-            spot risky hotspots before they slow you down.
+            Upload a repository zip and get a deterministic Candidate Brief with a reading
+            path, interview talking points, first PR ideas, and evidence references.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Badge label="Onboard faster" />
-            <Badge label="Spot risks" />
-            <Badge label="Export docs" />
+            <Badge label="Interview prep" />
+            <Badge label="Take-home prep" />
+            <Badge label="Contribution prep" />
           </div>
         </section>
 
@@ -236,7 +375,8 @@ export default function Home() {
               <span aria-hidden="true" />
             </div>
             <p className="text-sm text-slate-700">
-              Upload a zip of your repository. Deep analysis is available for TS/JS, Python, and Java repos.
+              Upload a repository zip. RepoAtlas reads static files and builds an
+              evidence-backed brief without running project code.
             </p>
 
             <div className="mt-5">
@@ -250,7 +390,7 @@ export default function Home() {
                 Reads repo files only. Never runs code.
               </p>
               <p className="mt-1.5 text-xs text-slate-500">
-                Max 100MB · Analysis up to 2 min
+                Max 100MB | Analysis up to 2 min
               </p>
             </div>
 
@@ -261,7 +401,7 @@ export default function Home() {
                   onClick={scrollToReport}
                   className="btn btn-secondary border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                 >
-                  View report ↓
+                  View report
                 </button>
               </div>
             )}
@@ -282,33 +422,33 @@ export default function Home() {
           </h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <FeatureCard
-              title="Folder Map"
-              description="A quick top-down view of key directories and where major functionality lives."
-              iconPath="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
-            />
-            <FeatureCard
-              title="Architecture Map"
-              description="A concise Mermaid-ready outline of system components and relationships."
-              iconPath="M5 5h5v5H5zM14 5h5v5h-5zM14 14h5v5h-5zM10 7.5h4M16.5 10v4"
-            />
-            <FeatureCard
-              title="Start Here"
-              description="A ranked reading path with deterministic signals showing why each file matters."
+              title="Candidate Brief"
+              description="An evidence-backed summary built for interviews, take-homes, and contribution prep."
               iconPath="M6 4h10l4 4v12H6zM16 4v4h4M9 12h6M9 16h4"
             />
             <FeatureCard
-              title="Danger Zones"
-              description="Potentially risky hotspots flagged for complexity, coupling, or churn."
-              iconPath="M12 3l9 16H3L12 3Zm0 6v4m0 4h.01"
+              title="Reading Path"
+              description="A ranked sequence of docs, entrypoints, routes, and central modules to inspect first."
+              iconPath="M4 6h16M4 12h10M4 18h7"
             />
             <FeatureCard
-              title="Run & Contribute"
-              description="Useful run commands and contribution pointers extracted from the repo."
-              iconPath="M8 8 4 12l4 4M16 8l4 4-4 4M10 19l4-14"
+              title="Interview Talking Points"
+              description="Structured answers for codebase walkthroughs, risks, improvements, and first-week contributions."
+              iconPath="M4 5h16v11H8l-4 4V5Z"
+            />
+            <FeatureCard
+              title="First PR Plan"
+              description="Three scoped contribution ideas tied to docs, commands, CI, tests, warnings, and risk signals."
+              iconPath="M5 5h14v14H5zM8 12h8M12 8v8"
+            />
+            <FeatureCard
+              title="Architecture & Risk"
+              description="Folder maps, dependency structure, Start Here rankings, and measurable danger-zone signals."
+              iconPath="M5 5h5v5H5zM14 5h5v5h-5zM14 14h5v5h-5zM10 7.5h4M16.5 10v4"
             />
             <FeatureCard
               title="Export"
-              description="Structured JSON and markdown-friendly output for docs and handoff notes."
+              description="Portable Markdown, PDF, and PNG reports with Candidate Brief evidence included."
               iconPath="M12 3v12m0 0 4-4m-4 4-4-4M5 15v4h14v-4"
             />
           </div>
@@ -333,10 +473,10 @@ export default function Home() {
                 2
               </div>
               <p className="font-semibold text-slate-900">
-                RepoAtlas maps structure and import relationships
+                RepoAtlas indexes evidence
               </p>
               <p className="mt-1 text-xs text-slate-600">
-                Deterministic signals highlight architecture and coupling.
+                Static analysis maps structure, imports, docs, commands, tests, CI, and risk.
               </p>
             </li>
             <li className="panel surface-lg p-4">
@@ -344,10 +484,10 @@ export default function Home() {
                 3
               </div>
               <p className="font-semibold text-slate-900">
-                Get a Repo Brief with ranked start points and risk zones
+                Review the Candidate Brief
               </p>
               <p className="mt-1 text-xs text-slate-600">
-                Export JSON or Markdown for docs, handoffs, and reviews.
+                Rehearse talking points, inspect evidence, and export the complete report.
               </p>
             </li>
           </ol>

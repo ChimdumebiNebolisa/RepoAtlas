@@ -95,7 +95,7 @@ export function CandidateBriefPanel({ candidateBrief }: CandidateBriefPanelProps
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
         Candidate Brief is not available for this report. Re-run analysis to generate
-        interview-mode output.
+        Candidate Brief output.
       </div>
     );
   }
