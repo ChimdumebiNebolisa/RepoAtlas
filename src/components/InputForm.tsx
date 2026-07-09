@@ -158,7 +158,7 @@ export function InputForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="input-form">
+    <form onSubmit={handleSubmit} className="input-form" aria-busy={loading}>
       <div>
         <label htmlFor="zipFile" className="input-label">
           Repository zip file
@@ -188,7 +188,9 @@ export function InputForm({
           disabled={loading || !file}
           className="btn btn-primary"
         >
-          {loading ? ANALYSIS_STAGES[stageIndex] : "Analyze Repository"}
+          <span aria-live="polite">
+            {loading ? ANALYSIS_STAGES[stageIndex] : "Analyze Repository"}
+          </span>
         </button>
         <button
           ref={sampleButtonRef}
@@ -197,7 +199,9 @@ export function InputForm({
           onClick={handleSample}
           className="btn btn-secondary"
         >
-          {loading ? ANALYSIS_STAGES[stageIndex] : "Run bundled sample"}
+          <span aria-live="polite">
+            {loading ? ANALYSIS_STAGES[stageIndex] : "Run bundled sample"}
+          </span>
         </button>
       </div>
     </form>

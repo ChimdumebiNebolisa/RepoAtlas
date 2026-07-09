@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Report } from "@/types/report";
 import { FolderMapTree } from "./FolderMapTree";
 import { ElkArchitectureGraph } from "./ElkArchitectureGraph";
@@ -69,6 +69,7 @@ export function ReportTabs({
   variant = "live",
   initialDemoMode = false,
 }: ReportTabsProps) {
+  const tabsId = useId();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Candidate Brief");
   const [demoMode, setDemoMode] = useState(initialDemoMode);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -280,19 +281,19 @@ export function ReportTabs({
   };
 
   return (
-    <div className="mt-8">
-      <div className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-3">
-        <p className="text-sm text-slate-600">
+    <div className="report-tabs mt-8">
+      <div className="report-toolbar">
+        <p id={`${tabsId}-export-summary`} className="report-toolbar-copy">
           {variant === "preview"
-            ? "Read-only sample report with export preview."
+            ? "Read-only sample. PDF and PNG are available here; analyze a repository to export Markdown."
             : "Generated report ready for PDF, PNG, and Markdown export."}
         </p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="report-toolbar-actions">
           <button
             type="button"
             onClick={handleExportPdf}
             disabled={exporting !== null}
-            className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+            className="report-action report-action-primary report-action-compact"
           >
             {exporting === "pdf" ? "Exporting PDF..." : "Export PDF"}
           </button>
@@ -300,41 +301,51 @@ export function ReportTabs({
             type="button"
             onClick={handleExportPng}
             disabled={exporting !== null}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            className="report-action report-action-secondary report-action-compact"
           >
-            {exporting === "png" ? "Exporting PNG..." : "Export Image"}
+            {exporting === "png" ? "Exporting PNG..." : "Export PNG"}
           </button>
           <button
             type="button"
             onClick={handleExportMarkdown}
             disabled={exporting !== null || !reportId || markdownSupport === "unavailable"}
-            className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="report-action report-action-accent report-action-compact"
             title={markdownNote ?? undefined}
+            aria-describedby={`${tabsId}-export-summary`}
           >
             {exporting === "md" ? "Exporting Markdown..." : "Export Markdown"}
           </button>
         </div>
       </div>
 
-      <div className="mb-4 border-b dark:border-gray-700">
-        <nav className="flex gap-4 overflow-x-auto">
-          {TABS.map((tab) => (
+      <div className="report-tab-rail">
+        <nav className="report-tab-list" aria-label="Report sections" role="tablist">
+          {TABS.map((tab) => {
+            const tabKey = tab.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+            return (
             <button
               key={tab}
+              id={`${tabsId}-tab-${tabKey}`}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              aria-controls={`${tabsId}-panel-${tabKey}`}
               onClick={() => setActiveTab(tab)}
-              className={`py-3 px-1 border-b-2 whitespace-nowrap ${
-                activeTab === tab
-                  ? "border-emerald-700 text-emerald-700"
-                  : "border-transparent hover:border-gray-300 dark:hover:border-gray-600"
-              }`}
+              className="report-tab"
             >
               {tab}
             </button>
-          ))}
+            );
+          })}
         </nav>
       </div>
 
-      <div className="py-4">
+      <div
+        id={`${tabsId}-panel-${activeTab.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+        role="tabpanel"
+        aria-labelledby={`${tabsId}-tab-${activeTab.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+        className="py-4"
+      >
         {activeTab === "Candidate Brief" && (
           <CandidateBriefPanel candidateBrief={report.candidate_brief} demoMode={demoMode} />
         )}
@@ -378,7 +389,7 @@ export function ReportTabs({
                   type="button"
                   onClick={handleCreateShareLink}
                   disabled={shareLoading}
-                  className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                  className="report-action report-action-secondary report-action-compact"
                 >
                   {shareLoading ? "Creating link…" : "Create share link"}
                 </button>
@@ -452,7 +463,7 @@ export function ReportTabs({
                 type="button"
                 onClick={handleExportPdf}
                 disabled={exporting !== null}
-                className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+                className="report-action report-action-primary"
               >
                 {exporting === "pdf" ? "Exporting PDF..." : "Export Full Report (PDF)"}
               </button>
@@ -460,7 +471,7 @@ export function ReportTabs({
                 type="button"
                 onClick={handleExportPng}
                 disabled={exporting !== null}
-                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                className="report-action report-action-secondary"
               >
                 {exporting === "png" ? "Exporting PNG..." : "Export Full Report (PNG)"}
               </button>
@@ -469,10 +480,10 @@ export function ReportTabs({
               type="button"
               onClick={handleExportMarkdown}
               disabled={exporting !== null || !reportId || markdownSupport === "unavailable"}
-              className="inline-flex rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="report-action report-action-accent"
               title={markdownNote ?? undefined}
             >
-              {exporting === "md" ? "Exporting Markdown..." : "Export Markdown (optional)"}
+              {exporting === "md" ? "Exporting Markdown..." : "Export Markdown"}
             </button>
             {markdownNote && <p className="text-xs text-slate-500">{markdownNote}</p>}
           </div>
@@ -491,7 +502,7 @@ export function ReportTabs({
             type="checkbox"
             checked={demoMode}
             onChange={(e) => setDemoMode(e.target.checked)}
-            className="rounded border-slate-300"
+            className="rounded border-slate-300 accent-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
           />
           Screenshot / demo mode
         </label>

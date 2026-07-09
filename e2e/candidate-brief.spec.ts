@@ -39,7 +39,7 @@ test.describe("Candidate Brief smoke", () => {
     await runSampleAnalyzeOnPage(page);
 
     const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Export" }).last().click();
+    await page.getByRole("tab", { name: "Export" }).last().click();
     await page.getByRole("button", { name: /Export Markdown/i }).last().click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.md$/);

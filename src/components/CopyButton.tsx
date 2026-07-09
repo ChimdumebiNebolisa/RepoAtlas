@@ -31,7 +31,7 @@ export function CopyButton({ text, label = "Copy" }: CopyButtonProps) {
     <button
       type="button"
       onClick={handleCopy}
-      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+      className="report-action report-action-secondary report-action-compact"
     >
       {copied ? "Copied" : label}
     </button>

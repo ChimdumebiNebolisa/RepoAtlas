@@ -59,21 +59,21 @@ export function ElkArchitectureGraph({ architecture }: ElkArchitectureGraphProps
               <button
                 type="button"
                 onClick={() => zoomIn()}
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                className="report-action report-action-secondary report-action-compact"
               >
                 Zoom in
               </button>
               <button
                 type="button"
                 onClick={() => zoomOut()}
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                className="report-action report-action-secondary report-action-compact"
               >
                 Zoom out
               </button>
               <button
                 type="button"
                 onClick={() => resetTransform()}
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                className="report-action report-action-secondary report-action-compact"
               >
                 Reset
               </button>
