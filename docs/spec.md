@@ -1,8 +1,8 @@
 # RepoAtlas Engineering Specification
 
-**Version:** 1.0  
-**Status:** Implementation-ready  
-**Target:** Local dev first, then container deployment  
+**Version:** 1.1  
+**Status:** Living spec (validated against `main` 2026-07-09)  
+**Target:** Local dev first; optional Vercel Blob storage  
 
 ---
 
@@ -36,6 +36,11 @@ Engineers preparing for interviews, take-homes, and unfamiliar-repo onboarding w
 - Not a security vulnerability scanner.
 - Not a CI/CD replacement.
 - Does **not** execute or run repository code.
+- Does **not** use LLMs or external AI APIs — all brief text is deterministic.
+
+### What RepoAtlas Will Not Claim
+
+RepoAtlas does **not** assert vulnerabilities, production readiness, business purpose beyond extracted README/metadata, bug counts, or code correctness. Danger zones reflect structural risk signals (size, coupling, complexity, test proximity, optional churn) — not defect counts.
 
 ---
 
@@ -61,7 +66,7 @@ Single-page application at `/`:
 | Tab | Content | Acceptance Criteria |
 |-----|---------|---------------------|
 | Candidate Brief | Repo summary, reading path, talking points, first PR plan, resume bullets, evidence | Default tab; every claim links to evidence refs |
-| Overview | Repo metadata, key docs links, run commands summary | Shows name, URL, analyzed_at; at least placeholder if no run commands |
+| Overview | Repo metadata, deep analysis panels, share link, run commands summary | Shows `project_profile`, `test_inventory`, `architecture_insights`, `commit_insights` when present; `partial` badge when timed out |
 | Folder Map | Recursive tree with expand/collapse | Renders `folder_map`; depth limit respected |
 | Architecture Map | Interactive ELK-based dependency graph (pan/zoom) | Renders `architecture`; collapses if nodes > 50 |
 | Start Here | Sortable table: path, score, explanation | Sorted by score desc; explanations visible |
@@ -80,14 +85,15 @@ Single-page application at `/`:
 |-------|---------------------|-----------|
 | Invalid input | "Upload a zip file or send JSON with zipRef." | 400 / INVALID_INPUT |
 | Zip invalid | "Invalid or corrupted zip file." | 400 / ZIP_INVALID |
-| Timeout | "Analysis timed out. Try a smaller repository." | 504 / TIMEOUT |
+| Timeout | "Analysis timed out. Try a smaller repository." | 504 / TIMEOUT — or partial report saved with `partial: true` when indexing completed before deadline |
 | Analysis failed | "Analysis failed. Check server logs." | 500 / ANALYSIS_FAILED |
 | Zip path not found | "Zip path not found. Check the path or re-upload." | 404 / ZIP_NOT_FOUND |
 
 ### Export Experience
 
-- UI supports client-side export workflows (PDF/PNG snapshots).
-- Markdown export API is available at `GET /api/reports/:id/export/md`.
+- UI supports client-side export workflows (PDF/PNG full-report raster snapshots via `html2canvas` + `jspdf`).
+- Markdown export API is available at `GET /api/reports/:id/export/md` (includes Candidate Brief section).
+- Opt-in read-only sharing: `POST /api/reports/:id/share` → `/share/:token` (7-day TTL; report JSON only).
 
 ---
 
@@ -183,11 +189,11 @@ flowchart TB
 
 - **Endpoint**: Multipart form upload to `POST /api/analyze` with `file` or `zip` field.
 - **Validation**: Check magic bytes `50 4B 03 04` or `50 4B 05 06` (PK) for zip.
-- **Extraction**: Use `yauzl` or Node `unzip`; extract to `{tempDir}/zip-{uuid}`.
+- **Extraction**: `adm-zip` via `src/lib/safeZipExtract.ts` — path jail, entry count cap, uncompressed size cap.
 - **Path traversal**: For each entry, resolve path relative to extract root; reject if resolved path is outside root or contains `..`.
-- **Size limit**: Max uncompressed size 50MB; abort extraction if exceeded.
+- **Size limit**: Max uncompressed size 50MB per spec policy; abort extraction if exceeded.
 
-**Acceptance criteria**: Valid zip extracts; zip with `../../../etc/passwd` entries rejected; oversized zip aborted.
+**Acceptance criteria**: Valid zip extracts; zip with `../../../etc/passwd` entries rejected; oversized zip aborted. See `src/lib/safeZipExtract.test.ts`.
 
 ### Workspace Cleanup Rules
 
@@ -216,7 +222,7 @@ flowchart TB
 | Language detection | Extension → language map; `.gitattributes` overrides if present | `language` per file |
 | Key docs discovery | Glob: `README*`, `CONTRIBUTING*`, `LICENSE*`, `CHANGELOG*` | `keyDocs: string[]` |
 | CI discovery | Glob: `.github/workflows/*.yml`, `.gitlab-ci.yml`, `Jenkinsfile` | `ciConfigs: string[]` |
-| Run command extraction | Parse `package.json` scripts, `Makefile`, `pyproject.toml`, `pom.xml`, `build.gradle`; scan README for common patterns | `RunCommand[]` |
+| Run command extraction | Parse `package.json` scripts, `Makefile`, `pyproject.toml`, `pom.xml`, `build.gradle`, Docker Compose, README fenced blocks | `RunCommand[]` via `src/analyzer/commands/index.ts` |
 
 ### Language Pack: TS/JS
 
@@ -301,11 +307,11 @@ StartHereScore = (
 | Fan-out | Number of files this file imports | Import graph |
 | Complexity | Complexity proxy value | Language pack |
 | Test proximity penalty | 0 if nearby test else 1 | Test proximity |
-| Churn (optional) | Commit count in last N commits | Git log, if available |
+| Churn (optional) | Commit count in last N commits | Git log or GitHub API when available (`src/analyzer/gitHistory.ts`) |
 
 **Normalization**: For each metric, compute percentile rank (0–100) within repo.
 
-**RiskScore formula**:
+**RiskScore formula** (when churn unavailable — default for zip uploads without `.git`):
 
 ```
 RiskScore = (
@@ -313,9 +319,11 @@ RiskScore = (
   0.25 * fan_in_percentile +
   0.20 * fan_out_percentile +
   0.25 * complexity_percentile +
-  0.10 * (100 - test_proximity_score)  // no tests = higher risk
+  0.10 * (100 - test_proximity_score)
 )
 ```
+
+When `commit_insights.mode` is `local_git` or `github_api` and churn data exists, weights rebalance to include **10% churn percentile** (see `src/analyzer/scoring.ts`).
 
 - Clamp to 0–100.
 - Sort by RiskScore descending.
@@ -419,6 +427,7 @@ export interface DangerZoneItem {
     fan_out?: number;
     complexity?: number;
     test_proximity?: number;
+    churn?: number;
   };
 }
 
@@ -573,11 +582,11 @@ else {
 
 | Concern | Mitigation |
 |---------|------------|
-| Path traversal (zip) | Resolve all extracted paths; reject `..`; jail to extract root |
+| Path traversal (zip) | `src/lib/safeZipExtract.ts` — resolve paths; reject `..`; jail to extract root |
 | Code execution | Never `require()`, `import()`, or `exec()` repo code; parse as text only |
-| Network | Only `git clone` to GitHub; no arbitrary HTTP/fetch from analyzer |
-| Rate limiting | Per-IP: 10 analyses per hour; return 429 with `Retry-After` |
-| Zip bombs | Enforce max uncompressed size (50MB); abort if exceeded |
+| Network | GitHub archive download (legacy ingest) and optional GitHub Commits API for churn when local `.git` missing — no arbitrary user URLs |
+| Rate limiting | **Not implemented** — spec target 10 analyses/hour per IP (deferred item 39) |
+| Zip bombs | Enforce max uncompressed size (50MB) and entry count; abort if exceeded |
 
 **Acceptance criteria**: Zip with `../../etc/passwd` does not write outside extract dir; analyzer never executes repo code.
 
@@ -589,8 +598,8 @@ else {
 |----------|-------------|
 | Progressive analysis | Optional: emit folder_map first, then architecture, then scoring; UI can show partial results |
 | Clone cache | Optional: cache by `owner/repo@commit`; reuse if same commit requested within TTL |
-| Timeouts | Clone: 60s; analysis: 120s; abort and clean up on timeout |
-| Graceful degradation | On timeout: return partial report with `warnings: ["Analysis timed out; partial results"]` |
+| Timeouts | Clone: 60s; analysis: 120s; partial report saved when deadline hit after folder map |
+| Graceful degradation | On timeout after indexing: return `partial: true` report with Candidate Brief and `warnings` (see `src/analyzer/index.ts`) |
 
 ---
 

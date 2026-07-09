@@ -41,46 +41,69 @@ This document maps improvement items **1–38** to concrete files, dependencies,
 
 ## Current State
 
-RepoAtlas already has a working analysis pipeline and Candidate Brief layer:
+RepoAtlas is a **deterministic, no-AI** repository analysis app. Primary output: **Candidate Brief** for interviews, take-homes, onboarding, and open-source contribution prep.
 
 ```
-Zip / zipRef → POST /api/analyze → ingest → pipeline → language packs → scoring → interview builder → storage → UI + export
+Zip / zipRef / sample → POST /api/analyze → ingest → pipeline → language packs → scoring → interview builder → storage → UI + export (+ optional share link)
 ```
 
-| Area | Status | Key files |
-|------|--------|-----------|
-| Candidate Brief types | Done | `src/types/report.ts` |
-| Deterministic brief builder | Done | `src/analyzer/interview.ts` |
-| Candidate Brief UI (first tab) | Done | `src/components/CandidateBriefPanel.tsx`, `ReportTabs.tsx` |
-| Markdown export | Done | `src/lib/export.ts` |
-| Run commands | Partial | `src/analyzer/pipeline.ts` — `package.json` scripts only |
-| Zip extraction | Partial | `src/lib/ingest.ts` — `extractAllTo`, 100MB limit, no traversal checks |
-| Project type / purpose | Missing | Heuristics in `scoring.ts` / packs only |
-| Source snippets | Missing | Evidence refs are file paths only |
-| Commit / churn | Missing | Homepage mentions churn; `scoring.ts` does not compute it |
-| README positioning | Stale | Describes "Repo Brief" for onboarding; omits Candidate Brief |
-| Landing page (`page.tsx`) | Stale | "What you get" cards omit Candidate Brief; Danger Zones claims "churn" |
-| `docs/spec.md` | Stale | No `candidate_brief` in data model; still says "Repo Brief" |
-| Demo sample | Partial | `SAMPLE_REPORT` in `page.tsx` lacks `candidate_brief` |
-| E2E tests | Missing | Vitest only |
-| PDF/PNG export | Raster only | `html2canvas` + `jspdf` snapshots — not structured PDF |
-| Analysis timeout | Hard fail | `analyze/route.ts` uses `Promise.race` → 504; no partial report saved today |
-| GitHub URL ingest | Legacy | `ingest.ts` supports GitHub archive download; UI is zip-primary |
-| Legacy reports | No versioning | `candidate_brief` optional on `Report`; old JSON loads without brief |
+### Implementation status (verified 2026-07-09)
 
-**Candidate Brief already ships (do not rebuild):**
+Statuses: **Done** · **Partial** · **Missing** · **Deferred** · **Unverified**
 
-| Section | Source in `interview.ts` |
-|---------|--------------------------|
-| Repo summary | `buildRepoSummary()` — signal counts today; purpose extraction is item 8 |
+| Area | Status | Key files | Notes / gaps |
+|------|--------|-----------|--------------|
+| Candidate Brief types | **Done** | `src/types/report.ts` | `CandidateBrief`, `EvidenceRef`, `REPORT_VERSION = 2` |
+| Deterministic brief builder | **Done** | `src/analyzer/interview.ts`, `src/analyzer/questions.ts` | No LLM calls; templates + extracted signals |
+| Candidate Brief UI (first tab) | **Done** | `src/components/CandidateBriefPanel.tsx`, `src/components/ReportTabs.tsx` | Default tab; fallback when `candidate_brief` missing |
+| Markdown export | **Done** | `src/lib/export.ts`, `src/app/api/reports/[id]/export/md/route.ts` | Server-side `.md` with Candidate Brief + Mermaid artifact |
+| PDF / PNG export | **Done** | `src/components/ReportTabs.tsx` | Client-side raster via `html2canvas` + `jspdf` (not structured PDF) |
+| Run command extraction | **Done** | `src/analyzer/commands/index.ts`, `src/analyzer/pipeline.ts` | `package.json`, Makefile, Python, Java, Docker Compose, README blocks |
+| Zip extraction hardening | **Done** | `src/lib/safeZipExtract.ts`, `src/lib/ingest.ts` | Magic bytes, traversal jail, size/count limits; tests in `safeZipExtract.test.ts` |
+| Project type detection | **Done** | `src/analyzer/projectType.ts` | Next.js, FastAPI, Django, Java, Node API, monorepo, docs-only, etc. |
+| Project purpose extraction | **Done** | `src/analyzer/purpose.ts` | README heading/intro, `package.json` / `pyproject.toml` description |
+| Technical decision detector | **Partial** | `src/analyzer/decisions.ts` | Framework, DB, auth, deployment heuristics; `evidence_refs` often empty |
+| Source snippets / evidence refs | **Partial** | `src/analyzer/snippets.ts`, `src/analyzer/interview.ts` | Snippets on key docs; source-file line snippets limited |
+| Commit / history insights | **Partial** | `src/analyzer/gitHistory.ts` | `local_git` + `github_api` modes; `co_changed_pairs` stubbed; unavailable for zip-only uploads |
+| Churn in danger-zone scoring | **Done** | `src/analyzer/scoring.ts`, `src/analyzer/gitHistory.ts` | 10% weight when git insights available; omitted when unavailable |
+| README positioning | **Done** | `README.md` | Candidate Brief-first; screenshots, demo GIF, example link |
+| Landing page positioning | **Partial** | `src/components/HomePage.tsx` | Hero aligned; some feature cards understate export/churn |
+| `docs/spec.md` sync | **Done** | `docs/spec.md` | Schema v2, routes, partial reports, sharing, cron — maintained in this PR cycle |
+| Demo sample | **Done** | `src/lib/buildSampleReport.ts`, `src/app/page.tsx` | Homepage preview + “Try sample Candidate Brief”; uses `buildCandidateBrief()` |
+| E2E tests | **Done** | `e2e/candidate-brief.spec.ts`, `playwright.config.ts` | Smoke: sample analyze, export, share error, legacy brief fallback |
+| Portfolio screenshots | **Done** | `docs/images/*.png`, `e2e/portfolio-capture.spec.ts` | Regenerate via `npm run capture:portfolio` |
+| Demo GIF | **Done** | `docs/demo.gif`, `scripts/build-demo-gif.mjs` | Built from capture frames |
+| Report sharing | **Done** | `src/lib/sharing.ts`, `src/app/share/[token]/page.tsx` | 7-day token links; report JSON only (never uploaded zip) |
+| Cleanup / TTL cron | **Partial** | `src/app/api/cron/cleanup/route.ts`, `src/lib/reportTtl.ts` | Filesystem TTL + max count; **skipped** when `BLOB_READ_WRITE_TOKEN` set |
+| Report versioning | **Partial** | `src/types/report.ts`, `src/analyzer/index.ts` | New reports stamped `report_version: 2`; no migration/backfill for stored JSON |
+| Partial timeout behavior | **Done** | `src/analyzer/index.ts`, `src/analyzer/partial.test.ts` | Saves `partial: true` report with brief when deadline hit after indexing |
+| Generated-file / binary filtering | **Partial** | `src/analyzer/ignoreRules.ts`, language packs | Skips binaries/minified in analysis; folder map still lists all files |
+
+### Remaining work (honest)
+
+| Priority | Item | Why it matters |
+|----------|------|----------------|
+| Medium | Blob storage TTL sweep | Cron skips report deletion when using Vercel Blob |
+| Medium | Richer evidence snippets on source files | Brief claims still path-heavy outside key docs |
+| Medium | `co_changed_pairs` + commit `evidence_refs` | Commit insights panel is thin |
+| Low | Structured PDF export | Raster PDF today (item 41) |
+| Low | Rate limiting on analyze | Spec mentions 10/hr; not implemented (item 39) |
+| Low | Folder-map filtering for binaries | Binaries visible in tree though analysis skips them |
+
+**Candidate Brief sections shipped today** (`src/analyzer/interview.ts`):
+
+| Section | Builder |
+|---------|---------|
+| Repo summary | `buildRepoSummary()` + optional `projectPurpose` |
 | Reading path | `buildReadingPath()` from Start Here |
 | Talking points (×4) | walkthrough, risk, improve-first, first-week |
 | First PR plan (×3) | `buildFirstPrPlan()` |
 | Resume / LinkedIn bullets | `buildResumeBullets()` |
-| Evidence index | `buildEvidenceIndex()` |
-| Confidence notes | `buildCandidateWarnings()` + per-answer `confidenceFor()` |
+| Walkthrough script | tiered 30s / 2min / deep (when signals exist) |
+| Behavioral hooks + interview questions | when sufficient evidence |
+| Evidence index | `buildEvidenceIndex()` with grouped UI |
 
-**Core insight:** The brief builder (`buildCandidateBrief`) synthesizes everything from `startHere`, `dangerZones`, `runCommands`, `contributeSignals`, `architecture`, and `warnings`. New report-level fields (`project_profile`, etc.) must be threaded through `src/analyzer/index.ts` into `BuildCandidateBriefInput` — not only added to `Report`.
+**Core wiring:** New report fields flow through `src/analyzer/index.ts` → `BuildCandidateBriefInput` in `interview.ts`.
 
 ---
 
@@ -1688,9 +1711,9 @@ Not in the original 1–38 scope; track after M1 or when deploying publicly.
 | **40. `.gitattributes` language overrides** | `docs/spec.md` | Lower priority; affects language pack selection |
 | **41. Structured PDF export** | Export is raster today | Replace html2canvas path if printable output needed |
 | **42. Progressive SSE analysis** | Spec mentions streaming partial results | Alternative to polling; pairs with item 25 |
-| **43. Overview tab enrichment** | Tab exists but is metadata-only | Surface `project_profile`, commands summary after M2 |
-| **44. Report schema versioning** | `guardrails.md` §10 | `report_version` field + migration notes for stored JSON |
-| **45. CI workflow** | No `.github/workflows` today | Add `npm run test` + lint on PR |
+| **43. Overview tab enrichment** | Roadmap M5 | **Partial** — `DeepAnalysisSection` on Overview (`src/components/DeepAnalysisSection.tsx`) |
+| **44. Report schema versioning** | `guardrails.md` §10 | **Partial** — `report_version: 2` on new reports; no migration layer |
+| **45. CI workflow** | `.github/workflows/ci.yml` | **Done** — `npm run test`, `npm run build`, `npm run test:e2e` on PR |
 
 ---
 
@@ -1722,14 +1745,21 @@ Not in the original 1–38 scope; track after M1 or when deploying publicly.
 
 ## Definition of Done
 
-RepoAtlas reaches "elite" interview-prep status when:
+**Portfolio-ready (current — 2026-07-09):**
 
-1. **Coherent story** — Candidate Brief-first positioning in README, landing, and exports.
-2. **Provable claims** — Snippets, grouped evidence, explainable confidence.
-3. **Interview-ready content** — Tiered walkthrough, behavioral hooks, generated questions.
-4. **Safe ingest** — Hardened zip extraction with attack regression tests.
-5. **Credible demo** — Sample analyze, screenshot mode, demo GIF.
-6. **Regression-safe** — Fixture matrix, brief snapshots, Playwright smoke tests.
+1. ✅ **Coherent story** — Candidate Brief-first in README, landing, exports, and `docs/examples/repoatlas-candidate-brief.md`
+2. ⚠️ **Provable claims** — Evidence index + doc snippets; source-file line snippets still thin
+3. ✅ **Interview-ready content** — Walkthrough, behavioral hooks, interview questions when signals exist
+4. ✅ **Safe ingest** — Hardened zip extraction with regression tests
+5. ✅ **Credible demo** — Sample analyze, screenshot mode, portfolio PNGs + demo GIF
+6. ✅ **Regression-safe** — Fixture matrix, golden brief snapshot, Playwright smoke tests
+
+**Elite / stretch (remaining):**
+
+- Blob TTL sweep parity with filesystem
+- Rate limiting on public analyze endpoint
+- Structured PDF export
+- Richer commit co-change signals
 
 ---
 
@@ -1756,6 +1786,7 @@ flowchart TB
 |------|--------|
 | 2026-07-08 | Initial roadmap (items 1–38) |
 | 2026-07-08 | v1.1: spec sync checklist, policy decisions, review fixes, commit/push checkpoints per PR, PR-2b quick win, deferred items 39–43 |
+| 2026-07-09 | v1.3: implementation status table synced to codebase; deferred 43–45 updated; portfolio proof artifact |
 | 2026-07-08 | v1.2: items-at-a-glance table, integration choke points, guardrails alignment, milestone exit criteria, snapshot/CI notes, out of scope, risk register, PR-9b, schema/input wiring |
 
-*Document version: 1.2 — Last updated: 2026-07-08*
+*Document version: 1.3 — Last updated: 2026-07-09*
