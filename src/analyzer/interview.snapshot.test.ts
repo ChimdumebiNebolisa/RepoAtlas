@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import path from "path";
+import expectedBrief from "../../fixtures/repo-ts/expected-brief.json";
 import { analyzeRepository } from "./index";
 
 const DENYLIST = [
@@ -45,5 +46,17 @@ describe("Candidate Brief snapshots (repo-ts)", () => {
       plain_english: expect.any(String),
       confidence: expect.stringMatching(/^(high|medium|low)$/),
     });
+
+    expect(brief.repo_summary.headline).toBe(expectedBrief.repo_summary.headline);
+    expect(brief.repo_summary.confidence).toBe(expectedBrief.repo_summary.confidence);
+    expect(brief.reading_path.map((item) => ({
+      order: item.order,
+      title: item.title,
+      path: item.path,
+    }))).toEqual(expectedBrief.reading_path);
+    expect(brief.first_pr_plan.map((idea) => idea.title)).toEqual(
+      expectedBrief.first_pr_plan_titles
+    );
+    expect(brief.reading_path[0]?.path).toBe("src/app/api/health/route.ts");
   }, 30000);
 });

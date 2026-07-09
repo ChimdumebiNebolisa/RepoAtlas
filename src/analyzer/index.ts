@@ -233,7 +233,9 @@ export async function analyzeRepository(
     }
 
     const architecture = resolveArchitecture(packs);
-    const commit_insights = analyzeCommitInsights(workspace.path);
+    const commit_insights = await analyzeCommitInsights(workspace.path, {
+      githubUrl: input.githubUrl,
+    });
     const startHere = computeStartHere(
       pipeline,
       packs.tsjs,

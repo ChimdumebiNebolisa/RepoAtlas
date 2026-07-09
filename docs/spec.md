@@ -193,7 +193,7 @@ flowchart TB
 
 - Delete temp dir on analysis completion (success or failure).
 - Optional TTL: if analysis crashes, orphan dirs cleaned by cron/job after 1 hour.
-- Report files: retained on disk; no automatic expiry in MVP.
+- Report files: filesystem storage uses TTL sweep (`REPORT_TTL_DAYS`, default 30) and max count (`REPORT_MAX_COUNT`, default 100). Vercel Blob reports rely on provider lifecycle; use `POST /api/cron/cleanup` for filesystem + share-token sweeps.
 
 ### Limits
 
@@ -332,6 +332,8 @@ RiskScore = (
 
 ```json
 {
+  "report_version": 2,
+  "partial": false,
   "repo_metadata": {
     "name": "string",
     "url": "string",
@@ -351,9 +353,21 @@ RiskScore = (
     "key_docs": [],
     "ci_configs": []
   },
+  "candidate_brief": { },
+  "project_profile": { },
+  "project_purpose": { },
+  "technical_decisions": [],
+  "symbols": [],
+  "test_inventory": { },
+  "architecture_insights": { },
+  "commit_insights": {
+    "mode": "local_git | github_api | unavailable"
+  },
   "warnings": []
 }
 ```
+
+`candidate_brief` is the primary interview-facing output. `partial: true` indicates a timeout after folder map was saved. Deep-analysis fields (`project_profile`, `test_inventory`, `architecture_insights`, `commit_insights`) are optional and populated when signals are available.
 
 ### TypeScript Types
 
@@ -420,6 +434,8 @@ export interface ContributeSignals {
 }
 
 export interface Report {
+  report_version?: number;
+  partial?: boolean;
   repo_metadata: RepoMetadata;
   folder_map: FolderMapNode;
   architecture: Architecture;
@@ -427,9 +443,19 @@ export interface Report {
   danger_zones: DangerZoneItem[];
   run_commands: RunCommand[];
   contribute_signals: ContributeSignals;
+  candidate_brief?: CandidateBrief;
+  project_profile?: ProjectProfile;
+  project_purpose?: ProjectPurpose;
+  technical_decisions?: TechnicalDecision[];
+  symbols?: CodeSymbol[];
+  test_inventory?: TestInventory;
+  architecture_insights?: ArchitectureInsights;
+  commit_insights?: CommitInsights;
   warnings: string[];
 }
 ```
+
+See `src/types/report.ts` for full `CandidateBrief`, `EvidenceRef`, and deep-analysis type definitions.
 
 ---
 
@@ -440,8 +466,11 @@ export interface Report {
 | Route file | Methods | Public endpoint | Notes |
 |---|---|---|---|
 | `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` | Accepts multipart upload (`file` or `zip`) and JSON `{ "zipRef": "..." }` |
-| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` | Returns persisted report JSON |
+| `src/app/api/reports/[id]/route.ts` | `GET`, `DELETE` | `/api/reports/:id` | Returns or deletes persisted report JSON |
+| `src/app/api/reports/[id]/share/route.ts` | `POST` | `/api/reports/:id/share` | Creates 7-day read-only share token |
+| `src/app/api/share/[token]/route.ts` | `GET` | `/api/share/:token` | Resolves share token to report JSON |
 | `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` | Returns `text/markdown` with attachment headers |
+| `src/app/api/cron/cleanup/route.ts` | `GET`, `POST` | `/api/cron/cleanup` | `GET` inventory; `POST` sweeps expired reports + share tokens |
 
 Maintenance rule: when route handlers are added/removed/renamed, update this table in the same PR by checking the route files directly.
 
@@ -478,7 +507,7 @@ Maintenance rule: when route handlers are added/removed/renamed, update this tab
 
 ### API availability
 
-- **Current API routes:** `POST /api/analyze`, `GET /api/reports/:id`, and `GET /api/reports/:id/export/md`.
+- **Current API routes:** `POST /api/analyze`, `GET`/`DELETE /api/reports/:id`, `POST /api/reports/:id/share`, `GET /api/share/:token`, `GET /api/reports/:id/export/md`, and `GET`/`POST /api/cron/cleanup`.
 - There is no separate `POST /api/upload`; uploads are handled by `POST /api/analyze` via multipart fields `file` or `zip`.
 - UI report rendering/export can use `/api/reports/:id` and `/api/reports/:id/export/md` after analysis returns `reportId`.
 
@@ -498,6 +527,8 @@ Maintenance rule: when route handlers are added/removed/renamed, update this tab
 | `Page` | Root layout; input form + report tabs container |
 | `InputForm` | Zip file input, submit; calls POST /api/analyze with multipart |
 | `ReportTabs` | Tab bar + tab content; receives `Report` |
+| `CandidateBriefPanel` | Candidate Brief sections with evidence navigation |
+| `DeepAnalysisSection` | Overview panels for project profile, tests, boundaries, commits |
 | `FolderMapTree` | Recursive tree; expand/collapse |
 | `ArchitectureGraph` | Interactive ELK graph rendering; collapse to folder if nodes > 50 |
 | `StartHereTable` | Sortable table; path, score, explanation |
@@ -584,6 +615,12 @@ else {
 | `fixtures/repo-ts` | Small TS repo (5 files): index, utils, 1 test | `fixtures/repo-ts/` |
 | `fixtures/repo-python` | Small Python repo: main, utils, test | `fixtures/repo-python/` |
 | `fixtures/repo-java` | Small Java repo: Main, Util, Test | `fixtures/repo-java/` |
+| `fixtures/repo-java-maven` | Maven Java app with tests | `fixtures/repo-java-maven/` |
+| `fixtures/repo-fastapi` | FastAPI service with tests | `fixtures/repo-fastapi/` |
+| `fixtures/repo-node-api` | Express API with package scripts | `fixtures/repo-node-api/` |
+| `fixtures/repo-monorepo` | npm workspaces monorepo | `fixtures/repo-monorepo/` |
+| `fixtures/repo-docs-only` | README-only repo (no source) | `fixtures/repo-docs-only/` |
+| `fixtures/repo-no-readme` | Minimal JS without README | `fixtures/repo-no-readme/` |
 
 ### Acceptance Tests
 

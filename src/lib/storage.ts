@@ -6,9 +6,15 @@ import fs from "fs";
 import path from "path";
 import type { Report } from "@/types/report";
 import { put, get } from "@vercel/blob";
+import { getReportMaxCount, getReportTtlMs } from "@/lib/reportTtl";
 
-const REPORTS_DIR = process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
 const REPORTS_BLOB_PREFIX = "reports/";
+const UUID_FILE_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.json$/i;
+
+function getReportsDir(): string {
+  return process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
+}
 
 function isVercel(): boolean {
   return process.env.VERCEL === "1";
@@ -23,9 +29,17 @@ function getBlobToken(): string | undefined {
 }
 
 function ensureReportsDir() {
-  if (!fs.existsSync(REPORTS_DIR)) {
-    fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  const reportsDir = getReportsDir();
+  if (!fs.existsSync(reportsDir)) {
+    fs.mkdirSync(reportsDir, { recursive: true });
   }
+}
+
+export interface SweepReportsResult {
+  deleted: string[];
+  retained: number;
+  scanned: number;
+  skippedBlob: boolean;
 }
 
 export async function saveReport(reportId: string, report: Report): Promise<void> {
@@ -49,7 +63,7 @@ export async function saveReport(reportId: string, report: Report): Promise<void
   }
 
   ensureReportsDir();
-  const filePath = path.join(REPORTS_DIR, `${reportId}.json`);
+  const filePath = path.join(getReportsDir(), `${reportId}.json`);
   await fs.promises.writeFile(filePath, body, "utf-8");
 }
 
@@ -86,7 +100,7 @@ export async function getReport(reportId: string): Promise<Report | null> {
     }
   }
 
-  const filePath = path.join(REPORTS_DIR, `${reportId}.json`);
+  const filePath = path.join(getReportsDir(), `${reportId}.json`);
   try {
     const data = await fs.promises.readFile(filePath, "utf-8");
     return JSON.parse(data) as Report;
@@ -97,15 +111,68 @@ export async function getReport(reportId: string): Promise<Report | null> {
 
 export async function deleteReport(reportId: string): Promise<boolean> {
   if (shouldUseBlobStorage()) {
-    // Blob delete not implemented without @vercel/blob del — filesystem fallback only for v1
     return false;
   }
 
-  const filePath = path.join(REPORTS_DIR, `${reportId}.json`);
+  const filePath = path.join(getReportsDir(), `${reportId}.json`);
   try {
     await fs.promises.unlink(filePath);
     return true;
   } catch {
     return false;
   }
+}
+
+export async function listReportIds(): Promise<string[]> {
+  if (shouldUseBlobStorage()) {
+    return [];
+  }
+
+  ensureReportsDir();
+  const files = await fs.promises.readdir(getReportsDir());
+  return files
+    .filter((f) => UUID_FILE_RE.test(f))
+    .map((f) => f.replace(/\.json$/i, ""))
+    .sort();
+}
+
+export async function sweepExpiredReports(): Promise<SweepReportsResult> {
+  if (shouldUseBlobStorage()) {
+    return { deleted: [], retained: 0, scanned: 0, skippedBlob: true };
+  }
+
+  const ids = await listReportIds();
+  const ttlMs = getReportTtlMs();
+  const maxCount = getReportMaxCount();
+  const now = Date.now();
+
+  const entries: Array<{ id: string; analyzedAt: number }> = [];
+  for (const id of ids) {
+    const report = await getReport(id);
+    if (!report) continue;
+    const analyzedAt = Date.parse(report.repo_metadata.analyzed_at);
+    entries.push({
+      id,
+      analyzedAt: Number.isFinite(analyzedAt) ? analyzedAt : 0,
+    });
+  }
+
+  entries.sort((a, b) => b.analyzedAt - a.analyzedAt);
+
+  const deleted: string[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const { id, analyzedAt } = entries[i];
+    const expired = analyzedAt > 0 && now - analyzedAt > ttlMs;
+    const overMax = i >= maxCount;
+    if (expired || overMax) {
+      if (await deleteReport(id)) deleted.push(id);
+    }
+  }
+
+  return {
+    deleted,
+    retained: entries.length - deleted.length,
+    scanned: entries.length,
+    skippedBlob: false,
+  };
 }

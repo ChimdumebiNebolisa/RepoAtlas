@@ -213,6 +213,7 @@ These routes are implemented from the files in `src/app/api/**/route.ts`:
 | `src/app/api/reports/[id]/share/route.ts` | `POST` | `/api/reports/:id/share` |
 | `src/app/api/share/[token]/route.ts` | `GET` | `/api/share/:token` |
 | `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` |
+| `src/app/api/cron/cleanup/route.ts` | `GET`, `POST` | `/api/cron/cleanup` |
 
 ### `POST /api/analyze`
 
@@ -289,6 +290,18 @@ Common statuses:
 - `400` for invalid report IDs
 - `404` when the report does not exist
 
+### `DELETE /api/reports/:id`
+
+Deletes a report from filesystem storage (no-op when using Vercel Blob).
+
+### `GET /api/cron/cleanup`
+
+Returns report inventory metadata (`reportCount`, `ttlDays`, `maxReports`).
+
+### `POST /api/cron/cleanup`
+
+Runs TTL sweeps for expired reports (filesystem) and share tokens. When `CRON_SECRET` is set, send `Authorization: Bearer <CRON_SECRET>`.
+
 ---
 
 ## Configuration
@@ -296,6 +309,9 @@ Common statuses:
 - Vercel production: set `BLOB_READ_WRITE_TOKEN`
 - Local development: `REPORTS_DIR` is optional when not using Blob storage and defaults to `<project-root>/reports`
 - Local Blob testing: `BLOB_READ_WRITE_TOKEN` can also be set locally if you want to exercise Blob storage
+- Report retention (filesystem): `REPORT_TTL_DAYS` (default 30; 7 when Blob token is set), `REPORT_MAX_COUNT` (default 100)
+- Cron cleanup auth: optional `CRON_SECRET` for `POST /api/cron/cleanup`
+- GitHub commit insights (fallback when no local `.git`): optional `GITHUB_TOKEN` for higher API rate limits
 
 No `.env` file is required for local development by default.
 
@@ -309,7 +325,10 @@ src/
     api/
       analyze/route.ts
       reports/[id]/route.ts
+      reports/[id]/share/route.ts
       reports/[id]/export/md/route.ts
+      share/[token]/route.ts
+      cron/cleanup/route.ts
   analyzer/
     packs/
     index.ts
@@ -367,7 +386,11 @@ Fixture repositories in `fixtures/`:
 - `fixtures/repo-python`
 - `fixtures/repo-java`
 - `fixtures/repo-java-maven`
+- `fixtures/repo-fastapi`
+- `fixtures/repo-node-api`
+- `fixtures/repo-monorepo`
 - `fixtures/repo-docs-only`
+- `fixtures/repo-no-readme`
 
 These are used for local regression checks and analyzer test coverage.
 

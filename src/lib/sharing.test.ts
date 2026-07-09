@@ -5,7 +5,11 @@ import os from "os";
 import { randomUUID } from "crypto";
 import type { Report } from "@/types/report";
 import { saveReport } from "@/lib/storage";
-import { createShareLink, resolveShareToken } from "@/lib/sharing";
+import {
+  createShareLink,
+  resolveShareToken,
+  sweepExpiredShareTokens,
+} from "@/lib/sharing";
 
 const minimalReport: Report = {
   repo_metadata: {
@@ -51,5 +55,20 @@ describe("sharing", () => {
 
   it("returns null for unknown tokens", async () => {
     expect(await resolveShareToken("not-a-valid-token-at-all")).toBeNull();
+  });
+
+  it("sweeps expired share tokens", async () => {
+    const share = await createShareLink(reportId);
+    const sharesDir = path.join(reportsDir, "shares");
+    const recordPath = path.join(sharesDir, `${share.token}.json`);
+    const record = JSON.parse(fs.readFileSync(recordPath, "utf-8")) as {
+      expiresAt: string;
+    };
+    record.expiresAt = new Date(Date.now() - 60_000).toISOString();
+    fs.writeFileSync(recordPath, JSON.stringify(record));
+
+    const result = await sweepExpiredShareTokens();
+    expect(result.deleted).toContain(share.token);
+    expect(await resolveShareToken(share.token)).toBeNull();
   });
 });
