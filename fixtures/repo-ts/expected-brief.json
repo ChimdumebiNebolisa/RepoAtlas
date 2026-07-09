@@ -1,0 +1,43 @@
+{
+  "reading_path": [
+    {
+      "order": 1,
+      "title": "route.ts",
+      "path": "src/app/api/health/route.ts"
+    },
+    {
+      "order": 2,
+      "title": "page.tsx",
+      "path": "src/app/page.tsx"
+    },
+    {
+      "order": 3,
+      "title": "layout.tsx",
+      "path": "src/app/layout.tsx"
+    },
+    {
+      "order": 4,
+      "title": "README.md",
+      "path": "README.md"
+    },
+    {
+      "order": 5,
+      "title": "bootstrap.ts",
+      "path": "src/bootstrap.ts"
+    },
+    {
+      "order": 6,
+      "title": "index.ts",
+      "path": "src/index.ts"
+    }
+  ],
+  "first_pr_plan_titles": [
+    "Verify and document the detected run commands",
+    "Add or expand contributor guidance",
+    "Add test coverage around src/app/page.tsx"
+  ],
+  "repo_summary": {
+    "headline": "repo-ts appears to be a Next.js application",
+    "confidence": "high"
+  }
+}

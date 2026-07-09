@@ -9,10 +9,16 @@ import { randomBytes } from "crypto";
 import { get, put } from "@vercel/blob";
 import { getReport } from "@/lib/storage";
 
-const REPORTS_DIR = process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
-const SHARES_DIR = path.join(REPORTS_DIR, "shares");
 const SHARES_BLOB_PREFIX = "shares/";
 const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getReportsDir(): string {
+  return process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
+}
+
+function getSharesDir(): string {
+  return path.join(getReportsDir(), "shares");
+}
 
 export interface ShareRecord {
   reportId: string;
@@ -29,8 +35,9 @@ function getBlobToken(): string | undefined {
 }
 
 function ensureSharesDir(): void {
-  if (!fs.existsSync(SHARES_DIR)) {
-    fs.mkdirSync(SHARES_DIR, { recursive: true });
+  const sharesDir = getSharesDir();
+  if (!fs.existsSync(sharesDir)) {
+    fs.mkdirSync(sharesDir, { recursive: true });
   }
 }
 
@@ -53,7 +60,7 @@ async function saveShareRecord(token: string, record: ShareRecord): Promise<void
   }
 
   ensureSharesDir();
-  await fs.promises.writeFile(path.join(SHARES_DIR, `${token}.json`), body, "utf-8");
+  await fs.promises.writeFile(path.join(getSharesDir(), `${token}.json`), body, "utf-8");
 }
 
 async function loadShareRecord(token: string): Promise<ShareRecord | null> {
@@ -88,7 +95,7 @@ async function loadShareRecord(token: string): Promise<ShareRecord | null> {
   }
 
   try {
-    const data = await fs.promises.readFile(path.join(SHARES_DIR, `${token}.json`), "utf-8");
+    const data = await fs.promises.readFile(path.join(getSharesDir(), `${token}.json`), "utf-8");
     return JSON.parse(data) as ShareRecord;
   } catch {
     return null;
@@ -100,7 +107,7 @@ async function deleteShareRecord(token: string): Promise<void> {
     return;
   }
   try {
-    await fs.promises.unlink(path.join(SHARES_DIR, `${token}.json`));
+    await fs.promises.unlink(path.join(getSharesDir(), `${token}.json`));
   } catch {
     /* ignore */
   }
@@ -142,4 +149,29 @@ export async function resolveShareToken(token: string): Promise<ShareRecord | nu
   }
 
   return record;
+}
+
+export async function listShareTokens(): Promise<string[]> {
+  if (shouldUseBlobStorage()) return [];
+  ensureSharesDir();
+  try {
+    const files = await fs.promises.readdir(getSharesDir());
+    return files.filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, ""));
+  } catch {
+    return [];
+  }
+}
+
+export async function sweepExpiredShareTokens(): Promise<{ deleted: string[]; scanned: number }> {
+  const tokens = await listShareTokens();
+  const deleted: string[] = [];
+  for (const token of tokens) {
+    const record = await loadShareRecord(token);
+    if (!record) continue;
+    if (new Date(record.expiresAt) < new Date()) {
+      await deleteShareRecord(token);
+      deleted.push(token);
+    }
+  }
+  return { deleted, scanned: tokens.length };
 }

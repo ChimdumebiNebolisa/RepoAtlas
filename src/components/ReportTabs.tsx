@@ -9,6 +9,7 @@ import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
 import { ReportDocument } from "./ReportDocument";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
+import { DeepAnalysisSection } from "./DeepAnalysisSection";
 import { ERROR_CODES } from "@/lib/errors";
 import { buildExportFilename } from "@/lib/exportNames";
 import html2canvas from "html2canvas";
@@ -396,6 +397,15 @@ export function ReportTabs({
                 )}
               </div>
             )}
+            <div className="mt-6">
+              <h3 className="mb-3 text-lg font-semibold text-slate-900">Deep analysis</h3>
+              <DeepAnalysisSection
+                projectProfile={report.project_profile}
+                testInventory={report.test_inventory}
+                architectureInsights={report.architecture_insights}
+                commitInsights={report.commit_insights}
+              />
+            </div>
             {report.run_commands.length > 0 && (
               <div>
                 <h3 className="font-semibold mt-4">Run commands</h3>
