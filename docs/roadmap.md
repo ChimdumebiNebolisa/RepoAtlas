@@ -70,7 +70,7 @@ Statuses: **Done** · **Partial** · **Missing** · **Deferred** · **Unverified
 | Landing page positioning | **Partial** | `src/components/HomePage.tsx` | Hero aligned; some feature cards understate export/churn |
 | `docs/spec.md` sync | **Done** | `docs/spec.md` | Schema v2, routes, partial reports, sharing, cron — maintained in this PR cycle |
 | Demo sample | **Done** | `src/lib/buildSampleReport.ts`, `src/app/page.tsx` | Homepage preview + “Try sample Candidate Brief”; uses `buildCandidateBrief()` |
-| E2E tests | **Done** | `e2e/candidate-brief.spec.ts`, `playwright.config.ts` | Smoke: sample analyze, export, share error, legacy brief fallback |
+| E2E tests | **Done** | `e2e/*.spec.ts`, `playwright.config.ts` | 32 tests: API edge cases, UI flows (tabs, share, upload, partial, export), smoke; portfolio capture excluded from default `npm run test:e2e` |
 | Portfolio screenshots | **Done** | `docs/images/*.png`, `e2e/portfolio-capture.spec.ts` | Regenerate via `npm run capture:portfolio` |
 | Demo GIF | **Done** | `docs/demo.gif`, `scripts/build-demo-gif.mjs` | Built from capture frames |
 | Report sharing | **Done** | `src/lib/sharing.ts`, `src/app/share/[token]/page.tsx` | 7-day token links; report JSON only (never uploaded zip) |
