@@ -28,10 +28,12 @@ const TSJS_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const PYTHON_EXTENSIONS = new Set([".py"]);
 const JAVA_EXTENSIONS = new Set([".java"]);
 
-export interface AnalyzeInput {
-  githubUrl?: string;
-  zipRef?: string;
-  zipName?: string;
+export type AnalyzeInput =
+  | { kind?: "zip"; zipRef: string; zipName?: string; githubUrl?: undefined; ref?: undefined }
+  | { kind: "github"; githubUrl: string; ref?: string; zipRef?: undefined; zipName?: undefined };
+
+function githubUrlOf(input: AnalyzeInput): string | undefined {
+  return input.githubUrl;
 }
 
 export interface AnalyzeOptions {
@@ -135,6 +137,7 @@ function buildPartialReport(input: {
   analyzeInput: AnalyzeInput;
   workspacePath: string;
   workspaceName: string;
+  workspaceUrl?: string | null;
   workspaceBranch?: string | null;
   workspaceCloneHash?: string | null;
   pipeline: IndexingPipelineResult;
@@ -170,7 +173,7 @@ function buildPartialReport(input: {
     partial: true,
     repo_metadata: {
       name: input.workspaceName,
-      url: input.analyzeInput.githubUrl ?? "zip",
+      url: input.workspaceUrl ?? githubUrlOf(input.analyzeInput) ?? "zip",
       branch: input.workspaceBranch ?? "unknown",
       clone_hash: input.workspaceCloneHash ?? null,
       analyzed_at: new Date().toISOString(),
@@ -207,6 +210,7 @@ export async function analyzeRepository(
         analyzeInput: input,
         workspacePath: workspace.path,
         workspaceName: workspace.name,
+        workspaceUrl: workspace.url,
         workspaceBranch: workspace.branch,
         workspaceCloneHash: workspace.cloneHash,
         pipeline,
@@ -223,6 +227,7 @@ export async function analyzeRepository(
         analyzeInput: input,
         workspacePath: workspace.path,
         workspaceName: workspace.name,
+        workspaceUrl: workspace.url,
         workspaceBranch: workspace.branch,
         workspaceCloneHash: workspace.cloneHash,
         pipeline,
@@ -234,7 +239,7 @@ export async function analyzeRepository(
 
     const architecture = resolveArchitecture(packs);
     const commit_insights = await analyzeCommitInsights(workspace.path, {
-      githubUrl: input.githubUrl,
+      githubUrl: githubUrlOf(input),
     });
     const startHere = computeStartHere(
       pipeline,
@@ -263,6 +268,7 @@ export async function analyzeRepository(
         analyzeInput: input,
         workspacePath: workspace.path,
         workspaceName: workspace.name,
+        workspaceUrl: workspace.url,
         workspaceBranch: workspace.branch,
         workspaceCloneHash: workspace.cloneHash,
         pipeline,
@@ -315,7 +321,7 @@ export async function analyzeRepository(
       report_version: REPORT_VERSION,
       repo_metadata: {
         name: workspace.name,
-        url: input.githubUrl ?? "zip",
+        url: workspace.url ?? githubUrlOf(input) ?? "zip",
         branch: workspace.branch ?? "unknown",
         clone_hash: workspace.cloneHash ?? null,
         analyzed_at: new Date().toISOString(),

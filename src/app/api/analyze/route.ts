@@ -3,16 +3,29 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { analyzeRepository } from "@/analyzer";
+import { analyzeRepository, type AnalyzeInput } from "@/analyzer";
 import {
   ERROR_CODES,
   toApiErrorPayload,
   toAppError,
 } from "@/lib/errors";
+import { MAX_ANALYSIS_TIME_MS, MAX_COMPRESSED_BYTES } from "@/lib/ingestLimits";
+import {
+  clientKeyFromHeaders,
+  getMaxConcurrentAnalyses,
+  getRateLimiter,
+  tryAcquireAnalysisSlot,
+} from "@/lib/rateLimit";
 
-// Primary flow: multipart zip upload. Optional: JSON body with zipRef (tests/CLI).
-const MAX_ANALYSIS_TIME_MS = 120_000; // 120s
-const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100MB
+// Discriminated input model:
+//   - multipart upload  -> { kind: "zip" }   (server-created temp path)
+//   - { sample: true }  -> { kind: "zip" }   (server-owned fixture path)
+//   - { githubUrl,ref } -> { kind: "github" }
+//
+// Caller-controlled filesystem paths (the old JSON `zipRef`) are intentionally
+// NOT accepted from the network — that path allowed reading arbitrary server
+// files (Phase 1 finding A). Internal code/tests call analyzeRepository()
+// directly for the zipRef path.
 
 function logAnalyzeError(requestId: string, err: unknown): void {
   const appErr = toAppError(err);
@@ -32,70 +45,114 @@ function logAnalyzeError(requestId: string, err: unknown): void {
   console.error(JSON.stringify({ level: "error", ...payload }));
 }
 
+function badRequest(code: string, message: string, status = 400) {
+  return NextResponse.json({ code, message }, { status });
+}
+
 export async function POST(request: NextRequest) {
   const requestId = randomUUID();
   let tempZipPath: string | null = null;
 
+  // Best-effort per-instance rate limit (see src/lib/rateLimit.ts for the
+  // distributed-limiting caveat) + a conservative concurrency gate.
+  const rateResult = await getRateLimiter().check(clientKeyFromHeaders(request.headers));
+  if (!rateResult.allowed) {
+    return NextResponse.json(
+      {
+        code: ERROR_CODES.RATE_LIMIT_EXCEEDED,
+        message: "Too many analysis requests. Please wait and try again.",
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((rateResult.retryAfterMs ?? 60_000) / 1000)),
+        },
+      }
+    );
+  }
+
+  const slot = tryAcquireAnalysisSlot();
+  if (!slot) {
+    return NextResponse.json(
+      {
+        code: ERROR_CODES.RATE_LIMIT_EXCEEDED,
+        message: `Server is busy (max ${getMaxConcurrentAnalyses()} concurrent analyses). Please retry shortly.`,
+      },
+      { status: 429, headers: { "Retry-After": "10" } }
+    );
+  }
+
   try {
     const contentType = request.headers.get("content-type") ?? "";
-    let zipRef: string | undefined;
-    let zipName: string | undefined;
+    let analyzeInput: AnalyzeInput | null = null;
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       const file = formData.get("file") ?? formData.get("zip");
       if (!file || typeof file === "string") {
-        return NextResponse.json(
-          { code: ERROR_CODES.INVALID_INPUT, message: "Upload a single zip file." },
-          { status: 400 }
-        );
+        return badRequest(ERROR_CODES.INVALID_INPUT, "Upload a single zip file.");
       }
       const blob = file as Blob;
-      zipName = "name" in file && typeof file.name === "string" ? file.name : undefined;
-      const size = blob.size;
-      if (size > MAX_UPLOAD_BYTES) {
-        return NextResponse.json(
-          {
-            code: ERROR_CODES.REPO_TOO_LARGE,
-            message: "Repository exceeds the 100MB limit. Try a smaller zip.",
-          },
-          { status: 413 }
+      const zipName = "name" in file && typeof file.name === "string" ? file.name : undefined;
+      if (blob.size > MAX_COMPRESSED_BYTES) {
+        return badRequest(
+          ERROR_CODES.REPO_TOO_LARGE,
+          "Repository exceeds the 100MB limit. Try a smaller zip.",
+          413
         );
       }
       const buffer = Buffer.from(await blob.arrayBuffer());
       tempZipPath = path.join(os.tmpdir(), `repoatlas-${randomUUID()}.zip`);
       await fs.promises.writeFile(tempZipPath, buffer);
-      zipRef = tempZipPath;
+      analyzeInput = { kind: "zip", zipRef: tempZipPath, zipName };
     } else if (contentType.includes("application/json")) {
-      const body = await request.json();
-      if (body.sample === true) {
-        zipRef = path.join(process.cwd(), "fixtures", "repo-ts");
-        zipName = "repo-ts";
-      } else {
-        zipRef = body.zipRef;
-        zipName = typeof body.zipName === "string" ? body.zipName : undefined;
+      let body: Record<string, unknown>;
+      try {
+        body = (await request.json()) as Record<string, unknown>;
+      } catch {
+        return badRequest(ERROR_CODES.INVALID_INPUT, "Request body is not valid JSON.");
       }
-      if (!zipRef) {
-        return NextResponse.json(
-          { code: ERROR_CODES.INVALID_INPUT, message: "Provide zipRef or upload a zip file." },
-          { status: 400 }
+      if (body == null || typeof body !== "object") {
+        return badRequest(ERROR_CODES.INVALID_INPUT, "Provide a JSON object.");
+      }
+
+      if (body.sample === true) {
+        analyzeInput = {
+          kind: "zip",
+          zipRef: path.join(process.cwd(), "fixtures", "repo-ts"),
+          zipName: "repo-ts",
+        };
+      } else if (typeof body.githubUrl === "string" && body.githubUrl.trim() !== "") {
+        const ref =
+          typeof body.ref === "string" && body.ref.trim() !== "" ? body.ref.trim() : undefined;
+        analyzeInput = { kind: "github", githubUrl: body.githubUrl.trim(), ref };
+      } else if ("zipRef" in body) {
+        // Explicitly rejected: caller-controlled server paths are not analyzable
+        // via the public API.
+        return badRequest(
+          ERROR_CODES.INVALID_INPUT,
+          "zipRef is not accepted. Upload a zip file or provide a public GitHub URL."
+        );
+      } else {
+        return badRequest(
+          ERROR_CODES.INVALID_INPUT,
+          "Provide a GitHub repository URL, upload a zip file, or request the sample."
         );
       }
     } else {
-      return NextResponse.json(
-        { code: ERROR_CODES.INVALID_INPUT, message: "Upload a zip file or send JSON with zipRef." },
-        { status: 400 }
+      return badRequest(
+        ERROR_CODES.INVALID_INPUT,
+        "Upload a zip file or send JSON with a githubUrl."
       );
     }
 
-    const report = await analyzeRepository(
-      { zipRef, zipName },
-      { deadlineMs: MAX_ANALYSIS_TIME_MS }
-    );
+    const report = await analyzeRepository(analyzeInput, {
+      deadlineMs: MAX_ANALYSIS_TIME_MS,
+    });
 
     if (!report.reportId) {
       return NextResponse.json(
-        { code: "ANALYSIS_FAILED", message: "No report produced" },
+        { code: ERROR_CODES.ANALYSIS_FAILED, message: "No report produced" },
         { status: 500 }
       );
     }
@@ -106,6 +163,7 @@ export async function POST(request: NextRequest) {
     const { status, code, message } = toApiErrorPayload(err);
     return NextResponse.json({ code, message }, { status });
   } finally {
+    slot.release();
     if (tempZipPath) {
       try {
         await fs.promises.unlink(tempZipPath);

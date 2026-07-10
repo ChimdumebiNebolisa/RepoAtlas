@@ -30,10 +30,16 @@ describe("API integration: analyze -> report -> markdown export", () => {
     const reportRoute = await import("@/app/api/reports/[id]/route");
     const exportRoute = await import("@/app/api/reports/[id]/export/md/route");
 
+    // Public API accepts multipart uploads (not caller-controlled zipRef paths).
+    const zip = new AdmZip();
+    zip.addLocalFolder(fixturePath, "repo-ts");
+    const zipBlob = new Blob([zip.toBuffer()], { type: "application/zip" });
+    const form = new FormData();
+    form.append("file", zipBlob, "repo-ts.zip");
+
     const analyzeRequest = new Request("http://localhost/api/analyze", {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ zipRef: fixturePath }),
+      body: form,
     });
 
     const analyzeResponse = await analyzeRoute.POST(analyzeRequest as never);
@@ -103,6 +109,32 @@ describe("API integration: analyze -> report -> markdown export", () => {
 
     const report = await reportResponse.json();
     expect(report.repo_metadata.name).toContain("repo-ts");
+  });
+
+  it("rejects caller-controlled zipRef JSON with 400 (no arbitrary file access)", async () => {
+    const analyzeRoute = await import("@/app/api/analyze/route");
+    const request = new Request("http://localhost/api/analyze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ zipRef: "/etc" }),
+    });
+    const response = await analyzeRoute.POST(request as never);
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("INVALID_INPUT");
+  });
+
+  it("rejects invalid JSON with 400 INVALID_INPUT", async () => {
+    const analyzeRoute = await import("@/app/api/analyze/route");
+    const request = new Request("http://localhost/api/analyze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{not valid json",
+    });
+    const response = await analyzeRoute.POST(request as never);
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("INVALID_INPUT");
   });
 
   it("returns 404 for unknown report ID", async () => {

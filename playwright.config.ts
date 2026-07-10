@@ -10,6 +10,9 @@ const capturePortfolio =
 // Playwright's web server inherits this process environment on every platform.
 process.env.PORT = PORT;
 process.env.REPORTS_DIR ??= ".playwright-reports";
+// The best-effort in-memory analyze rate limit would otherwise trip across the
+// serial e2e suite; disable it for tests (production keeps the default).
+process.env.ANALYZE_RATE_LIMIT_PER_MIN ??= "0";
 
 export default defineConfig({
   testDir: "./e2e",
