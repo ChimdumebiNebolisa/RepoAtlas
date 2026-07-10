@@ -82,20 +82,11 @@ function collectLanguageWarnings(packs: PackResults): string[] {
     ...(packs.python?.warnings ?? []),
     ...(packs.java?.warnings ?? []),
   ];
+  // Only warn when no supported language is detected at all. A normal
+  // single-language repository should not be told that the languages it simply
+  // does not use are "unavailable" — that is noise, not a genuine gap.
   if (!packs.hasTsJsFiles && !packs.hasPythonFiles && !packs.hasJavaFiles) {
     warnings.push("Deep analysis unavailable: no supported source files detected.");
-  } else {
-    if (!packs.hasTsJsFiles) {
-      warnings.push(
-        "Deep TS/JS analysis unavailable: no TypeScript or JavaScript source files detected."
-      );
-    }
-    if (!packs.hasPythonFiles) {
-      warnings.push("Deep Python analysis unavailable: no Python source files detected.");
-    }
-    if (!packs.hasJavaFiles) {
-      warnings.push("Deep Java analysis unavailable: no Java source files detected.");
-    }
   }
   return warnings;
 }

@@ -77,6 +77,57 @@ from collections.abc import Mapping
     const result = extractImportSpecifiers(content);
     expect(result.some((s) => s.startsWith("."))).toBe(true);
   });
+
+  it("does not add an extra dot for bare relative imports (regression)", () => {
+    // `from . import x` must produce ".x" (current package), not "..x" (parent).
+    expect(extractImportSpecifiers("from . import x\n")).toContain(".x");
+    expect(extractImportSpecifiers("from . import x\n")).not.toContain("..x");
+    // `from .. import y` must produce "..y", not "...y".
+    expect(extractImportSpecifiers("from .. import y\n")).toContain("..y");
+    expect(extractImportSpecifiers("from .. import y\n")).not.toContain("...y");
+    // Package-qualified relative imports keep the separating dot.
+    expect(extractImportSpecifiers("from .pkg import mod\n")).toContain(".pkg.mod");
+    expect(extractImportSpecifiers("from ..pkg import mod\n")).toContain("..pkg.mod");
+  });
+
+  it("resolves `from . import x` to a sibling module (regression)", () => {
+    const workspace = writeWorkspace({
+      "app/views.py": "from . import models",
+      "app/models.py": "x = 1",
+    });
+    const fileSet = new Set(["app/views.py", "app/models.py"]);
+    try {
+      const specs = extractImportSpecifiers("from . import models\n");
+      const modelsSpec = specs.find((s) => s.endsWith("models"))!;
+      const resolved = resolveImport("app/views.py", modelsSpec, workspace, [""], fileSet);
+      expect(normalizeKey(resolved!)).toBe("app/models.py");
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("nested test directory detection", () => {
+  it("marks files under a nested tests/ directory as tests (regression)", () => {
+    const workspace = writeWorkspace({
+      "pkg/service.py": "def run(): return 1",
+      "pkg/tests/test_service.py": "def test_run(): pass",
+      "pkg/nested/deep_test.py": "def test_deep(): pass",
+    });
+    const pipeline = buildPipeline([
+      "pkg/service.py",
+      "pkg/tests/test_service.py",
+      "pkg/nested/deep_test.py",
+    ]);
+    try {
+      const result = runPythonPack(workspace, pipeline);
+      expect(result.testFiles.has("pkg/tests/test_service.py")).toBe(true);
+      expect(result.testFiles.has("pkg/nested/deep_test.py")).toBe(true);
+      expect(result.testFiles.has("pkg/service.py")).toBe(false);
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("detectPackageRoots", () => {

@@ -61,7 +61,7 @@ export function DangerZonesTable({ items }: DangerZonesTableProps) {
               <th
                 className="whitespace-nowrap px-4 py-2 text-left"
                 aria-sort={sortBy === "score" ? (asc ? "ascending" : "descending") : "none"}
-                title="Combined risk from size, coupling, complexity, and test coverage; higher = more risk"
+                title="Combined risk from size, coupling, complexity, and test proximity (a static signal, not measured coverage); higher = more risk"
               >
                 <button
                   type="button"
@@ -84,7 +84,7 @@ export function DangerZonesTable({ items }: DangerZonesTableProps) {
                   <ScoreCircle
                     score={item.score}
                     variant="risk"
-                    tooltip={`Risk: ${item.score.toFixed(0)} — Combined risk from size, coupling, complexity, and test coverage; higher = more risk`}
+                    tooltip={`Risk: ${item.score.toFixed(0)} — Combined risk from size, coupling, complexity, and test proximity (a static signal, not measured coverage); higher = more risk`}
                   />
                 </td>
                 <td className="px-4 py-2 text-gray-600 dark:text-gray-400">

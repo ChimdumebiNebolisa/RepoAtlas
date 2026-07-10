@@ -451,9 +451,9 @@ function buildFirstPrPlan(
 
   if (weakTestRisk) {
     pushUniqueIdea(ideas, {
-      title: `Add test coverage around ${weakTestRisk.path}`,
+      title: `Add tests near ${weakTestRisk.path}`,
       rationale:
-        `This file is risk-ranked and has test proximity ${weakTestRisk.metrics.test_proximity ?? 0}, making it a concrete candidate for a small coverage-focused contribution.`,
+        `This file is risk-ranked and has test proximity ${weakTestRisk.metrics.test_proximity ?? 0} (a static signal, not measured coverage), making it a concrete candidate for a small test-focused contribution.`,
       suggested_files: [weakTestRisk.path],
       evidence_refs: [evidence.dangerZoneRefs.get(weakTestRisk.path) ?? firstAvailableRef(evidence)],
       risk: weakTestRisk.score >= 75 ? "medium" : "low",
@@ -664,7 +664,7 @@ function buildWalkthroughScript(
 
   const tradeoffs = (input.technicalDecisions ?? []).slice(0, 3).map((d) => d.decision);
   const improvements = input.dangerZones.slice(0, 2).map(
-    (dz) => `Review test coverage and complexity around ${dz.path}`
+    (dz) => `Review test proximity and complexity around ${dz.path}`
   );
 
   return {

@@ -13,9 +13,11 @@ const ARCH_NODE_CAP = 50;
 const ARCH_EDGE_CAP = 200;
 
 const TEST_PATTERNS = [
-  /^test_.*\.py$/i,
-  /.*_test\.py$/i,
-  /^tests?\//,
+  // `test_*.py` / `*_test.py` in any directory, and `tests/` or `test/`
+  // directories anywhere in the path (not just repository root).
+  /(^|\/)test_[^/]*\.py$/i,
+  /_test\.py$/i,
+  /(^|\/)tests?\//,
 ];
 const COMMON_ENTRY_NAMES = ["main.py", "app.py", "cli.py", "server.py", "manage.py", "run.py"];
 const PYPROJECT_SCRIPTS_RE = /\[project\.scripts\]\s*[\s\S]*?(\w+)\s*=\s*["']([^:]+):(\w+)["']/g;
@@ -113,7 +115,12 @@ export function extractImportSpecifiers(content: string): string[] {
       .map((n) => n.replace(/\s+as\s+\S+$/, "").trim().split(/\s/)[0])
       .filter((n) => n && n !== "*");
     for (const name of names) {
-      const spec = base ? `${base}.${name}` : `.${name}`;
+      // `base` already carries the leading dots (and optional package path).
+      // For bare relative imports (`from . import x`, `from .. import x`),
+      // pkgRest is empty and the name attaches directly to the dots (".x",
+      // "..x"). Only insert a separating dot when a package path is present
+      // (`from .pkg import mod` -> ".pkg.mod").
+      const spec = pkgRest ? `${base}.${name}` : `${base}${name}`;
       if (!seen.has(spec)) {
         seen.add(spec);
         specs.push(spec);
