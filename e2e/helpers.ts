@@ -58,21 +58,6 @@ export async function analyzeSample(request: APIRequestContext): Promise<string>
   return body.reportId;
 }
 
-export async function analyzeZipRef(
-  request: APIRequestContext,
-  zipRef: string
-): Promise<string> {
-  const res = await request.post("/api/analyze", {
-    data: { zipRef },
-  });
-  if (!res.ok()) {
-    throw new Error(`zipRef analyze failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { reportId?: string };
-  if (!body.reportId) throw new Error("zipRef analyze missing reportId");
-  return body.reportId;
-}
-
 export async function runSampleAnalyzeOnPage(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: /Try sample Candidate Brief/i }).click();

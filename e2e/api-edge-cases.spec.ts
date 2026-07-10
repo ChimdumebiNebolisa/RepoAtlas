@@ -5,7 +5,6 @@ import {
   REPORTS_DIR,
   VALID_UUID,
   analyzeSample,
-  analyzeZipRef,
   minimalReport,
   writeReport,
   zipFixture,
@@ -48,18 +47,36 @@ test.describe("API edge cases", () => {
     expect(body.code).toBe("ZIP_INVALID");
   });
 
-  test("POST /api/analyze rejects missing zipRef path", async ({ request }) => {
+  test("POST /api/analyze rejects caller-controlled zipRef (no arbitrary path access)", async ({ request }) => {
     const res = await request.post("/api/analyze", {
       data: { zipRef: path.join(process.cwd(), "fixtures", "does-not-exist-xyz") },
     });
-    expect(res.status()).toBe(404);
+    expect(res.status()).toBe(400);
     const body = await res.json();
-    expect(body.code).toBe("ZIP_NOT_FOUND");
+    expect(body.code).toBe("INVALID_INPUT");
   });
 
-  test("POST /api/analyze accepts docs-only fixture via zipRef", async ({ request }) => {
-    const zipRef = path.join(process.cwd(), "fixtures", "repo-docs-only");
-    const reportId = await analyzeZipRef(request, zipRef);
+  test("POST /api/analyze rejects a non-canonical GitHub URL", async ({ request }) => {
+    const res = await request.post("/api/analyze", {
+      data: { githubUrl: "https://gitlab.com/foo/bar" },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("INVALID_URL");
+  });
+
+  test("POST /api/analyze accepts docs-only fixture via zip upload", async ({ request }) => {
+    const res = await request.post("/api/analyze", {
+      multipart: {
+        file: {
+          name: "repo-docs-only.zip",
+          mimeType: "application/zip",
+          buffer: zipFixture("repo-docs-only"),
+        },
+      },
+    });
+    expect(res.ok()).toBe(true);
+    const { reportId } = (await res.json()) as { reportId: string };
     expect(reportId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );

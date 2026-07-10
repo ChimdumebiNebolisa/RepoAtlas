@@ -272,7 +272,11 @@ export function InputForm({
       )}
 
       <div className="form-actions">
-        <button type="submit" disabled={loading} className="btn btn-primary">
+        <button
+          type="submit"
+          disabled={loading || (mode === "zip" && !file)}
+          className="btn btn-primary"
+        >
           <span aria-live="polite">
             {loading ? "Analyzing… (up to 2 min)" : "Analyze Repository"}
           </span>
