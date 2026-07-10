@@ -2,11 +2,13 @@ import fs from "fs";
 import path from "path";
 import AdmZip from "adm-zip";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import {
+  MAX_ENTRIES,
+  MAX_SINGLE_FILE_BYTES,
+  MAX_UNCOMPRESSED_BYTES,
+} from "@/lib/ingestLimits";
 
 const ZIP_MAGIC = [0x50, 0x4b];
-const MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
-const MAX_ENTRIES = 10_000;
-const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024;
 
 function validateMagic(buffer: Buffer): void {
   if (buffer.length < 2 || buffer[0] !== ZIP_MAGIC[0] || buffer[1] !== ZIP_MAGIC[1]) {
