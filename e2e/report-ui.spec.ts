@@ -116,7 +116,7 @@ test.describe("Report UI flows", () => {
     await page.locator('input[type="file"]').setInputFiles(txtPath);
     await expect(page.getByText(/Please select a \.zip file/i)).toBeVisible();
     await page.getByRole("button", { name: /Analyze Repository/i }).first().click();
-    await expect(page.getByRole("alert")).toContainText(/zip/i);
+    await expect(page.locator("#input-form-error")).toContainText(/zip/i);
   });
 
   test("missing report id on /report/:id shows error", async ({ page }) => {
