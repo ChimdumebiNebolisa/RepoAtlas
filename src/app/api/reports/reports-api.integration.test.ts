@@ -33,7 +33,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     // Public API accepts multipart uploads (not caller-controlled zipRef paths).
     const zip = new AdmZip();
     zip.addLocalFolder(fixturePath, "repo-ts");
-    const zipBlob = new Blob([zip.toBuffer()], { type: "application/zip" });
+    const zipBlob = new Blob([new Uint8Array(zip.toBuffer())], { type: "application/zip" });
     const form = new FormData();
     form.append("file", zipBlob, "repo-ts.zip");
 
@@ -49,7 +49,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(analyzePayload.reportId).toBeTruthy();
     const reportId = analyzePayload.reportId as string;
 
-    const reportResponse = await reportRoute.GET(new Request("http://localhost"), {
+    const reportResponse = await reportRoute.GET(new Request("http://localhost") as never, {
       params: { id: reportId },
     });
     expect(reportResponse.status).toBe(200);
@@ -64,7 +64,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(report.run_commands).toBeInstanceOf(Array);
     expect(report.contribute_signals).toBeDefined();
 
-    const exportResponse = await exportRoute.GET(new Request("http://localhost"), {
+    const exportResponse = await exportRoute.GET(new Request("http://localhost") as never, {
       params: { id: reportId },
     });
     expect(exportResponse.status).toBe(200);
@@ -87,7 +87,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
 
     const zip = new AdmZip();
     zip.addLocalFolder(fixturePath, "repo-ts");
-    const zipBlob = new Blob([zip.toBuffer()], { type: "application/zip" });
+    const zipBlob = new Blob([new Uint8Array(zip.toBuffer())], { type: "application/zip" });
     const form = new FormData();
     form.append("file", zipBlob, "repo-ts.zip");
 
@@ -102,7 +102,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     const analyzePayload = (await analyzeResponse.json()) as { reportId?: string };
     expect(analyzePayload.reportId).toBeTruthy();
 
-    const reportResponse = await reportRoute.GET(new Request("http://localhost"), {
+    const reportResponse = await reportRoute.GET(new Request("http://localhost") as never, {
       params: { id: analyzePayload.reportId as string },
     });
     expect(reportResponse.status).toBe(200);
@@ -144,7 +144,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
         return new Response(JSON.stringify({ sha }), { status: 200 });
       }
       if (url === `https://codeload.github.com/octocat/demo/zip/${sha}`) {
-        return new Response(ghZip, { status: 200, headers: { url } });
+        return new Response(new Uint8Array(ghZip), { status: 200, headers: { url } });
       }
       throw new Error(`unexpected url ${url}`);
     }) as unknown as typeof global.fetch;
@@ -162,7 +162,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
       const payload = (await response.json()) as { reportId?: string };
       expect(payload.reportId).toBeTruthy();
 
-      const reportResponse = await reportRoute.GET(new Request("http://localhost"), {
+      const reportResponse = await reportRoute.GET(new Request("http://localhost") as never, {
         params: { id: payload.reportId as string },
       });
       expect(reportResponse.status).toBe(200);
@@ -216,7 +216,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
 
   it("returns 404 markdown export for unknown report ID", async () => {
     const exportRoute = await import("@/app/api/reports/[id]/export/md/route");
-    const response = await exportRoute.GET(new Request("http://localhost"), {
+    const response = await exportRoute.GET(new Request("http://localhost") as never, {
       params: { id: "11111111-1111-4111-8111-111111111111" },
     });
 
