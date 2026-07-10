@@ -10,9 +10,15 @@ export const ERROR_CODES = {
   ZIP_INVALID: "ZIP_INVALID",
   REPO_TOO_LARGE: "REPO_TOO_LARGE",
   CLONE_TIMEOUT: "CLONE_TIMEOUT",
+  DOWNLOAD_TIMEOUT: "DOWNLOAD_TIMEOUT",
   TIMEOUT: "TIMEOUT",
   REPO_NOT_PUBLIC: "REPO_NOT_PUBLIC",
+  REPO_NOT_FOUND: "REPO_NOT_FOUND",
+  REPO_PRIVATE: "REPO_PRIVATE",
+  RATE_LIMITED: "RATE_LIMITED",
+  MISSING_REF: "MISSING_REF",
   CLONE_FAILED: "CLONE_FAILED",
+  RATE_LIMIT_EXCEEDED: "RATE_LIMIT_EXCEEDED",
   ANALYSIS_FAILED: "ANALYSIS_FAILED",
 } as const;
 
@@ -74,12 +80,24 @@ const USER_MESSAGES: Record<ErrorCode, string> = {
     "Repository exceeds the 100MB limit. Try a smaller repo or a specific branch.",
   [ERROR_CODES.CLONE_TIMEOUT]:
     "Cloning timed out. The repo may be too large or the network slow. Try again or use a smaller repo.",
+  [ERROR_CODES.DOWNLOAD_TIMEOUT]:
+    "Downloading the repository archive timed out. The repo may be too large or the network slow. Try again or use a smaller repo.",
   [ERROR_CODES.TIMEOUT]:
     "Analysis timed out. The repo may be too large or complex. Try a smaller repo or a specific branch.",
   [ERROR_CODES.REPO_NOT_PUBLIC]:
     "Repository is private or not found. RepoAtlas only analyzes public GitHub repos.",
+  [ERROR_CODES.REPO_NOT_FOUND]:
+    "Repository not found. Check the owner and repository name.",
+  [ERROR_CODES.REPO_PRIVATE]:
+    "This repository is private. RepoAtlas only analyzes public GitHub repositories.",
+  [ERROR_CODES.RATE_LIMITED]:
+    "GitHub rate limit reached while fetching this repository. Please try again later.",
+  [ERROR_CODES.MISSING_REF]:
+    "The requested branch or tag was not found in this repository.",
   [ERROR_CODES.CLONE_FAILED]:
     "Could not download the repository. Check the URL and that the repo is public.",
+  [ERROR_CODES.RATE_LIMIT_EXCEEDED]:
+    "Too many analysis requests. Please wait a moment and try again.",
   [ERROR_CODES.ANALYSIS_FAILED]: "Analysis failed. Check server logs.",
 };
 

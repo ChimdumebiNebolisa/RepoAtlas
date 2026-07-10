@@ -12,10 +12,11 @@ const UNAVAILABLE: CommitInsights = {
   evidence_refs: [],
 };
 
-function getAuthHeaders(): Record<string, string> {
-  const token = process.env.GITHUB_TOKEN;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+// GitHub commit history for user-supplied repositories is fetched WITHOUT any
+// server credentials so a privileged server token can never expose private
+// repository data to unauthenticated callers (Phase 1 finding B). Public
+// repositories only.
+const GITHUB_JSON_HEADERS = { Accept: "application/vnd.github+json" } as const;
 
 function buildInsightsFromFileCounts(
   fileCounts: Map<string, number>,
@@ -73,10 +74,7 @@ async function analyzeGithubApi(githubUrl: string): Promise<CommitInsights> {
 
   try {
     const res = await fetch(commitsUrl, {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-        ...getAuthHeaders(),
-      },
+      headers: { ...GITHUB_JSON_HEADERS },
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) return UNAVAILABLE;
@@ -88,10 +86,7 @@ async function analyzeGithubApi(githubUrl: string): Promise<CommitInsights> {
       const detailRes = await fetch(
         `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${commit.sha}`,
         {
-          headers: {
-            Accept: "application/vnd.github.v3+json",
-            ...getAuthHeaders(),
-          },
+          headers: { ...GITHUB_JSON_HEADERS },
           signal: AbortSignal.timeout(10_000),
         }
       );
