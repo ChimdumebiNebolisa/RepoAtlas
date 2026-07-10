@@ -12,6 +12,7 @@ import { CandidateBriefPanel } from "./CandidateBriefPanel";
 import { DeepAnalysisSection } from "./DeepAnalysisSection";
 import { ERROR_CODES } from "@/lib/errors";
 import { buildExportFilename } from "@/lib/exportNames";
+import { isHttpUrl, repoSourceLabel, formatTimestamp } from "@/lib/format";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -356,21 +357,34 @@ export function ReportTabs({
             <dl className="grid grid-cols-[auto_1fr] gap-2">
               <dt className="font-medium">Name:</dt>
               <dd>{report.repo_metadata.name}</dd>
-              <dt className="font-medium">URL:</dt>
+              <dt className="font-medium">Source:</dt>
               <dd>
-                <a
-                  href={report.repo_metadata.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-emerald-700 hover:underline"
-                >
-                  {report.repo_metadata.url}
-                </a>
+                {isHttpUrl(report.repo_metadata.url) ? (
+                  <a
+                    href={report.repo_metadata.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-700 hover:underline"
+                  >
+                    {report.repo_metadata.url}
+                  </a>
+                ) : (
+                  <span>{repoSourceLabel(report.repo_metadata.url)}</span>
+                )}
               </dd>
               <dt className="font-medium">Branch:</dt>
               <dd>{report.repo_metadata.branch}</dd>
               <dt className="font-medium">Analyzed:</dt>
-              <dd>{report.repo_metadata.analyzed_at}</dd>
+              <dd>
+                {(() => {
+                  const t = formatTimestamp(report.repo_metadata.analyzed_at);
+                  return t.dateTime ? (
+                    <time dateTime={t.dateTime}>{t.display}</time>
+                  ) : (
+                    <span>{t.display}</span>
+                  );
+                })()}
+              </dd>
               {report.partial && (
                 <>
                   <dt className="font-medium">Status:</dt>
@@ -511,7 +525,7 @@ export function ReportTabs({
       <div className="pointer-events-none fixed -left-[10000px] top-0 w-[1100px] bg-white p-8 text-slate-900">
         <div ref={exportRef}>
           <h1 className="mb-2 text-3xl font-bold">Repo Analysis: {report.repo_metadata.name}</h1>
-          <p className="mb-6 text-sm text-slate-600">{report.repo_metadata.url}</p>
+          <p className="mb-6 text-sm text-slate-600">{repoSourceLabel(report.repo_metadata.url)}</p>
           <ReportDocument report={report} />
         </div>
       </div>

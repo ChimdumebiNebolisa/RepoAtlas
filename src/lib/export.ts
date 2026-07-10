@@ -3,6 +3,7 @@
  */
 
 import type { BriefAnswer, CandidateBrief, EvidenceRef, Report } from "@/types/report";
+import { repoSourceLabel } from "./format";
 
 function treeToMarkdown(node: Report["folder_map"], indent = 0): string {
   const prefix = "  ".repeat(indent);
@@ -145,7 +146,7 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
 
 export function exportReportToMarkdown(report: Report): string {
   let md = `# Repo Analysis: ${report.repo_metadata.name}\n\n`;
-  md += `- **URL**: ${report.repo_metadata.url}\n`;
+  md += `- **Source**: ${repoSourceLabel(report.repo_metadata.url)}\n`;
   md += `- **Branch**: ${report.repo_metadata.branch}\n`;
   md += `- **Analyzed**: ${report.repo_metadata.analyzed_at}\n\n`;
 

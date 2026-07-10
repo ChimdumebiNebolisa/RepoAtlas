@@ -8,7 +8,7 @@ RepoAtlas produces deterministic, evidence-backed Candidate Briefs **without AI*
 
 # Repo Analysis: repo-atlas
 
-- **URL**: https://github.com/owner/repo-atlas
+- **Source**: https://github.com/owner/repo-atlas
 - **Branch**: main
 - **Analyzed**: 2026-02-14T12:34:00Z
 
