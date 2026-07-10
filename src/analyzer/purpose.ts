@@ -2,38 +2,90 @@ import fs from "fs";
 import path from "path";
 import type { ProjectPurpose } from "@/types/report";
 
-function firstReadme(workspacePath: string, keyDocs: string[]): string | null {
-  const readme = keyDocs.find((d) => /readme/i.test(d));
+export interface ExtractPurposeOptions {
+  /** Canonical README path chosen by documentation discovery (root preferred). */
+  canonicalReadme?: string;
+  /** Repository name, used to reject headings that are only the repo name. */
+  repoName?: string;
+}
+
+function firstReadme(
+  workspacePath: string,
+  keyDocs: string[],
+  canonicalReadme?: string
+): string | null {
+  if (canonicalReadme && fs.existsSync(path.join(workspacePath, canonicalReadme))) {
+    return canonicalReadme;
+  }
+  const readme = keyDocs.find((d) => /(^|\/)readme(\.[^./]+)?$/i.test(d));
   if (!readme) return null;
   const full = path.join(workspacePath, readme);
   return fs.existsSync(full) ? readme : null;
 }
 
+/** Loose normalization for comparing a heading against the repo name. */
+function normalizeName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+/** True when a README heading carries no meaning beyond the repo name. */
+function isRepoNameOnlyHeading(heading: string, repoName?: string): boolean {
+  const normalizedHeading = normalizeName(heading);
+  if (!normalizedHeading) return true;
+  if (!repoName) return false;
+  const normalizedRepo = normalizeName(repoName);
+  // Repo name may be "owner/name" for GitHub inputs; compare against the tail too.
+  const repoTail = normalizeName(repoName.split("/").pop() ?? repoName);
+  return normalizedHeading === normalizedRepo || normalizedHeading === repoTail;
+}
+
+function meaningfulParagraph(content: string): string | null {
+  const paragraphs = content
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/^#+\s*/gm, "").trim())
+    .filter((p) => p.length > 20 && !p.startsWith("```"));
+  return paragraphs[0] ?? null;
+}
+
 export function extractProjectPurpose(
   workspacePath: string,
-  keyDocs: string[]
+  keyDocs: string[],
+  options: ExtractPurposeOptions = {}
 ): ProjectPurpose | undefined {
-  const readmeRel = firstReadme(workspacePath, keyDocs);
+  const readmeRel = firstReadme(workspacePath, keyDocs, options.canonicalReadme);
   if (readmeRel) {
     const content = fs.readFileSync(path.join(workspacePath, readmeRel), "utf-8");
     const heading = content.match(/^#\s+(.+)$/m);
-    if (heading?.[1]) {
+    const headingText = heading?.[1]?.trim();
+
+    // A heading that is only the repo name is not a real purpose (requirement 10):
+    // prefer a meaningful introductory paragraph instead.
+    if (headingText && !isRepoNameOnlyHeading(headingText, options.repoName)) {
       return {
-        text: heading[1].trim().slice(0, 500),
+        text: headingText.slice(0, 500),
         source: "readme_heading",
         path: readmeRel,
         extracted: true,
         evidence_refs: [],
       };
     }
-    const paragraphs = content
-      .split(/\n\s*\n/)
-      .map((p) => p.replace(/^#+\s*/gm, "").trim())
-      .filter((p) => p.length > 20 && !p.startsWith("```"));
-    if (paragraphs[0]) {
+
+    const paragraph = meaningfulParagraph(content);
+    if (paragraph) {
       return {
-        text: paragraphs[0].slice(0, 500),
+        text: paragraph.slice(0, 500),
         source: "readme_intro",
+        path: readmeRel,
+        extracted: true,
+        evidence_refs: [],
+      };
+    }
+
+    // Fall back to the bare heading only if nothing better exists.
+    if (headingText) {
+      return {
+        text: headingText.slice(0, 500),
+        source: "readme_heading",
         path: readmeRel,
         extracted: true,
         evidence_refs: [],

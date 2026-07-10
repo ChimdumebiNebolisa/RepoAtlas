@@ -18,6 +18,8 @@ export type FolderMapNode = {
   path: string;
   type: "file" | "dir";
   children?: FolderMapNode[];
+  /** True when this directory had entries that were not walked due to depth limits. */
+  truncated?: boolean;
 };
 
 export interface ArchitectureNode {
@@ -104,6 +106,37 @@ export interface ProjectProfile {
   confidence: "high" | "medium" | "low";
   signals: string[];
   evidence_refs: string[];
+}
+
+export interface DocumentInventoryItem {
+  path: string;
+  category: "readme" | "contributing" | "architecture" | "docs" | "changelog" | "license" | "other";
+  scope: "root" | "docs" | "nested";
+  bytes: number;
+  content_hash: string;
+  normalized_hash: string;
+  /** True for the single representative document of a duplicate group. */
+  canonical: boolean;
+  /** When set, this document is an exact/normalized duplicate of another path. */
+  duplicate_of?: string;
+}
+
+export interface DuplicateDocGroup {
+  canonical: string;
+  duplicates: string[];
+  reason: "identical" | "normalized-identical";
+}
+
+export interface SimilarDocGroup {
+  paths: string[];
+  similarity: number;
+}
+
+export interface DocumentInventory {
+  documents: DocumentInventoryItem[];
+  duplicate_groups: DuplicateDocGroup[];
+  similar_groups?: SimilarDocGroup[];
+  canonical_readme?: string;
 }
 
 export interface ProjectPurpose {
@@ -243,6 +276,7 @@ export interface Report {
   candidate_brief?: CandidateBrief;
   project_profile?: ProjectProfile;
   project_purpose?: ProjectPurpose;
+  document_inventory?: DocumentInventory;
   technical_decisions?: TechnicalDecision[];
   symbols?: CodeSymbol[];
   test_inventory?: TestInventory;

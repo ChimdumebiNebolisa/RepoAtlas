@@ -5,7 +5,7 @@
 
 import path from "path";
 import fs from "fs";
-import type { Report } from "@/types/report";
+import type { DocumentInventory, Report } from "@/types/report";
 import { REPORT_VERSION } from "@/types/report";
 import { ingestRepo } from "@/lib/ingest";
 import { runIndexingPipeline, type IndexingPipelineResult } from "./pipeline";
@@ -16,6 +16,7 @@ import { computeStartHere, computeDangerZones } from "./scoring";
 import { buildCandidateBrief } from "./interview";
 import { detectProjectProfile } from "./projectType";
 import { extractProjectPurpose } from "./purpose";
+import { discoverDocuments } from "./docs";
 import { detectTechnicalDecisions } from "./decisions";
 import { extractSymbols } from "./symbols";
 import { buildTestInventory, detectTestFrameworks } from "./testInventory";
@@ -141,6 +142,7 @@ function buildPartialReport(input: {
   workspaceBranch?: string | null;
   workspaceCloneHash?: string | null;
   pipeline: IndexingPipelineResult;
+  documentInventory: DocumentInventory;
   architecture?: Report["architecture"];
   startHere?: Report["start_here"];
   dangerZones?: Report["danger_zones"];
@@ -163,9 +165,13 @@ function buildPartialReport(input: {
     contributeSignals: input.pipeline.contribute_signals,
     architecture,
     warnings,
-    projectPurpose: extractProjectPurpose(input.workspacePath, input.pipeline.key_docs),
+    projectPurpose: extractProjectPurpose(input.workspacePath, input.pipeline.key_docs, {
+      canonicalReadme: input.documentInventory.canonical_readme,
+      repoName: input.workspaceName,
+    }),
     workspacePath: input.workspacePath,
     keyDocs: input.pipeline.key_docs,
+    documentInventory: input.documentInventory,
   });
 
   return {
@@ -185,6 +191,7 @@ function buildPartialReport(input: {
     run_commands: input.pipeline.run_commands,
     contribute_signals: input.pipeline.contribute_signals,
     candidate_brief,
+    document_inventory: input.documentInventory,
     warnings,
   };
 }
@@ -204,6 +211,10 @@ export async function analyzeRepository(
 
   try {
     const pipeline = await runIndexingPipeline(workspace.path);
+    const documentInventory = discoverDocuments(
+      workspace.path,
+      Array.from(pipeline.file_metadata.keys())
+    );
 
     if (deadline.isExpired()) {
       const report = buildPartialReport({
@@ -214,6 +225,7 @@ export async function analyzeRepository(
         workspaceBranch: workspace.branch,
         workspaceCloneHash: workspace.cloneHash,
         pipeline,
+        documentInventory,
       });
       return persistReport(reportId, report);
     }
@@ -231,6 +243,7 @@ export async function analyzeRepository(
         workspaceBranch: workspace.branch,
         workspaceCloneHash: workspace.cloneHash,
         pipeline,
+        documentInventory,
         architecture,
         extraWarnings: collectLanguageWarnings(packs),
       });
@@ -272,6 +285,7 @@ export async function analyzeRepository(
         workspaceBranch: workspace.branch,
         workspaceCloneHash: workspace.cloneHash,
         pipeline,
+        documentInventory,
         architecture,
         startHere,
         dangerZones,
@@ -281,7 +295,10 @@ export async function analyzeRepository(
     }
 
     const project_profile = detectProjectProfile(workspace.path, filePaths);
-    const project_purpose = extractProjectPurpose(workspace.path, pipeline.key_docs);
+    const project_purpose = extractProjectPurpose(workspace.path, pipeline.key_docs, {
+      canonicalReadme: documentInventory.canonical_readme,
+      repoName: workspace.name,
+    });
     const technical_decisions = detectTechnicalDecisions(workspace.path);
     const symbols = extractSymbols(workspace.path, filePaths);
     const architecture_insights = analyzeArchitectureBoundaries(architecture);
@@ -315,6 +332,7 @@ export async function analyzeRepository(
       symbols,
       workspacePath: workspace.path,
       keyDocs: pipeline.key_docs,
+      documentInventory,
     });
 
     const report: Report = {
@@ -335,6 +353,7 @@ export async function analyzeRepository(
       candidate_brief,
       project_profile,
       project_purpose,
+      document_inventory: documentInventory,
       technical_decisions,
       symbols,
       test_inventory,

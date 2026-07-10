@@ -9,6 +9,7 @@ import type {
   ConfidenceAssessment,
   ContributeSignals,
   DangerZoneItem,
+  DocumentInventory,
   EvidenceRef,
   InterviewQuestion,
   ProjectProfile,
@@ -21,6 +22,7 @@ import type {
 } from "@/types/report";
 import { generateInterviewQuestions } from "./questions";
 import { readFileHeaderSnippet } from "./snippets";
+import { canonicalizeKeyDocs } from "./docs";
 
 type Confidence = "high" | "medium" | "low";
 type PrRisk = "low" | "medium" | "high";
@@ -42,6 +44,7 @@ export interface BuildCandidateBriefInput {
   symbols?: CodeSymbol[];
   workspacePath?: string;
   keyDocs?: string[];
+  documentInventory?: DocumentInventory;
 }
 
 interface EvidenceIndex {
@@ -190,8 +193,14 @@ function buildEvidenceIndex(input: BuildCandidateBriefInput): EvidenceIndex {
     );
   });
 
+  // Collapse exact/normalized duplicate documents to a single canonical
+  // evidence card so equivalent content is not repeated (Phase 3, requirement 9).
+  const { canonicalDocs } = canonicalizeKeyDocs(
+    input.contributeSignals.key_docs,
+    input.documentInventory
+  );
   const docRefs = new Map<string, string>();
-  input.contributeSignals.key_docs.forEach((doc, index) => {
+  canonicalDocs.forEach((doc, index) => {
     const snippet =
       input.workspacePath && readFileHeaderSnippet(input.workspacePath, doc);
     docRefs.set(

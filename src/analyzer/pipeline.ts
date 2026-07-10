@@ -8,9 +8,7 @@ import path from "path";
 import type { FolderMapNode, ContributeSignals, RunCommand } from "@/types/report";
 import { shouldSkipDir } from "./ignoreRules";
 import { extractAllRunCommands } from "./commands";
-
-const MAX_DEPTH = 10;
-const MAX_FILE_COUNT = 10_000;
+import { MAX_DEPTH, MAX_FILE_COUNT } from "@/lib/ingestLimits";
 
 export interface IndexingPipelineResult {
   folder_map: FolderMapNode;
@@ -58,6 +56,20 @@ const CI_PATTERNS = [
   "azure-pipelines.yml",
 ];
 
+/**
+ * Sort key docs so root documents come before nested ones, then lexicographic.
+ * Prefers meaningful root documentation over nested package docs (requirement 1)
+ * and is fully deterministic (requirement 2).
+ */
+function sortKeyDocs(keyDocs: string[]): void {
+  keyDocs.sort((a, b) => {
+    const da = a.split("/").length;
+    const db = b.split("/").length;
+    if (da !== db) return da - db;
+    return a.localeCompare(b);
+  });
+}
+
 export async function runIndexingPipeline(
   workspacePath: string
 ): Promise<IndexingPipelineResult> {
@@ -66,10 +78,18 @@ export async function runIndexingPipeline(
   const ci_configs: string[] = [];
   const warnings: string[] = [];
   let fileCount = 0;
+  let depthTruncated = false;
 
   function buildFolderMap(dir: string, relPath: string, depth: number): FolderMapNode {
     if (depth >= MAX_DEPTH) {
-      return { path: relPath || ".", type: "dir", children: [] };
+      // Record that some deeply-nested entries were not walked so the truncation
+      // is surfaced to the user instead of silently dropped (Phase 4).
+      try {
+        if (fs.readdirSync(dir).length > 0) depthTruncated = true;
+      } catch {
+        /* ignore unreadable directory */
+      }
+      return { path: relPath || ".", type: "dir", children: [], truncated: true };
     }
 
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -125,6 +145,16 @@ export async function runIndexingPipeline(
   if (fileCount >= MAX_FILE_COUNT) {
     warnings.push("Max file count reached; some files omitted");
   }
+  if (depthTruncated) {
+    warnings.push(
+      `Folder map truncated at depth ${MAX_DEPTH}; deeper directories were not walked.`
+    );
+  }
+
+  // Deterministic ordering so downstream extraction, evidence and reports do not
+  // depend on filesystem traversal order (Phase 3 requirement 2 / Phase 4).
+  sortKeyDocs(key_docs);
+  ci_configs.sort((a, b) => a.localeCompare(b));
 
   const { commands: run_commands, warnings: runWarnings } =
     extractAllRunCommands(workspacePath, key_docs);
