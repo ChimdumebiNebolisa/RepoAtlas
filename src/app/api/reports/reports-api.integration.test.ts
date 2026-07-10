@@ -111,6 +111,70 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(report.repo_metadata.name).toContain("repo-ts");
   });
 
+  it("creates a report from the bundled sample flow", async () => {
+    const analyzeRoute = await import("@/app/api/analyze/route");
+    const request = new Request("http://localhost/api/analyze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sample: true }),
+    });
+    const response = await analyzeRoute.POST(request as never);
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { reportId?: string };
+    expect(payload.reportId).toBeTruthy();
+  }, 30000);
+
+  it("creates a report from a public GitHub URL (mocked API + archive)", async () => {
+    const sha = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0";
+    const AdmZipMod = (await import("adm-zip")).default;
+    const gh = new AdmZipMod();
+    gh.addFile(`demo-${sha}/README.md`, Buffer.from("# Demo\n\nMocked GitHub repo.\n"));
+    gh.addFile(`demo-${sha}/index.js`, Buffer.from("module.exports = 1;\n"));
+    const ghZip = gh.toBuffer();
+
+    const originalFetch = global.fetch;
+    global.fetch = (async (input: unknown) => {
+      const url = typeof input === "string" ? input : String(input);
+      if (url === "https://api.github.com/repos/octocat/demo") {
+        return new Response(JSON.stringify({ default_branch: "main", private: false }), {
+          status: 200,
+        });
+      }
+      if (url === "https://api.github.com/repos/octocat/demo/commits/main") {
+        return new Response(JSON.stringify({ sha }), { status: 200 });
+      }
+      if (url === `https://codeload.github.com/octocat/demo/zip/${sha}`) {
+        return new Response(ghZip, { status: 200, headers: { url } });
+      }
+      throw new Error(`unexpected url ${url}`);
+    }) as unknown as typeof global.fetch;
+
+    try {
+      const analyzeRoute = await import("@/app/api/analyze/route");
+      const reportRoute = await import("@/app/api/reports/[id]/route");
+      const request = new Request("http://localhost/api/analyze", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ githubUrl: "https://github.com/octocat/demo" }),
+      });
+      const response = await analyzeRoute.POST(request as never);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as { reportId?: string };
+      expect(payload.reportId).toBeTruthy();
+
+      const reportResponse = await reportRoute.GET(new Request("http://localhost"), {
+        params: { id: payload.reportId as string },
+      });
+      expect(reportResponse.status).toBe(200);
+      const report = await reportResponse.json();
+      expect(report.repo_metadata.name).toBe("octocat/demo");
+      expect(report.repo_metadata.url).toBe("https://github.com/octocat/demo");
+      expect(report.repo_metadata.clone_hash).toBe(sha);
+    } finally {
+      global.fetch = originalFetch;
+    }
+  }, 30000);
+
   it("rejects caller-controlled zipRef JSON with 400 (no arbitrary file access)", async () => {
     const analyzeRoute = await import("@/app/api/analyze/route");
     const request = new Request("http://localhost/api/analyze", {

@@ -185,6 +185,45 @@ describe("ingestFromGithub (mocked)", () => {
     ).rejects.toMatchObject({ code: "REPO_TOO_LARGE", status: 413 });
   });
 
+  it("refuses a repository the API reports as private (public boundary)", async () => {
+    let downloadAttempted = false;
+    installFetch((url) => {
+      if (url === "https://api.github.com/repos/octocat/demo") {
+        return jsonResponse(200, { default_branch: "main", private: true });
+      }
+      if (url.includes("codeload")) {
+        downloadAttempted = true;
+        return archiveResponse(Buffer.from("x"), url);
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+
+    await expect(
+      ingestRepo({ kind: "github", githubUrl: "https://github.com/octocat/demo" })
+    ).rejects.toMatchObject({ code: "REPO_PRIVATE", status: 403 });
+    expect(downloadAttempted).toBe(false);
+  });
+
+  it("rejects an archive redirect to a non-GitHub host (redirect policy)", async () => {
+    installFetch((url) => {
+      if (url === "https://api.github.com/repos/octocat/demo") {
+        return jsonResponse(200, { default_branch: "main", private: false });
+      }
+      if (url.includes("/commits/")) {
+        return jsonResponse(200, { sha: SHA });
+      }
+      if (url.includes("codeload")) {
+        // Simulate a redirect whose final resolved URL is an attacker host.
+        return archiveResponse(buildCodeloadZip(), "https://evil.example.com/archive.zip");
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+
+    await expect(
+      ingestRepo({ kind: "github", githubUrl: "https://github.com/octocat/demo" })
+    ).rejects.toMatchObject({ code: "CLONE_FAILED" });
+  });
+
   it("rejects a non-canonical URL with INVALID_URL", async () => {
     installFetch(() => {
       throw new Error("network should not be called");
