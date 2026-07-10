@@ -142,8 +142,8 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
 
       <section id="analyze" className="action-section page-container">
         <article className="analyze-card">
-          <h2>Start with the zip you already have.</h2>
-          <p>Upload a repository archive for deterministic static analysis across supported project types.</p>
+          <h2>Upload a zip or paste a public GitHub URL.</h2>
+          <p>Analyze a repository archive or a canonical public GitHub URL with deterministic static analysis across supported project types.</p>
           <InputForm
             onAnalyzeStart={() => {
               setLoading(true);
@@ -159,7 +159,8 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           />
           <div className="analyze-limits">
             <span>Reads repository files only</span>
-            <span>100MB maximum zip</span>
+            <span>Public repositories only</span>
+            <span>100MB maximum archive</span>
             <span>Analysis up to 2 minutes</span>
           </div>
           {showViewReportButton && report && (

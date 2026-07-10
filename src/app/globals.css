@@ -440,6 +440,52 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: #eef6f2;
   font-weight: 700;
 }
+.input-mode-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid #b9ccc2;
+  border-radius: var(--radius-control);
+  background: #f1f7f4;
+}
+.input-mode-tab {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 0.25rem);
+  color: #315747;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.input-mode-tab.is-active {
+  color: #14311f;
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
+}
+.input-mode-tab:disabled { cursor: not-allowed; opacity: 0.6; }
+.text-input {
+  width: 100%;
+  min-height: 3.1rem;
+  margin-bottom: 0.85rem;
+  padding: 0 1rem;
+  border: 1px solid #b9ccc2;
+  border-radius: var(--radius-control);
+  background: #fbfdfc;
+  color: #1f3a2c;
+  font-size: 0.85rem;
+}
+.text-input:focus-visible {
+  outline: 2px solid var(--color-accent, #2f8f5b);
+  outline-offset: 1px;
+}
+.text-input:disabled { cursor: not-allowed; opacity: 0.6; }
+.input-help {
+  margin: -0.35rem 0 0.9rem;
+  color: #66786f;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
 .form-actions .btn { min-width: 10.5rem; }
 .analyze-limits {
   display: flex;
