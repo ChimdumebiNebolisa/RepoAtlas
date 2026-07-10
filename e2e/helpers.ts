@@ -60,7 +60,7 @@ export async function analyzeSample(request: APIRequestContext): Promise<string>
 
 export async function runSampleAnalyzeOnPage(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/");
-  await page.getByRole("button", { name: /Try sample Candidate Brief/i }).click();
+  await page.getByRole("button", { name: /Run bundled sample/i }).click();
   await page.getByRole("button", { name: /View report/i }).waitFor({
     state: "visible",
     timeout: 90_000,

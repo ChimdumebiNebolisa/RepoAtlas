@@ -30,7 +30,7 @@ describe("cron cleanup route", () => {
     expect(body.ok).toBe(true);
   });
 
-  it("GET fails closed in production without CRON_SECRET", async () => {
+  it("GET fails closed on Vercel without CRON_SECRET", async () => {
     process.env.VERCEL = "1";
     const response = await GET(new Request("http://localhost/api/cron/cleanup"));
     expect(response.status).toBe(503);
@@ -53,7 +53,7 @@ describe("cron cleanup route", () => {
     expect(body.scannedAt).toBeTruthy();
   });
 
-  it("POST fails closed in production without CRON_SECRET", async () => {
+  it("POST fails closed on Vercel without CRON_SECRET", async () => {
     process.env.VERCEL = "1";
     const response = await POST(new Request("http://localhost/api/cron/cleanup", { method: "POST" }));
     expect(response.status).toBe(503);

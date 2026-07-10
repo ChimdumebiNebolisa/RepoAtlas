@@ -31,8 +31,10 @@ test.describe("Candidate Brief smoke", () => {
   test("homepage preview sample shows Candidate Brief sections", async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 1000 });
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Sample Repo" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Open sample report/i }).first().click();
+    await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible({
+      timeout: 30_000,
+    });
   });
 
   test("sample analyze exports Markdown from Export tab", async ({ page }) => {

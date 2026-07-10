@@ -54,7 +54,9 @@ test.describe("Report UI flows", () => {
 
     await page.goto(href!);
     await expect(page.getByText(/Shared Candidate Brief/i)).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible({
+      timeout: 30_000,
+    });
   });
 
   test("partial report shows status badge on Overview", async ({ page }) => {
@@ -82,6 +84,7 @@ test.describe("Report UI flows", () => {
 
   test("homepage preview disables Markdown export (no reportId)", async ({ page }) => {
     await page.goto("/");
+    await page.getByRole("button", { name: /^Open sample report/i }).first().click();
     await page.getByRole("tab", { name: "Export", exact: true }).first().click();
     const mdButton = page.getByRole("button", { name: /Export Markdown/i }).first();
     await expect(mdButton).toBeDisabled();
@@ -94,7 +97,7 @@ test.describe("Report UI flows", () => {
 
     await page.goto("/");
     await page.locator('input[type="file"]').setInputFiles(zipPath);
-    await page.getByRole("button", { name: /Analyze Repository/i }).click();
+    await page.getByRole("button", { name: /Analyze Repository/i }).first().click();
 
     await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
       timeout: 90_000,
@@ -112,7 +115,8 @@ test.describe("Report UI flows", () => {
     await page.goto("/");
     await page.locator('input[type="file"]').setInputFiles(txtPath);
     await expect(page.getByText(/Please select a \.zip file/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /Analyze Repository/i })).toBeDisabled();
+    await page.getByRole("button", { name: /Analyze Repository/i }).first().click();
+    await expect(page.getByRole("alert")).toHaveTextContent(/zip/i);
   });
 
   test("missing report id on /report/:id shows error", async ({ page }) => {

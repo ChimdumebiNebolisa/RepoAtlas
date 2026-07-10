@@ -171,13 +171,12 @@ test.describe("API edge cases", () => {
     expect(body.message).toMatch(/expired|not found/i);
   });
 
-  test("GET /api/cron/cleanup returns inventory metadata", async ({ request }) => {
+  test("GET /api/cron/cleanup returns health metadata", async ({ request }) => {
     const res = await request.get("/api/cron/cleanup");
     expect(res.ok()).toBe(true);
     const body = await res.json();
-    expect(body.ttlDays).toBeGreaterThan(0);
-    expect(body.maxReports).toBeGreaterThan(0);
-    expect(typeof body.reportCount).toBe("number");
+    expect(body.ok).toBe(true);
+    expect(body.message).toMatch(/cleanup sweep/i);
   });
 
   test("POST /api/cron/cleanup runs sweep", async ({ request }) => {

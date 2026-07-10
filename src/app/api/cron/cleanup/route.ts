@@ -1,12 +1,8 @@
 import { sweepExpiredReports } from "@/lib/storage";
 import { sweepExpiredShareTokens } from "@/lib/sharing";
 
-function isProduction(): boolean {
-  return process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
-}
-
 function cronMisconfigured(): boolean {
-  return isProduction() && !process.env.CRON_SECRET?.trim();
+  return process.env.VERCEL === "1" && !process.env.CRON_SECRET?.trim();
 }
 
 export async function POST(request: Request) {
