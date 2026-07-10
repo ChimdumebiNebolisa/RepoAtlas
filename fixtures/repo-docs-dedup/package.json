@@ -1,0 +1,9 @@
+{
+  "name": "widget-toolkit",
+  "version": "1.0.0",
+  "description": "Turns raw widget definitions into deployable components",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc -p ."
+  }
+}
