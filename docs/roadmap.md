@@ -44,10 +44,10 @@ This document maps improvement items **1–38** to concrete files, dependencies,
 RepoAtlas is a **deterministic, no-AI** repository analysis app. Primary output: **Candidate Brief** for interviews, take-homes, onboarding, and open-source contribution prep.
 
 ```
-Zip / zipRef / sample → POST /api/analyze → ingest → pipeline → language packs → scoring → interview builder → storage → UI + export (+ optional share link)
+Zip upload / public GitHub URL / sample → POST /api/analyze (rate-limited + concurrency-gated) → ingest → pipeline → doc discovery → language packs → scoring → interview builder → storage → UI + export (+ optional share link)
 ```
 
-### Implementation status (verified 2026-07-09)
+### Implementation status (verified 2026-07-10)
 
 Statuses: **Done** · **Partial** · **Missing** · **Deferred** · **Unverified**
 
@@ -60,8 +60,12 @@ Statuses: **Done** · **Partial** · **Missing** · **Deferred** · **Unverified
 | PDF / PNG export | **Done** | `src/components/ReportTabs.tsx` | Client-side raster via `html2canvas` + `jspdf` (not structured PDF) |
 | Run command extraction | **Done** | `src/analyzer/commands/index.ts`, `src/analyzer/pipeline.ts` | `package.json`, Makefile, Python, Java, Docker Compose, README blocks |
 | Zip extraction hardening | **Done** | `src/lib/safeZipExtract.ts`, `src/lib/ingest.ts` | Magic bytes, traversal jail, size/count limits; tests in `safeZipExtract.test.ts` |
+| Centralized ingestion limits | **Done** | `src/lib/ingestLimits.ts` | Single source of truth for size/count/timeout budgets across API, extractor, pipeline, UI |
+| Public GitHub URL ingestion | **Done** | `src/lib/github.ts`, `src/lib/ingest.ts` | Canonical URL only, unauthenticated (public-only), exact-SHA-first, streamed download, redirect policy, typed errors; mocked tests in `ingest.github.test.ts` |
+| Analyze abuse protection | **Done** | `src/lib/rateLimit.ts`, `src/app/api/analyze/route.ts` | Concurrency gate + best-effort sliding window; durable backend isolated behind `RateLimiter` interface |
 | Project type detection | **Done** | `src/analyzer/projectType.ts` | Next.js, FastAPI, Django, Java, Node API, monorepo, docs-only, etc. |
-| Project purpose extraction | **Done** | `src/analyzer/purpose.ts` | README heading/intro, `package.json` / `pyproject.toml` description |
+| Documentation discovery / dedup | **Done** | `src/analyzer/docs.ts`, `src/analyzer/pipeline.ts` | Deterministic discovery, exact/normalized duplicate grouping, similar flagging, canonical selection; `document_inventory` in report |
+| Project purpose extraction | **Done** | `src/analyzer/purpose.ts` | Canonical README heading/intro (rejects repo-name-only headings), `package.json` / `pyproject.toml` description |
 | Technical decision detector | **Partial** | `src/analyzer/decisions.ts` | Framework, DB, auth, deployment heuristics; `evidence_refs` often empty |
 | Source snippets / evidence refs | **Partial** | `src/analyzer/snippets.ts`, `src/analyzer/interview.ts` | Snippets on key docs; source-file line snippets limited |
 | Commit / history insights | **Partial** | `src/analyzer/gitHistory.ts` | `local_git` + `github_api` modes; `co_changed_pairs` stubbed; unavailable for zip-only uploads |
@@ -74,7 +78,7 @@ Statuses: **Done** · **Partial** · **Missing** · **Deferred** · **Unverified
 | Portfolio screenshots | **Done** | `docs/images/*.png`, `e2e/portfolio-capture.spec.ts` | Regenerate via `npm run capture:portfolio` |
 | Demo GIF | **Done** | `docs/demo.gif`, `scripts/build-demo-gif.mjs` | Built from capture frames |
 | Report sharing | **Done** | `src/lib/sharing.ts`, `src/app/share/[token]/page.tsx` | 7-day token links; report JSON only (never uploaded zip) |
-| Cleanup / TTL cron | **Partial** | `src/app/api/cron/cleanup/route.ts`, `src/lib/reportTtl.ts` | Filesystem TTL + max count; **skipped** when `BLOB_READ_WRITE_TOKEN` set |
+| Cleanup / TTL cron | **Done** | `src/app/api/cron/cleanup/route.ts`, `src/lib/storage.ts`, `src/lib/reportTtl.ts` | Filesystem **and** Vercel Blob TTL + max-count sweep and deletion; blob uses upload timestamps; tests in `storage.ttl.test.ts` + `storage.blob.test.ts` |
 | Report versioning | **Partial** | `src/types/report.ts`, `src/analyzer/index.ts` | New reports stamped `report_version: 2`; no migration/backfill for stored JSON |
 | Partial timeout behavior | **Done** | `src/analyzer/index.ts`, `src/analyzer/partial.test.ts` | Saves `partial: true` report with brief when deadline hit after indexing |
 | Generated-file / binary filtering | **Partial** | `src/analyzer/ignoreRules.ts`, language packs | Skips binaries/minified in analysis; folder map still lists all files |
@@ -83,12 +87,12 @@ Statuses: **Done** · **Partial** · **Missing** · **Deferred** · **Unverified
 
 | Priority | Item | Why it matters |
 |----------|------|----------------|
-| Medium | Blob storage TTL sweep | Cron skips report deletion when using Vercel Blob |
 | Medium | Richer evidence snippets on source files | Brief claims still path-heavy outside key docs |
 | Medium | `co_changed_pairs` + commit `evidence_refs` | Commit insights panel is thin |
+| Medium | Durable distributed rate limiting | Only process-local controls today; needs Redis/KV backend via `setRateLimiter()` for real quotas on serverless |
 | Low | Structured PDF export | Raster PDF today (item 41) |
-| Low | Rate limiting on analyze | Spec mentions 10/hr; not implemented (item 39) |
 | Low | Folder-map filtering for binaries | Binaries visible in tree though analysis skips them |
+| Low | User-scoped GitHub auth for private repos | Public repos only by design; private support needs a deliberate OAuth flow |
 
 **Candidate Brief sections shipped today** (`src/analyzer/interview.ts`):
 
@@ -1707,7 +1711,10 @@ Not in the original 1–38 scope; track after M1 or when deploying publicly.
 
 | Item | Source | Notes |
 |------|--------|-------|
-| **39. Rate limiting** | `docs/spec.md` — 10 req/hr | Add middleware on `POST /api/analyze`; document in spec |
+| **39. Rate limiting** | `docs/spec.md` | **Partial** — process-local concurrency gate + best-effort sliding window shipped (`src/lib/rateLimit.ts`); durable distributed backend still needed via `setRateLimiter()` (Redis/KV/WAF) |
+| **46. Public GitHub URL analysis** | Phase 2 | **Done** — canonical URL ingestion, public-only unauthenticated boundary, exact-SHA-first, streamed download, redirect policy, typed errors, UI input switching |
+| **47. Documentation dedup / canonicalization** | Phase 3 | **Done** — deterministic discovery, duplicate grouping, similar flagging, canonical selection, purpose fix, `document_inventory` |
+| **48. Silent folder-depth truncation** | Phase 4 | **Done** — over-depth directories flagged `truncated` and surfaced as a warning |
 | **40. `.gitattributes` language overrides** | `docs/spec.md` | Lower priority; affects language pack selection |
 | **41. Structured PDF export** | Export is raster today | Replace html2canvas path if printable output needed |
 | **42. Progressive SSE analysis** | Spec mentions streaming partial results | Alternative to polling; pairs with item 25 |
@@ -1756,10 +1763,10 @@ Not in the original 1–38 scope; track after M1 or when deploying publicly.
 
 **Elite / stretch (remaining):**
 
-- Blob TTL sweep parity with filesystem
-- Rate limiting on public analyze endpoint
+- Durable, distributed rate limiting on the public analyze endpoint (process-local controls shipped)
 - Structured PDF export
 - Richer commit co-change signals
+- User-scoped GitHub auth for private repositories
 
 ---
 
@@ -1788,5 +1795,6 @@ flowchart TB
 | 2026-07-08 | v1.1: spec sync checklist, policy decisions, review fixes, commit/push checkpoints per PR, PR-2b quick win, deferred items 39–43 |
 | 2026-07-09 | v1.3: implementation status table synced to codebase; deferred 43–45 updated; portfolio proof artifact |
 | 2026-07-08 | v1.2: items-at-a-glance table, integration choke points, guardrails alignment, milestone exit criteria, snapshot/CI notes, out of scope, risk register, PR-9b, schema/input wiring |
+| 2026-07-10 | v1.4: ingestion audit + hardening — public GitHub URL analysis (public-only, exact-SHA-first, streamed, redirect policy), centralized ingest limits, blob TTL/delete parity, documentation discovery & canonicalization (`document_inventory`), purpose repo-name-only fix, depth-truncation warning, analyze abuse protection, honest progress + reportId validation |
 
-*Document version: 1.3 — Last updated: 2026-07-09*
+*Document version: 1.4 — Last updated: 2026-07-10*

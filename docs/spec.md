@@ -1,7 +1,7 @@
 # RepoAtlas Engineering Specification
 
-**Version:** 1.1  
-**Status:** Living spec (validated against `main` 2026-07-09)  
+**Version:** 1.2  
+**Status:** Living spec (validated against `main` 2026-07-10)  
 **Target:** Local dev first; optional Vercel Blob storage  
 
 ---
@@ -14,7 +14,7 @@ Engineers preparing for interviews, take-homes, and unfamiliar-repo onboarding w
 
 ### Key Value Proposition
 
-**One input** (zip upload, or JSON `zipRef` for testing) → **Candidate Brief** + **Repo Analysis** with:
+**Two supported inputs** — a **zip upload** or a **public GitHub repository URL** — produce a **Candidate Brief** + **Repo Analysis** with:
 
 - **Candidate Brief** – Interview-facing output: reading path, talking points, first PR plan, resume bullets, evidence index (deterministic, no AI).
 - **Folder Map** – Directory tree of the repo.
@@ -49,15 +49,19 @@ RepoAtlas does **not** assert vulnerabilities, production readiness, business pu
 ### User Flow
 
 ```
-Input (zip upload) → Validation → Analysis (loading) → Report Tabs
+Input (zip upload OR public GitHub URL) → Validation → Analysis (loading) → Report Tabs
 ```
 
-1. User uploads a zip of the repository (primary flow). Optional testing flow sends JSON `zipRef`.
-2. Client sends zip via multipart; on submit, `POST /api/analyze`.
-3. Server saves zip to temp, extracts, runs analyzer.
-4. UI shows loading state (spinner/skeleton).
-5. On success: `reportId` returned; UI fetches report and renders tabs.
+1. User picks an input method via an accessible tablist:
+   - **Upload ZIP** — selects a `.zip` of the repository (primary flow), or
+   - **Public GitHub URL** — pastes a canonical `https://github.com/owner/repo` URL with an optional branch/tag ref.
+2. Client validates input client-side (mirroring server rules) and submits `POST /api/analyze` (multipart for zip, JSON `{ githubUrl, ref? }` for GitHub).
+3. Server saves zip to temp / downloads the public GitHub archive, extracts, runs analyzer.
+4. UI shows an honest loading state ("Analyzing… (up to 2 min)").
+5. On success: `reportId` returned; UI validates it and fetches the report to render tabs.
 6. User can export report views client-side (PDF/PNG) from the UI.
+
+The legacy JSON `zipRef` field is **not** accepted over the network (see §10); internal code and tests call `analyzeRepository()` directly for that path.
 
 ### UI Page Map
 
@@ -75,19 +79,27 @@ Single-page application at `/`:
 
 ### Loading States
 
-- **Idle**: Input form visible.
-- **Analyzing**: Staged progress message (extracting → folder map → languages → risk → brief → saving). Disable submit.
-- **Fetching report**: After `reportId` returned, optional skeleton for tabs until report loads.
+- **Idle**: Input form visible with ZIP / GitHub URL tabs.
+- **Analyzing**: A single honest indicator ("Analyzing… (up to 2 min)"). No fabricated staged progress — the analyzer does not stream stage events, so the UI does not pretend to. Submit is disabled.
+- **Fetching report**: After a validated `reportId` is returned, an optional skeleton for tabs until the report loads.
 
 ### Error States
 
 | Error | User-facing message | HTTP/Code |
 |-------|---------------------|-----------|
-| Invalid input | "Upload a zip file or send JSON with zipRef." | 400 / INVALID_INPUT |
-| Zip invalid | "Invalid or corrupted zip file." | 400 / ZIP_INVALID |
+| Invalid input | "Provide a GitHub repository URL, upload a zip file, or request the sample." | 400 / INVALID_INPUT |
+| Invalid URL | "Enter a canonical GitHub repository URL like https://github.com/owner/repo." | 400 / INVALID_URL |
+| Repository not found | "Repository not found (it may be private)." | 404 / REPO_NOT_FOUND |
+| Private repository | "Repository is private." | 403 / REPO_PRIVATE |
+| Missing ref | "Requested branch or tag was not found." | 404 / MISSING_REF |
+| GitHub rate limit | "GitHub rate limit reached. Try again later." | 429 / RATE_LIMITED |
+| Download timeout | "GitHub request timed out." | 504 / DOWNLOAD_TIMEOUT |
+| Repo too large | "Repository archive exceeds the size limit." | 413 / REPO_TOO_LARGE |
+| Zip/archive invalid | "Invalid or corrupted zip file." | 400 / ZIP_INVALID |
 | Timeout | "Analysis timed out. Try a smaller repository." | 504 / TIMEOUT — or partial report saved with `partial: true` when indexing completed before deadline |
+| Too many requests | "Too many analysis requests. Please wait and try again." | 429 / RATE_LIMIT_EXCEEDED |
 | Analysis failed | "Analysis failed. Check server logs." | 500 / ANALYSIS_FAILED |
-| Zip path not found | "Zip path not found. Check the path or re-upload." | 404 / ZIP_NOT_FOUND |
+| Zip path not found | "Zip path not found. Check the path or re-upload." | 404 / ZIP_NOT_FOUND (internal path only) |
 
 ### Export Experience
 
@@ -159,31 +171,32 @@ flowchart TB
 
 ## 4. Repo Ingest
 
-**Primary flow:** Zip file is uploaded to `POST /api/analyze` (multipart); server writes to temp, passes path as `zipRef` to ingest, which extracts and analyzes.
+**Discriminated input model** (`src/lib/ingest.ts`):
 
-### GitHub URL Validation Rules (internal / legacy support in ingest module)
+- `{ kind: "zip", zipRef, zipName? }` — server-created temp path (multipart upload) or a server-owned fixture path (sample flow). Never a caller-supplied network path.
+- `{ kind: "github", githubUrl, ref? }` — a canonical public GitHub URL with an optional validated branch/tag ref.
 
-**Valid patterns** (regex):
+### Public GitHub URL Ingestion (`src/lib/github.ts`, `src/lib/ingest.ts`)
 
-```
-^https?://github\.com/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_.-]+)(?:\.git)?(?:(?:/tree|/blob)/([^/]+))?/?$
-```
+**Accepted URLs** — canonical repository URLs only:
 
-- Captures: `owner`, `repo`, optional `ref` (branch/tag).
-- Reject: non-GitHub hosts, invalid characters, empty owner/repo.
+- `https://github.com/owner/repository`
+- `https://github.com/owner/repository.git`
 
-**Normalization**: Strip fragment (`#...`), query (`?...#`); use `ref` if present, else `main` or `master`.
+Rejected: non-HTTPS, non-`github.com` hosts, `tree`/`blob` subpaths, query strings, fragments, non-default ports, and malformed owner/repo. A custom branch/tag is provided through a **separate validated `ref` field** (`isValidGitRef`), not by parsing tree/blob URLs.
 
-**Acceptance criteria**: `https://github.com/vercel/next.js` and `https://github.com/vercel/next.js/tree/canary` both accepted; `https://gitlab.com/foo/bar` rejected.
+**Security properties (all enforced and tested):**
 
-### Clone Strategy (internal / legacy)
+1. **Public-only, unauthenticated.** GitHub API and archive requests are always sent **without** an `Authorization` header. The server `GITHUB_TOKEN` is never attached to user-supplied URL ingestion, so an unauthenticated caller can never borrow privileged server access to read a private repository. A repository the API reports as `private: true`, or that returns 404/403, is refused before any download (Phase 1 finding B).
+2. **Exact-SHA first.** The requested ref (or default branch) is resolved to an exact commit SHA via the commits API **before** downloading. The archive for that exact SHA is downloaded and the same SHA is recorded as `clone_hash` (finding C).
+3. **Streaming with caps.** The archive is streamed to a temp file and aborted if it exceeds `MAX_COMPRESSED_BYTES`; it is never buffered whole in memory (finding D). A `content-length` over the cap is rejected up front.
+4. **Redirect policy.** Redirects are followed only when the finally-resolved host is a known GitHub host (`github.com`, `codeload.github.com`, `objects.githubusercontent.com`); any other host is rejected.
+5. **Timeouts.** GitHub API requests use `GITHUB_API_TIMEOUT_MS`; archive downloads use `DOWNLOAD_TIMEOUT_MS`. Aborts map to `DOWNLOAD_TIMEOUT`.
+6. **Cleanup.** The per-analysis temp directory is removed on success, failure, and cancellation.
 
-- **Command**: `git clone --depth 1 [--branch <ref>] <url> <dest>`
-- **Depth**: Default 1 (shallow). Configurable via env `GIT_CLONE_DEPTH` (default 1).
-- **Timeout**: 60 seconds. Abort and clean up on timeout.
-- **Destination**: `{tempDir}/repo-{uuid}`
+**Error taxonomy** (finding E): `INVALID_URL`, `REPO_NOT_FOUND`, `REPO_PRIVATE`, `MISSING_REF`, `RATE_LIMITED`, `DOWNLOAD_TIMEOUT`, `REPO_TOO_LARGE`, `ZIP_INVALID`.
 
-**Acceptance criteria**: Clone completes for public repos within 60s; timeout returns TIMEOUT error.
+**Acceptance criteria**: `https://github.com/vercel/next.js` accepted; `https://github.com/vercel/next.js/tree/canary`, `https://gitlab.com/foo/bar` rejected. See `src/lib/github.test.ts` and `src/lib/ingest.github.test.ts` (mocked API/archive — CI never hits live GitHub).
 
 ### Zip Upload Strategy
 
@@ -197,17 +210,24 @@ flowchart TB
 
 ### Workspace Cleanup Rules
 
-- Delete temp dir on analysis completion (success or failure).
-- Optional TTL: if analysis crashes, orphan dirs cleaned by cron/job after 1 hour.
-- Report files: filesystem storage uses TTL sweep (`REPORT_TTL_DAYS`, default 30) and max count (`REPORT_MAX_COUNT`, default 100). Vercel Blob reports rely on provider lifecycle; use `POST /api/cron/cleanup` for filesystem + share-token sweeps.
+- Delete temp dir on analysis completion (success **or** failure). `analyzeRepository()` wraps the whole run in `try/finally` and always invokes `workspace.cleanup()`, including when report persistence throws (regression test: `src/analyzer/cleanup.test.ts`).
+- Report files: **both** filesystem and Vercel Blob storage support deletion and a TTL/max-count sweep. `sweepExpiredReports()` uses `analyzed_at` on the filesystem and blob upload timestamps for blob storage. Retention is `REPORT_TTL_DAYS` (default 30) and `REPORT_MAX_COUNT` (default 100). Run via `POST /api/cron/cleanup`, which also sweeps share tokens.
 
-### Limits
+### Centralized Limits (`src/lib/ingestLimits.ts`)
 
-| Limit | Value | Behavior |
-|-------|-------|----------|
-| Max repo size (clone/extract) | 100MB | Abort clone/extract if exceeded |
-| Max file count | 10,000 | Stop indexing; add warning to report |
-| Max analysis time | 120s | Abort; return partial report + TIMEOUT warning if supported |
+All size/count/timeout budgets live in one module so the API route, ZIP extractor, GitHub downloader, indexing pipeline, and UI cannot disagree (finding D / Phase 2 requirement 8).
+
+| Limit | Constant | Value | Behavior |
+|-------|----------|-------|----------|
+| Max compressed archive | `MAX_COMPRESSED_BYTES` | 100 MB | Abort upload/download if exceeded |
+| Max uncompressed total | `MAX_UNCOMPRESSED_BYTES` | 50 MB | Abort extraction if exceeded |
+| Max entries | `MAX_ENTRIES` | 10,000 | Abort extraction |
+| Max single file | `MAX_SINGLE_FILE_BYTES` | 10 MB | Abort extraction |
+| Max indexed files | `MAX_FILE_COUNT` | 10,000 | Stop indexing; add warning |
+| Max folder depth | `MAX_DEPTH` | 10 | Stop recursing; mark node `truncated` + add warning (no longer silent) |
+| Max analysis time | `MAX_ANALYSIS_TIME_MS` | 120 s | Abort; return partial report |
+| Archive download timeout | `DOWNLOAD_TIMEOUT_MS` | 60 s | Abort → DOWNLOAD_TIMEOUT |
+| GitHub API timeout | `GITHUB_API_TIMEOUT_MS` | 15 s | Abort → DOWNLOAD_TIMEOUT |
 
 ---
 
@@ -217,12 +237,27 @@ flowchart TB
 
 | Step | Description | Output |
 |------|-------------|--------|
-| Folder tree | Recursive `fs.readdirSync` with depth limit (default 10) | `FolderMapNode[]` |
+| Folder tree | Recursive `fs.readdirSync` with depth limit (`MAX_DEPTH`); over-depth directories are marked `truncated` and a warning is emitted | `FolderMapNode` |
 | File metadata | For each file: path, size, extension | `FileMetadata[]` |
 | Language detection | Extension → language map; `.gitattributes` overrides if present | `language` per file |
-| Key docs discovery | Glob: `README*`, `CONTRIBUTING*`, `LICENSE*`, `CHANGELOG*` | `keyDocs: string[]` |
+| Key docs discovery | `README*`, `CONTRIBUTING*`, `LICENSE*`, `CHANGELOG*`, **deterministically sorted** (root docs first, then lexicographic) | `keyDocs: string[]` |
 | CI discovery | Glob: `.github/workflows/*.yml`, `.gitlab-ci.yml`, `Jenkinsfile` | `ciConfigs: string[]` |
 | Run command extraction | Parse `package.json` scripts, `Makefile`, `pyproject.toml`, `pom.xml`, `build.gradle`, Docker Compose, README fenced blocks | `RunCommand[]` via `src/analyzer/commands/index.ts` |
+
+### Documentation Discovery and Canonicalization (`src/analyzer/docs.ts`)
+
+To stop duplicated documentation from producing repetitive or misleading briefs (Phase 3), a deterministic discovery step builds a `document_inventory`:
+
+1. **Classify & prioritize.** Each doc is classified (`readme`, `contributing`, `architecture`, `docs`, `changelog`, `license`) and scoped (`root`, `docs`, `nested`). Root docs outrank `docs/`, which outrank nested package docs.
+2. **Deterministic order.** Documents are sorted by (category, scope, path depth, path) before any grouping, independent of filesystem traversal order.
+3. **Duplicate detection.** Content is hashed both raw (`content_hash`) and normalized (`normalized_hash`). Normalization strips a UTF-8 BOM, converts CRLF/CR → LF, trims trailing whitespace per line, and collapses surrounding blank lines. Documents sharing a normalized hash form a duplicate group; the highest-priority member is `canonical`, others record `duplicate_of`.
+4. **Similarity flagging.** Same-category canonical docs with Jaccard line similarity ≥ 0.85 (and < 1) are recorded in `similar_groups` as *possible* redundancy — never suppressed.
+5. **Nothing hidden.** Every document remains in the inventory and folder map. Duplicates are grouped, not deleted, so users can see what was suppressed and why.
+6. **Canonical selection.** One canonical document per duplicate group is used for purpose extraction, run-command extraction, and Candidate Brief evidence, so equivalent content does not generate repeated evidence cards. Different nested package READMEs are treated as legitimate and each keep their own card.
+
+**Purpose extraction** (`src/analyzer/purpose.ts`) prefers the canonical README, and will **not** use a heading that is only the repository name; it falls back to the first meaningful paragraph or a manifest description, preserving the source path and evidence.
+
+Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `src/analyzer/purpose.test.ts`, `src/analyzer/pipeline.test.ts`. Fixture: `fixtures/repo-docs-dedup`.
 
 ### Language Pack: TS/JS
 
@@ -364,6 +399,12 @@ When `commit_insights.mode` is `local_git` or `github_api` and churn data exists
   "candidate_brief": { },
   "project_profile": { },
   "project_purpose": { },
+  "document_inventory": {
+    "documents": [],
+    "duplicate_groups": [],
+    "similar_groups": [],
+    "canonical_readme": "string | undefined"
+  },
   "technical_decisions": [],
   "symbols": [],
   "test_inventory": { },
@@ -392,6 +433,7 @@ export type FolderMapNode = {
   path: string;
   type: 'file' | 'dir';
   children?: FolderMapNode[];
+  truncated?: boolean; // true when depth-limited entries were not walked
 };
 
 export interface ArchitectureNode {
@@ -455,6 +497,7 @@ export interface Report {
   candidate_brief?: CandidateBrief;
   project_profile?: ProjectProfile;
   project_purpose?: ProjectPurpose;
+  document_inventory?: DocumentInventory;
   technical_decisions?: TechnicalDecision[];
   symbols?: CodeSymbol[];
   test_inventory?: TestInventory;
@@ -463,6 +506,8 @@ export interface Report {
   warnings: string[];
 }
 ```
+
+`document_inventory` (see `src/types/report.ts`) captures every discovered document, duplicate groups (with canonical + suppressed paths and a reason), optional similar groups, and the chosen `canonical_readme`.
 
 See `src/types/report.ts` for full `CandidateBrief`, `EvidenceRef`, and deep-analysis type definitions.
 
@@ -474,7 +519,7 @@ See `src/types/report.ts` for full `CandidateBrief`, `EvidenceRef`, and deep-ana
 
 | Route file | Methods | Public endpoint | Notes |
 |---|---|---|---|
-| `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` | Accepts multipart upload (`file` or `zip`) and JSON `{ "zipRef": "..." }` |
+| `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` | Accepts multipart upload (`file` or `zip`), JSON `{ "githubUrl", "ref"? }`, or JSON `{ "sample": true }`. JSON `zipRef` is rejected. Rate-limited + concurrency-gated. |
 | `src/app/api/reports/[id]/route.ts` | `GET`, `DELETE` | `/api/reports/:id` | Returns or deletes persisted report JSON |
 | `src/app/api/reports/[id]/share/route.ts` | `POST` | `/api/reports/:id/share` | Creates 7-day read-only share token |
 | `src/app/api/share/[token]/route.ts` | `GET` | `/api/share/:token` | Resolves share token to report JSON |
@@ -485,15 +530,17 @@ Maintenance rule: when route handlers are added/removed/renamed, update this tab
 
 ### POST /api/analyze
 
-**Request (primary):** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
+**Request (zip):** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
 
-**Request (testing/CLI):** `Content-Type: application/json` with body:
+**Request (GitHub):** `Content-Type: application/json`:
 
 ```json
-{
-  "zipRef": "path-to-local-repo-or-fixture"
-}
+{ "githubUrl": "https://github.com/owner/repo", "ref": "optional-branch-or-tag" }
 ```
+
+**Request (sample):** `Content-Type: application/json` with `{ "sample": true }` (analyzes the bundled `fixtures/repo-ts`).
+
+> The old JSON `zipRef` field is intentionally **rejected** with `400 / INVALID_INPUT` — caller-controlled server paths are never analyzable through the public API (Phase 1 finding A). Internal callers/tests use `analyzeRepository({ zipRef })` directly.
 
 **Response (200)**:
 
@@ -507,11 +554,17 @@ Maintenance rule: when route handlers are added/removed/renamed, update this tab
 
 | Status | Body | Code |
 |--------|------|------|
-| 400 | `{ "code": "INVALID_INPUT", "message": "..." }` | Missing upload or `zipRef`; unsupported content type |
-| 400 | `{ "code": "ZIP_INVALID", "message": "..." }` | Invalid zip |
-| 404 | `{ "code": "ZIP_NOT_FOUND", "message": "..." }` | zipRef not found |
-| 413 | `{ "code": "REPO_TOO_LARGE", "message": "..." }` | Upload/zip exceeds 100MB |
-| 504 | `{ "code": "TIMEOUT", "message": "..." }` | Analysis timeout |
+| 400 | `{ "code": "INVALID_INPUT", "message": "..." }` | Missing/invalid body, unsupported content type, or `zipRef` sent over the network |
+| 400 | `{ "code": "INVALID_URL", "message": "..." }` | Non-canonical GitHub URL or invalid ref |
+| 400 | `{ "code": "ZIP_INVALID", "message": "..." }` | Invalid zip / archive |
+| 403 | `{ "code": "REPO_PRIVATE", "message": "..." }` | Repository is private/restricted |
+| 404 | `{ "code": "REPO_NOT_FOUND", "message": "..." }` | Repository not found (or private, unauthenticated) |
+| 404 | `{ "code": "MISSING_REF", "message": "..." }` | Requested branch/tag not found |
+| 413 | `{ "code": "REPO_TOO_LARGE", "message": "..." }` | Upload/archive exceeds 100MB |
+| 429 | `{ "code": "RATE_LIMITED", "message": "..." }` | GitHub API rate limit |
+| 429 | `{ "code": "RATE_LIMIT_EXCEEDED", "message": "..." }` | Per-instance request limit / concurrency cap |
+| 504 | `{ "code": "DOWNLOAD_TIMEOUT", "message": "..." }` | GitHub request/download timed out |
+| 504 | `{ "code": "TIMEOUT", "message": "..." }` | Analysis timeout (may instead return `partial: true`) |
 | 500 | `{ "code": "ANALYSIS_FAILED", "message": "..." }` | Analysis error |
 
 ### API availability
@@ -582,13 +635,22 @@ else {
 
 | Concern | Mitigation |
 |---------|------------|
+| Arbitrary server file read | Public API rejects JSON `zipRef`; only server-created temp paths and server-owned fixtures reach the zip ingest path (finding A). Report ids are validated against a strict UUID shape before any storage access. |
 | Path traversal (zip) | `src/lib/safeZipExtract.ts` — resolve paths; reject `..`; jail to extract root |
 | Code execution | Never `require()`, `import()`, or `exec()` repo code; parse as text only |
-| Network | GitHub archive download (legacy ingest) and optional GitHub Commits API for churn when local `.git` missing — no arbitrary user URLs |
-| Rate limiting | **Not implemented** — spec target 10 analyses/hour per IP (deferred item 39) |
-| Zip bombs | Enforce max uncompressed size (50MB) and entry count; abort if exceeded |
+| Private repo exposure | User-supplied GitHub ingestion is **always unauthenticated** — the server `GITHUB_TOKEN` is never attached. Repos reported private, or 404/403, are refused before download (finding B). |
+| SSRF / redirect abuse | Only canonical `github.com` URLs are accepted; archive redirects are followed only to known GitHub hosts. |
+| Zip bombs / oversized archives | Compressed and uncompressed caps, entry-count and per-file caps, plus streamed download with an abort-on-cap (findings D). |
+| Fetch hangs | GitHub API and archive requests have `AbortController` timeouts. |
+| Rate limiting | **Conservative controls implemented; durable limiting isolated.** `src/lib/rateLimit.ts` provides a process-local concurrency gate (`MAX_CONCURRENT_ANALYSES`, default 4) — a legitimate resource bound — plus a best-effort per-key sliding window (`ANALYZE_RATE_LIMIT_PER_MIN`, default 30). The in-memory window is explicitly documented as **not** reliable distributed rate limiting on serverless; the `RateLimiter` interface can be swapped for a Redis/KV backend via `setRateLimiter()` with no route changes. |
 
-**Acceptance criteria**: Zip with `../../etc/passwd` does not write outside extract dir; analyzer never executes repo code.
+**Security assumptions & remaining limitations:**
+
+- Only **public** GitHub repositories are supported. There is no user-scoped GitHub auth; private-repo support would require a deliberately designed OAuth flow.
+- The default rate limiter is per-instance. Production quotas require a shared-store backend (or a WAF/API-gateway rule) injected through the isolated interface.
+- Blob-store retention relies on the cron sweep (`POST /api/cron/cleanup`); schedule it (e.g. Vercel Cron) in production.
+
+**Acceptance criteria**: Zip with `../../etc/passwd` does not write outside extract dir; analyzer never executes repo code; a private repo cannot be read via server credentials; JSON `zipRef` cannot analyze an arbitrary server path (see `src/lib/ingest.github.test.ts`, `src/app/api/reports/reports-api.integration.test.ts`).
 
 ---
 
@@ -630,6 +692,9 @@ else {
 | `fixtures/repo-monorepo` | npm workspaces monorepo | `fixtures/repo-monorepo/` |
 | `fixtures/repo-docs-only` | README-only repo (no source) | `fixtures/repo-docs-only/` |
 | `fixtures/repo-no-readme` | Minimal JS without README | `fixtures/repo-no-readme/` |
+| `fixtures/repo-docs-dedup` | Root + nested READMEs, byte-identical duplicate, distinct package README, duplicate run commands | `fixtures/repo-docs-dedup/` |
+
+Documentation-discovery edge cases (whitespace-only duplicates, similar-but-different docs, no-README repos, monorepo package docs) are additionally covered by programmatic temp-dir fixtures in `src/analyzer/docs.test.ts`.
 
 ### Acceptance Tests
 
