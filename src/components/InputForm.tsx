@@ -4,6 +4,7 @@ import { useState, useRef, type RefObject } from "react";
 import type { Report } from "@/types/report";
 import { ERROR_CODES } from "@/lib/errors";
 import { parseGithubRepoUrl, isValidGitRef } from "@/lib/github";
+import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 
 const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
 
@@ -16,7 +17,7 @@ interface InputFormProps {
   onAnalyzeComplete: (report: Report, reportId: string) => void;
   onAnalyzeError: (message: string) => void;
   loading: boolean;
-  sampleButtonRef?: RefObject<HTMLButtonElement>;
+  sampleButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
 interface ApiErrorLike {
@@ -113,6 +114,10 @@ export function InputForm({
         setFieldError("Choose a .zip file to analyze.");
         return;
       }
+      if (file.size > clientMaxZipBytes()) {
+        setFieldError(`Zip file must be ${clientMaxZipMbLabel()}MB or smaller.`);
+        return;
+      }
       const formData = new FormData();
       formData.append("file", file);
       onAnalyzeStart();
@@ -149,6 +154,12 @@ export function InputForm({
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
+    if (chosen.size > clientMaxZipBytes()) {
+      setFieldError(`Zip file must be ${clientMaxZipMbLabel()}MB or smaller.`);
+      setFile(null);
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
     setFile(chosen);
   };
 
@@ -168,6 +179,8 @@ export function InputForm({
     setMode(next);
     setFieldError(null);
   };
+
+  const hasFieldError = fieldError !== null;
 
   return (
     <form onSubmit={handleSubmit} className="input-form" aria-busy={loading}>
@@ -217,6 +230,8 @@ export function InputForm({
               className="absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-not-allowed"
               disabled={loading}
               aria-label="Choose repository zip file"
+              aria-invalid={hasFieldError && mode === "zip"}
+              aria-describedby={hasFieldError && mode === "zip" ? "input-form-error" : undefined}
             />
             <span className="file-name">{file ? file.name : "No file chosen"}</span>
             <span className="file-action">Choose file</span>
@@ -241,6 +256,7 @@ export function InputForm({
             disabled={loading}
             autoComplete="off"
             aria-describedby="githubUrl-help"
+            aria-invalid={hasFieldError && mode === "github"}
           />
           <p id="githubUrl-help" className="input-help">
             Canonical HTTPS github.com URLs only. Public repositories only — private
@@ -261,12 +277,13 @@ export function InputForm({
             className="text-input"
             disabled={loading}
             autoComplete="off"
+            aria-invalid={hasFieldError && mode === "github"}
           />
         </div>
       )}
 
       {fieldError && (
-        <p role="alert" className="form-error">
+        <p id="input-form-error" role="alert" className="form-error">
           {fieldError}
         </p>
       )}
@@ -274,7 +291,7 @@ export function InputForm({
       <div className="form-actions">
         <button
           type="submit"
-          disabled={loading || (mode === "zip" && !file)}
+          disabled={loading}
           className="btn btn-primary"
         >
           <span aria-live="polite">

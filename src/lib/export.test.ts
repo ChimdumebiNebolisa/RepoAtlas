@@ -172,4 +172,61 @@ describe("exportReportToMarkdown", () => {
     expect(markdown).toContain("## Danger Zones");
     expect(markdown).toContain("## Run & Contribute");
   });
+
+  it("escapes malicious repo names and markdown injection in headings", () => {
+    const report = sampleReport();
+    report.repo_metadata.name = "# injected\n\n## takeover";
+
+    const markdown = exportReportToMarkdown(report);
+
+    expect(markdown).toMatch(/^# Repo Analysis: \\# injected/);
+    expect(markdown).not.toMatch(/^## takeover/m);
+  });
+
+  it("escapes pipes and backticks in table cells", () => {
+    const report = sampleReport();
+    report.start_here[0]!.explanation = "col|injected `code` _emphasis_";
+    report.danger_zones[0]!.breakdown = "pipe|break `tick`";
+
+    const markdown = exportReportToMarkdown(report);
+
+    expect(markdown).toContain("col\\|injected");
+    expect(markdown).toContain("pipe\\|break");
+    expect(markdown).toContain("\\`tick\\`");
+    expect(markdown).toContain("\\_emphasis\\_");
+    const startHereRow = markdown
+      .split("\n")
+      .find((line) => line.includes("README.md") && line.includes("col"));
+    expect(startHereRow).toBeDefined();
+    expect(startHereRow!.split("|").length).toBeGreaterThan(4);
+  });
+
+  it("escapes mermaid-breaking characters in architecture labels", () => {
+    const report = sampleReport();
+    report.architecture = {
+      nodes: [
+        {
+          id: 'src["evil"]',
+          label: 'label"; evil --> x',
+          type: "folder",
+        },
+      ],
+      edges: [{ from: 'src["evil"]', to: 'src["evil"]', type: "import" }],
+    };
+
+    const markdown = exportReportToMarkdown(report);
+
+    expect(markdown).toContain("```mermaid");
+    expect(markdown).not.toContain('label"; evil --> x');
+    expect(markdown).toContain('label\\"');
+  });
+
+  it("escapes backticks in inline code paths", () => {
+    const report = sampleReport();
+    report.start_here[0]!.path = "src/`inject`.ts";
+
+    const markdown = exportReportToMarkdown(report);
+
+    expect(markdown).toContain("`src/\\`inject\\`.ts`");
+  });
 });

@@ -180,6 +180,8 @@ export interface InterviewQuestion {
   question: string;
   rationale: string;
   evidence_refs: string[];
+  /** True for RepoAtlas-meta prompts not tied to repo-specific evidence. */
+  generic?: boolean;
 }
 
 export interface CodeSymbol {

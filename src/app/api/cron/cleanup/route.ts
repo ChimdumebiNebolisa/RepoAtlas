@@ -1,8 +1,22 @@
-import { listReportIds, sweepExpiredReports } from "@/lib/storage";
+import { sweepExpiredReports } from "@/lib/storage";
 import { sweepExpiredShareTokens } from "@/lib/sharing";
-import { getReportMaxCount, getReportTtlDays } from "@/lib/reportTtl";
+
+function isProduction(): boolean {
+  return process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+}
+
+function cronMisconfigured(): boolean {
+  return isProduction() && !process.env.CRON_SECRET?.trim();
+}
 
 export async function POST(request: Request) {
+  if (cronMisconfigured()) {
+    return Response.json(
+      { code: "MISCONFIGURED", message: "CRON_SECRET is required in production." },
+      { status: 503 }
+    );
+  }
+
   const secret = process.env.CRON_SECRET?.trim();
   if (secret) {
     const auth = request.headers.get("authorization");
@@ -23,12 +37,25 @@ export async function POST(request: Request) {
   });
 }
 
-export async function GET() {
-  const ids = await listReportIds();
+/** Authenticated health check only — no inventory scan. */
+export async function GET(request: Request) {
+  if (cronMisconfigured()) {
+    return Response.json(
+      { ok: false, message: "CRON_SECRET is required in production." },
+      { status: 503 }
+    );
+  }
+
+  const secret = process.env.CRON_SECRET?.trim();
+  if (secret) {
+    const auth = request.headers.get("authorization");
+    if (auth !== `Bearer ${secret}`) {
+      return Response.json({ code: "UNAUTHORIZED", message: "Invalid cron secret." }, { status: 401 });
+    }
+  }
+
   return Response.json({
-    reportCount: ids.length,
-    ttlDays: getReportTtlDays(),
-    maxReports: getReportMaxCount(),
-    note: "POST with Authorization: Bearer CRON_SECRET to run cleanup sweep.",
+    ok: true,
+    message: "POST with Authorization: Bearer CRON_SECRET to run cleanup sweep.",
   });
 }

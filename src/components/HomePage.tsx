@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { InputForm } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
+import { clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 import type { Report } from "@/types/report";
 
 const projectTypes = [
@@ -57,15 +58,22 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showViewReportButton, setShowViewReportButton] = useState(false);
+  const [showSampleReport, setShowSampleReport] = useState(false);
   const reportSectionRef = useRef<HTMLElement | null>(null);
   const sampleButtonRef = useRef<HTMLButtonElement | null>(null);
+  const sampleSectionRef = useRef<HTMLElement | null>(null);
 
   const scrollToReport = () => {
     reportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     setShowViewReportButton(false);
   };
 
-  const runSample = () => sampleButtonRef.current?.click();
+  const openSampleReport = () => {
+    setShowSampleReport(true);
+    requestAnimationFrame(() => {
+      sampleSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const handleAnalyzeComplete = (reportData: Report, id: string) => {
     setReport(reportData);
@@ -99,18 +107,21 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <p className="eyebrow">Evidence-backed repository analysis</p>
           <h1>Turn a codebase into an interview-ready Candidate Brief.</h1>
           <p className="hero-description">
-            Upload a repository zip and RepoAtlas maps the structure, risk areas, run commands,
-            and evidence-backed talking points without executing code or calling AI.
+            Upload a repository zip or paste a public GitHub URL — RepoAtlas maps the structure,
+            risk areas, run commands, and evidence-backed talking points without executing code
+            or calling AI.
           </p>
           <div className="hero-actions">
             <a className="btn btn-primary" href="#analyze">
               Analyze Repository <Arrow />
             </a>
-            <button className="text-action" type="button" onClick={runSample}>
+            <button className="text-action" type="button" onClick={openSampleReport}>
               Try sample Candidate Brief <Arrow />
             </button>
           </div>
-          <p className="hero-microcopy">Local-first static analysis. No code execution. No AI calls.</p>
+          <p className="hero-microcopy">
+            ZIP upload or public GitHub URL. Local-first static analysis. No code execution. No AI calls.
+          </p>
         </div>
 
         <div className="hero-visual" aria-label="Candidate Brief output overview">
@@ -158,9 +169,10 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             sampleButtonRef={sampleButtonRef}
           />
           <div className="analyze-limits">
+            <span>ZIP upload or public GitHub URL</span>
             <span>Reads repository files only</span>
             <span>Public repositories only</span>
-            <span>100MB maximum archive</span>
+            <span>{clientMaxZipMbLabel()}MB maximum zip</span>
             <span>Analysis up to 2 minutes</span>
           </div>
           {showViewReportButton && report && (
@@ -181,9 +193,9 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
               <li key={item}><span>{String(index + 1).padStart(2, "0")}</span>{item}</li>
             ))}
           </ul>
-          <a className="btn btn-inverse" href="#sample-report">
+          <button type="button" className="btn btn-inverse" onClick={openSampleReport}>
             Open sample report <Arrow />
-          </a>
+          </button>
         </aside>
       </section>
 
@@ -261,18 +273,58 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         </div>
       </section>
 
-      <section id="sample-report" className="sample-report-section page-container">
+      <section
+        id="sample-report"
+        ref={sampleSectionRef}
+        className="sample-report-section page-container"
+      >
         <div className="sample-report-heading">
           <div><h2>Sample Repo</h2></div>
-          <button type="button" className="text-action" onClick={runSample}>
-            Generate a live sample <Arrow />
-          </button>
+          {!showSampleReport && (
+            <button type="button" className="text-action" onClick={openSampleReport}>
+              Open full sample report <Arrow />
+            </button>
+          )}
         </div>
-        <p className="sample-report-copy">
-          Explore the bundled read-only report. PDF and PNG preview exports work here; Markdown
-          export is enabled after analysis.
-        </p>
-        <div className="sample-report-shell"><ReportTabs report={sampleReport} variant="preview" /></div>
+        {!showSampleReport ? (
+          <div className="sample-report-preview">
+            <p className="sample-report-copy">
+              Preview the bundled read-only Candidate Brief before uploading your own repository.
+              Open the full report to explore tabs, exports, and evidence-linked sections.
+            </p>
+            <div className="brief-sheet" style={{ maxWidth: "36rem" }}>
+              <div className="brief-sheet-header">
+                <span>Candidate Brief</span>
+                <span className="brief-status">sample</span>
+              </div>
+              <div className="brief-sheet-title">{sampleReport.repo_metadata.name}</div>
+              <div className="brief-reading-path">
+                <span>Read first</span>
+                {sampleReport.start_here.slice(0, 3).map((item) => (
+                  <code key={item.path}>{item.path}</code>
+                ))}
+              </div>
+              <div className="brief-sheet-footer">
+                <span>{sampleReport.start_here.length} start-here paths</span>
+                <span>{sampleReport.danger_zones.length} risk signals</span>
+                <span>{sampleReport.architecture.nodes.length} architecture nodes</span>
+              </div>
+            </div>
+            <button type="button" className="btn btn-primary" onClick={openSampleReport}>
+              Open sample report <Arrow />
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="sample-report-copy">
+              Explore the bundled read-only report. PDF and PNG preview exports work here; Markdown
+              export is enabled after analysis.
+            </p>
+            <div className="sample-report-shell">
+              <ReportTabs report={sampleReport} variant="preview" />
+            </div>
+          </>
+        )}
       </section>
 
       <section className="trust-section page-container">
@@ -301,10 +353,12 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         <div className="page-container closing-content">
           <div>
             <h2>Export the brief. Share the report. Walk into the interview with receipts.</h2>
-            <p>Start with the bundled sample or analyze a repository zip locally.</p>
+            <p>Start with the bundled sample or analyze a repository zip or public GitHub URL locally.</p>
           </div>
           <div className="closing-actions">
-            <a className="btn btn-inverse" href="#sample-report">Try sample Candidate Brief <Arrow /></a>
+            <a className="btn btn-inverse" href="#sample-report" onClick={openSampleReport}>
+              Try sample Candidate Brief <Arrow />
+            </a>
             <a className="btn btn-light" href="#analyze">Analyze Repository <Arrow /></a>
           </div>
         </div>

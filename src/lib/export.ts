@@ -5,12 +5,41 @@
 import type { BriefAnswer, CandidateBrief, EvidenceRef, Report } from "@/types/report";
 import { repoSourceLabel } from "./format";
 
+/** Escape characters that have special meaning in Markdown inline text. */
+export function escapeMarkdownInline(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/([`*_{}[\]()#])/g, "\\$1");
+}
+
+/** Escape table cell content (pipes, newlines, and inline Markdown). */
+export function escapeTableCell(value: string): string {
+  return escapeMarkdownInline(value).replace(/\|/g, "\\|").replace(/\n/g, " ");
+}
+
+function escapeInlineCodeContent(value: string): string {
+  return value.replace(/`/g, "\\`");
+}
+
+function wrapInlineCode(value: string): string {
+  return `\`${escapeInlineCodeContent(value)}\``;
+}
+
+function escapeMermaidLabel(label: string): string {
+  return label
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/[\[\]<>#;]/g, " ");
+}
+
+function escapeMermaidId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9_]/g, "_");
+}
+
 function treeToMarkdown(node: Report["folder_map"], indent = 0): string {
   const prefix = "  ".repeat(indent);
   if (node.type === "file") {
-    return `${prefix}- ${node.path}\n`;
+    return `${prefix}- ${escapeMarkdownInline(node.path)}\n`;
   }
-  let out = `${prefix}- **${node.path}**/\n`;
+  let out = `${prefix}- **${escapeMarkdownInline(node.path)}**/\n`;
   for (const child of node.children ?? []) {
     out += treeToMarkdown(child, indent + 1);
   }
@@ -20,37 +49,33 @@ function treeToMarkdown(node: Report["folder_map"], indent = 0): string {
 function architectureToMarkdown(arch: Report["architecture"]): string {
   let out = "```mermaid\nflowchart TB\n";
   for (const n of arch.nodes) {
-    const id = n.id.replace(/[^a-zA-Z0-9_]/g, "_");
-    out += `  ${id}["${n.label}"]\n`;
+    const id = escapeMermaidId(n.id);
+    out += `  ${id}["${escapeMermaidLabel(n.label)}"]\n`;
   }
   for (const e of arch.edges.filter((e) => e.from !== e.to)) {
-    const from = e.from.replace(/[^a-zA-Z0-9_]/g, "_");
-    const to = e.to.replace(/[^a-zA-Z0-9_]/g, "_");
+    const from = escapeMermaidId(e.from);
+    const to = escapeMermaidId(e.to);
     out += `  ${from} --> ${to}\n`;
   }
   out += "```\n\n";
   return out;
 }
 
-function escapeTableCell(value: string): string {
-  return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
-}
-
 function evidenceList(ids: string[]): string {
   const unique = Array.from(new Set(ids));
   if (unique.length === 0) return "";
-  return ` Evidence: ${unique.map((id) => `\`${id}\``).join(", ")}.`;
+  return ` Evidence: ${unique.map((id) => wrapInlineCode(id)).join(", ")}.`;
 }
 
 function briefAnswerToMarkdown(title: string, answer: BriefAnswer): string {
-  let md = `### ${title}\n\n`;
-  md += `${answer.answer}\n\n`;
+  let md = `### ${escapeMarkdownInline(title)}\n\n`;
+  md += `${escapeMarkdownInline(answer.answer)}\n\n`;
   md += `- **Confidence**: ${answer.confidence}\n`;
   for (const bullet of answer.bullets) {
-    md += `- ${bullet}\n`;
+    md += `- ${escapeMarkdownInline(bullet)}\n`;
   }
   if (answer.evidence_refs.length > 0) {
-    md += `- **Evidence**: ${answer.evidence_refs.map((id) => `\`${id}\``).join(", ")}\n`;
+    md += `- **Evidence**: ${answer.evidence_refs.map((id) => wrapInlineCode(id)).join(", ")}\n`;
   }
   md += "\n";
   return md;
@@ -61,7 +86,7 @@ function evidenceRefToMarkdown(ref: EvidenceRef): string {
   if (ref.path) parts.push(`path=${ref.path}`);
   if (ref.command) parts.push(`command=${ref.command}`);
   if (ref.detail) parts.push(ref.detail);
-  return `- \`${ref.id}\` - ${parts.join("; ")}\n`;
+  return `- ${wrapInlineCode(ref.id)} - ${escapeMarkdownInline(parts.join("; "))}\n`;
 }
 
 function candidateBriefToMarkdown(brief?: CandidateBrief): string {
@@ -69,11 +94,11 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
 
   let md = "## Candidate Brief\n\n";
   md += "### Repo Summary\n\n";
-  md += `${brief.repo_summary.headline}\n\n`;
-  md += `${brief.repo_summary.plain_english}\n\n`;
+  md += `${escapeMarkdownInline(brief.repo_summary.headline)}\n\n`;
+  md += `${escapeMarkdownInline(brief.repo_summary.plain_english)}\n\n`;
   md += `- **Confidence**: ${brief.repo_summary.confidence}\n`;
   md += `- **Primary evidence**: ${brief.repo_summary.primary_evidence
-    .map((id) => `\`${id}\``)
+    .map((id) => wrapInlineCode(id))
     .join(", ")}\n\n`;
 
   md += "### Reading Path\n\n";
@@ -83,8 +108,8 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
     md += "| Order | Path | Why | Evidence |\n";
     md += "|-------|------|-----|----------|\n";
     for (const item of brief.reading_path) {
-      md += `| ${item.order} | \`${item.path}\` | ${escapeTableCell(item.why)} | ${item.evidence_refs
-        .map((id) => `\`${id}\``)
+      md += `| ${item.order} | ${wrapInlineCode(item.path)} | ${escapeTableCell(item.why)} | ${item.evidence_refs
+        .map((id) => wrapInlineCode(id))
         .join(", ")} |\n`;
     }
     md += "\n";
@@ -110,9 +135,9 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
 
   md += "### First PR Plan\n\n";
   for (const idea of brief.first_pr_plan) {
-    md += `- **${idea.title}** (${idea.risk} risk): ${idea.rationale}`;
+    md += `- **${escapeMarkdownInline(idea.title)}** (${idea.risk} risk): ${escapeMarkdownInline(idea.rationale)}`;
     if (idea.suggested_files.length > 0) {
-      md += ` Suggested files: ${idea.suggested_files.map((file) => `\`${file}\``).join(", ")}.`;
+      md += ` Suggested files: ${idea.suggested_files.map((file) => wrapInlineCode(file)).join(", ")}.`;
     }
     md += evidenceList(idea.evidence_refs);
     md += "\n";
@@ -121,7 +146,7 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
 
   md += "### Resume / LinkedIn Bullets\n\n";
   for (const bullet of brief.resume_bullets) {
-    md += `- **${bullet.audience}**: ${bullet.text}${evidenceList(bullet.evidence_refs)}\n`;
+    md += `- **${escapeMarkdownInline(bullet.audience)}**: ${escapeMarkdownInline(bullet.text)}${evidenceList(bullet.evidence_refs)}\n`;
   }
   md += "\n";
 
@@ -130,7 +155,7 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
     md += "_No Candidate Brief warnings._\n\n";
   } else {
     for (const warning of brief.warnings) {
-      md += `- ${warning.message}${evidenceList(warning.evidence_refs ?? [])}\n`;
+      md += `- ${escapeMarkdownInline(warning.message)}${evidenceList(warning.evidence_refs ?? [])}\n`;
     }
     md += "\n";
   }
@@ -145,9 +170,9 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
 }
 
 export function exportReportToMarkdown(report: Report): string {
-  let md = `# Repo Analysis: ${report.repo_metadata.name}\n\n`;
-  md += `- **Source**: ${repoSourceLabel(report.repo_metadata.url)}\n`;
-  md += `- **Branch**: ${report.repo_metadata.branch}\n`;
+  let md = `# Repo Analysis: ${escapeMarkdownInline(report.repo_metadata.name)}\n\n`;
+  md += `- **Source**: ${escapeMarkdownInline(repoSourceLabel(report.repo_metadata.url))}\n`;
+  md += `- **Branch**: ${escapeMarkdownInline(report.repo_metadata.branch)}\n`;
   md += `- **Analyzed**: ${report.repo_metadata.analyzed_at}\n\n`;
 
   md += candidateBriefToMarkdown(report.candidate_brief);
@@ -166,7 +191,7 @@ export function exportReportToMarkdown(report: Report): string {
   md += "| Path | Score | Signals |\n";
   md += "|------|-------|---------|\n";
   for (const item of report.start_here) {
-    md += `| \`${item.path}\` | ${item.score} | ${item.explanation} |\n`;
+    md += `| ${wrapInlineCode(item.path)} | ${item.score} | ${escapeTableCell(item.explanation)} |\n`;
   }
   md += "\n";
 
@@ -174,28 +199,28 @@ export function exportReportToMarkdown(report: Report): string {
   md += "| Path | Score | Breakdown |\n";
   md += "|------|-------|----------|\n";
   for (const item of report.danger_zones) {
-    md += `| \`${item.path}\` | ${item.score} | ${item.breakdown} |\n`;
+    md += `| ${wrapInlineCode(item.path)} | ${item.score} | ${escapeTableCell(item.breakdown)} |\n`;
   }
   md += "\n";
 
   md += "## Run & Contribute\n\n";
   md += "### Run Commands\n\n";
   for (const cmd of report.run_commands) {
-    md += `- \`${cmd.command}\` (from ${cmd.source})${cmd.description ? ` - ${cmd.description}` : ""}\n`;
+    md += `- ${wrapInlineCode(cmd.command)} (from ${escapeMarkdownInline(cmd.source)})${cmd.description ? ` - ${escapeMarkdownInline(cmd.description)}` : ""}\n`;
   }
   md += "\n### Key Docs\n\n";
   for (const doc of report.contribute_signals.key_docs) {
-    md += `- ${doc}\n`;
+    md += `- ${escapeMarkdownInline(doc)}\n`;
   }
   md += "\n### CI Configs\n\n";
   for (const ci of report.contribute_signals.ci_configs) {
-    md += `- ${ci}\n`;
+    md += `- ${escapeMarkdownInline(ci)}\n`;
   }
 
   if (report.warnings.length > 0) {
     md += "\n## Warnings\n\n";
     for (const w of report.warnings) {
-      md += `- ${w}\n`;
+      md += `- ${escapeMarkdownInline(w)}\n`;
     }
   }
 

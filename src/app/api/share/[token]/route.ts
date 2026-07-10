@@ -9,9 +9,10 @@ const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 
 export async function GET(
   _request: Request,
-  context: { params: { token: string } }
+  context: { params: Promise<{ token: string }> }
 ) {
-  const token = context.params?.token?.trim() ?? "";
+  const { token: rawToken } = await context.params;
+  const token = rawToken?.trim() ?? "";
 
   if (!token) {
     return NextResponse.json(

@@ -10,11 +10,10 @@ import { RunContributeSection } from "./RunContributeSection";
 import { ReportDocument } from "./ReportDocument";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
 import { DeepAnalysisSection } from "./DeepAnalysisSection";
+import { DocumentsPanel } from "./DocumentsPanel";
 import { ERROR_CODES } from "@/lib/errors";
 import { buildExportFilename } from "@/lib/exportNames";
 import { isHttpUrl, repoSourceLabel, formatTimestamp } from "@/lib/format";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 const TABS = [
   "Candidate Brief",
@@ -32,7 +31,7 @@ const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
 interface ReportTabsProps {
   report: Report;
   reportId?: string | null;
-  variant?: "live" | "preview";
+  variant?: "live" | "preview" | "shared";
   initialDemoMode?: boolean;
 }
 
@@ -72,13 +71,16 @@ export function ReportTabs({
 }: ReportTabsProps) {
   const tabsId = useId();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Candidate Brief");
-  const [demoMode, setDemoMode] = useState(initialDemoMode);
+  const [demoMode, setDemoMode] = useState(
+    process.env.NODE_ENV === "development" && initialDemoMode
+  );
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "png" | "md" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportMountActive, setExportMountActive] = useState(false);
   const [markdownSupport, setMarkdownSupport] = useState<MarkdownSupportState>(
     reportId ? "unknown" : "unavailable"
   );
@@ -129,18 +131,33 @@ export function ReportTabs({
     };
   }, [reportId]);
 
+  const waitForExportMount = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+
   const renderExportCanvas = async () => {
+    setExportMountActive(true);
+    await waitForExportMount();
     if (!exportRef.current) {
+      setExportMountActive(false);
       throw new Error("Report snapshot is not ready yet.");
     }
     // Mermaid graphs render asynchronously; brief wait improves capture consistency.
     await new Promise((resolve) => setTimeout(resolve, 250));
-    return html2canvas(exportRef.current, {
-      backgroundColor: "#ffffff",
-      scale: 2,
-      useCORS: true,
-      windowWidth: 1200,
-    });
+    const { default: html2canvas } = await import("html2canvas");
+    try {
+      return await html2canvas(exportRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        windowWidth: 1200,
+      });
+    } finally {
+      setExportMountActive(false);
+    }
   };
 
   const downloadBlob = (blob: Blob, filename: string) => {
@@ -181,6 +198,7 @@ export function ReportTabs({
       setExporting("pdf");
       const canvas = await renderExportCanvas();
       const imageData = canvas.toDataURL("image/png");
+      const { default: jsPDF } = await import("jspdf");
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -287,7 +305,9 @@ export function ReportTabs({
         <p id={`${tabsId}-export-summary`} className="report-toolbar-copy">
           {variant === "preview"
             ? "Read-only sample. PDF and PNG are available here; analyze a repository to export Markdown."
-            : "Generated report ready for PDF, PNG, and Markdown export."}
+            : variant === "shared"
+              ? "Shared read-only Candidate Brief. PDF and PNG export are available; Markdown requires the original analysis session."
+              : "Generated report ready for PDF, PNG, and Markdown export."}
         </p>
         <div className="report-toolbar-actions">
           <button
@@ -422,6 +442,12 @@ export function ReportTabs({
                 )}
               </div>
             )}
+            {report.document_inventory && (
+              <div className="mt-6">
+                <h3 className="mb-3 text-lg font-semibold text-slate-900">Documentation inventory</h3>
+                <DocumentsPanel inventory={report.document_inventory} />
+              </div>
+            )}
             <div className="mt-6">
               <h3 className="mb-3 text-lg font-semibold text-slate-900">Deep analysis</h3>
               <DeepAnalysisSection
@@ -510,25 +536,29 @@ export function ReportTabs({
         </p>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={demoMode}
-            onChange={(e) => setDemoMode(e.target.checked)}
-            className="rounded border-slate-300 accent-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
-          />
-          Screenshot / demo mode
-        </label>
-      </div>
-
-      <div className="pointer-events-none fixed -left-[10000px] top-0 w-[1100px] bg-white p-8 text-slate-900">
-        <div ref={exportRef}>
-          <h1 className="mb-2 text-3xl font-bold">Repo Analysis: {report.repo_metadata.name}</h1>
-          <p className="mb-6 text-sm text-slate-600">{repoSourceLabel(report.repo_metadata.url)}</p>
-          <ReportDocument report={report} />
+      {process.env.NODE_ENV === "development" && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={demoMode}
+              onChange={(e) => setDemoMode(e.target.checked)}
+              className="rounded border-slate-300 accent-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            />
+            Screenshot / demo mode
+          </label>
         </div>
-      </div>
+      )}
+
+      {exportMountActive && (
+        <div className="pointer-events-none fixed -left-[10000px] top-0 w-[1100px] bg-white p-8 text-slate-900">
+          <div ref={exportRef}>
+            <h1 className="mb-2 text-3xl font-bold">Repo Analysis: {report.repo_metadata.name}</h1>
+            <p className="mb-6 text-sm text-slate-600">{repoSourceLabel(report.repo_metadata.url)}</p>
+            <ReportDocument report={report} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

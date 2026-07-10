@@ -59,16 +59,28 @@ export function detectProjectProfile(
       signals.push("pyproject.toml");
       confidence = "medium";
     }
-  } else if (hasFile(files, /\.java$/) && hasFile(files, /@SpringBootApplication/)) {
-    type = "spring-boot";
-    label = "Spring Boot application";
-    signals.push("Java + Spring Boot signals");
-    confidence = "medium";
-  } else if (hasFile(files, /pom\.xml$/) || hasFile(files, /build\.gradle/)) {
-    type = "java-maven-gradle";
-    label = "Java Maven/Gradle project";
-    signals.push("pom.xml or build.gradle");
-    confidence = "medium";
+  } else if (hasFile(files, /\.java$/)) {
+    for (const file of files) {
+      if (!file.endsWith(".java")) continue;
+      try {
+        const content = fs.readFileSync(path.join(workspacePath, file), "utf-8");
+        if (/@SpringBootApplication/.test(content)) {
+          type = "spring-boot";
+          label = "Spring Boot application";
+          signals.push(`${file} (@SpringBootApplication)`);
+          confidence = "high";
+          break;
+        }
+      } catch {
+        /* skip unreadable */
+      }
+    }
+    if (type === "unknown" && (hasFile(files, /pom\.xml$/) || hasFile(files, /build\.gradle/))) {
+      type = "java-maven-gradle";
+      label = "Java Maven/Gradle project";
+      signals.push("pom.xml or build.gradle");
+      confidence = "medium";
+    }
   } else if (deps?.express || deps?.fastify || hasFile(files, /routes?\//)) {
     type = "node-api";
     label = "Node API";

@@ -7,6 +7,8 @@ import path from "path";
 import type { Report } from "@/types/report";
 import { put, get, list, del } from "@vercel/blob";
 import { getReportMaxCount, getReportTtlMs } from "@/lib/reportTtl";
+import { parseAndValidateReport } from "@/lib/reportSchema";
+import { deleteSharesForReport } from "@/lib/sharing";
 
 const REPORTS_BLOB_PREFIX = "reports/";
 const UUID_FILE_RE =
@@ -71,7 +73,9 @@ export async function saveReport(reportId: string, report: Report): Promise<void
 
   ensureReportsDir();
   const filePath = path.join(getReportsDir(), `${reportId}.json`);
-  await fs.promises.writeFile(filePath, body, "utf-8");
+  const tmpPath = `${filePath}.${process.pid}.tmp`;
+  await fs.promises.writeFile(tmpPath, body, { encoding: "utf-8", mode: 0o600 });
+  await fs.promises.rename(tmpPath, filePath);
 }
 
 export async function getReport(reportId: string): Promise<Report | null> {
@@ -102,17 +106,17 @@ export async function getReport(reportId: string): Promise<Report | null> {
       offset += chunk.length;
     }
     const text = new TextDecoder().decode(buffer);
-    try {
-      return JSON.parse(text) as Report;
-    } catch {
-      return null;
-    }
+    const validated = parseAndValidateReport(text);
+    if (!validated.ok) return null;
+    return validated.report;
   }
 
   const filePath = path.join(getReportsDir(), `${reportId}.json`);
   try {
     const data = await fs.promises.readFile(filePath, "utf-8");
-    return JSON.parse(data) as Report;
+    const validated = parseAndValidateReport(data);
+    if (!validated.ok) return null;
+    return validated.report;
   } catch {
     return null;
   }
@@ -127,6 +131,7 @@ export async function deleteReport(reportId: string): Promise<boolean> {
       await del(`${REPORTS_BLOB_PREFIX}${reportId}.json`, {
         ...(token && { token }),
       });
+      await deleteSharesForReport(reportId);
       return true;
     } catch {
       return false;
@@ -136,6 +141,7 @@ export async function deleteReport(reportId: string): Promise<boolean> {
   const filePath = path.join(getReportsDir(), `${reportId}.json`);
   try {
     await fs.promises.unlink(filePath);
+    await deleteSharesForReport(reportId);
     return true;
   } catch {
     return false;

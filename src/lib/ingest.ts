@@ -32,6 +32,7 @@ import {
   DOWNLOAD_TIMEOUT_MS,
   GITHUB_API_TIMEOUT_MS,
   MAX_COMPRESSED_BYTES,
+  maxCompressedBytesForZipUpload,
 } from "@/lib/ingestLimits";
 
 // Legacy permissive parser retained for internal owner/repo extraction
@@ -99,12 +100,15 @@ export function normalizeIngestInput(input: LooseIngestInput): IngestInput {
   });
 }
 
-export async function ingestRepo(input: LooseIngestInput): Promise<IngestResult> {
+export async function ingestRepo(
+  input: LooseIngestInput,
+  opts?: { signal?: AbortSignal }
+): Promise<IngestResult> {
   const normalized = normalizeIngestInput(input);
   if (normalized.kind === "github") {
-    return ingestFromGithub(normalized.githubUrl, normalized.ref);
+    return ingestFromGithub(normalized.githubUrl, normalized.ref, opts?.signal);
   }
-  return ingestFromZip(normalized.zipRef, normalized.zipName);
+  return ingestFromZip(normalized.zipRef, normalized.zipName, opts?.signal);
 }
 
 function isAbortOrTimeout(msg: string): boolean {
@@ -261,9 +265,17 @@ function writeChunk(stream: fs.WriteStream, chunk: Uint8Array): Promise<void> {
  * hosts and enforces the compressed-byte cap while streaming (never buffers the
  * whole archive in memory).
  */
-async function downloadArchiveToFile(url: string, destFile: string): Promise<void> {
+async function downloadArchiveToFile(
+  url: string,
+  destFile: string,
+  parentSignal?: AbortSignal
+): Promise<void> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
+  if (parentSignal) {
+    if (parentSignal.aborted) controller.abort();
+    else parentSignal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
   try {
     let res: Response;
     try {
@@ -372,7 +384,11 @@ async function rmDir(dir: string): Promise<void> {
   }
 }
 
-async function ingestFromGithub(githubUrl: string, ref?: string): Promise<IngestResult> {
+async function ingestFromGithub(
+  githubUrl: string,
+  ref?: string,
+  signal?: AbortSignal
+): Promise<IngestResult> {
   const parsed = parseGithubRepoUrl(githubUrl);
   if (!parsed) {
     throw new AppError({
@@ -389,6 +405,8 @@ async function ingestFromGithub(githubUrl: string, ref?: string): Promise<Ingest
       message: "The provided branch or tag name is invalid.",
     });
   }
+
+  if (signal?.aborted) throw new Error("Analysis aborted");
 
   const { owner, repo } = parsed;
   const name = `${owner}/${repo}`;
@@ -408,7 +426,7 @@ async function ingestFromGithub(githubUrl: string, ref?: string): Promise<Ingest
 
   try {
     const archiveUrl = `https://codeload.github.com/${owner}/${repo}/zip/${sha}`;
-    await downloadArchiveToFile(archiveUrl, archivePath);
+    await downloadArchiveToFile(archiveUrl, archivePath, signal);
   } catch (err) {
     await rmDir(tempDir);
     throw err;
@@ -453,7 +471,12 @@ function getUploadedRepoName(zipPath: string, zipName?: string): string {
   return path.basename(candidate, path.extname(candidate)) || "uploaded-repo";
 }
 
-async function ingestFromZip(zipRef: string, zipName?: string): Promise<IngestResult> {
+async function ingestFromZip(
+  zipRef: string,
+  zipName?: string,
+  signal?: AbortSignal
+): Promise<IngestResult> {
+  if (signal?.aborted) throw new Error("Analysis aborted");
   const fullPath = path.resolve(zipRef);
   if (!fs.existsSync(fullPath)) {
     throw new AppError({
@@ -480,7 +503,8 @@ async function ingestFromZip(zipRef: string, zipName?: string): Promise<IngestRe
   }
 
   const size = stat.size;
-  if (size > MAX_COMPRESSED_BYTES) {
+  const zipCap = maxCompressedBytesForZipUpload();
+  if (size > zipCap) {
     throw new AppError({
       code: ERROR_CODES.REPO_TOO_LARGE,
       status: 413,

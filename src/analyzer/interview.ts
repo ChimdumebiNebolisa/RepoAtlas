@@ -500,17 +500,6 @@ function buildFirstPrPlan(
     });
   }
 
-  while (ideas.length < 3) {
-    pushUniqueIdea(ideas, {
-      title: "Create a short repository orientation note",
-      rationale:
-        "The report has enough structure to produce a concise onboarding note that links the ranked reading path, commands, and risk areas without changing runtime behavior.",
-      suggested_files: input.startHere.slice(0, 2).map((item) => item.path),
-      evidence_refs: [...refValues(evidence.startHereRefs, 2), evidence.architectureRef],
-      risk: "low",
-    });
-  }
-
   return ideas.slice(0, 3).map((idea) => ({
     ...idea,
     evidence_refs: idea.evidence_refs.length > 0 ? idea.evidence_refs : [firstAvailableRef(evidence)],
@@ -689,8 +678,8 @@ function buildBehavioralHooks(
 
   if (input.dangerZones[0] && (input.testInventory?.test_file_count ?? 0) > 0) {
     hooks.push({
-      prompt: "Challenge I solved",
-      answer_starter: `I would discuss how the team manages complexity in ${input.dangerZones[0].path} while maintaining tests nearby.`,
+      prompt: "Challenge (STAR template)",
+      answer_starter: `Discuss how complexity in \`${input.dangerZones[0].path}\` is managed while tests exist nearby.`,
       evidence_refs: [
         evidence.dangerZoneRefs.get(input.dangerZones[0].path) ?? evidence.architectureRef,
       ],
@@ -698,24 +687,27 @@ function buildBehavioralHooks(
     });
   } else {
     hooks.push({
-      prompt: "Challenge I solved",
-      answer_starter: "Not enough evidence",
+      prompt: "Challenge (STAR template)",
+      answer_starter: "Not enough evidence — use a different example or skip this prompt.",
       evidence_refs: [],
       sufficient_evidence: false,
     });
   }
 
-  if ((input.technicalDecisions ?? []).length >= 2) {
+  const decisions = input.technicalDecisions ?? [];
+  if (decisions.length >= 2) {
+    const decisionRefs = decisions.flatMap((d) => d.evidence_refs).slice(0, 4);
     hooks.push({
-      prompt: "Tradeoff I made",
-      answer_starter: `Technical choices include ${input.technicalDecisions!.map((d) => d.decision).join(" and ")} — I would explain why those fit the repo signals.`,
-      evidence_refs: [],
+      prompt: "Tradeoff (STAR template)",
+      answer_starter: `Discuss technical choices such as ${decisions.map((d) => d.decision).join(" and ")} and why they fit the observed repo signals.`,
+      evidence_refs:
+        decisionRefs.length > 0 ? decisionRefs : [evidence.architectureRef],
       sufficient_evidence: true,
     });
   } else {
     hooks.push({
-      prompt: "Tradeoff I made",
-      answer_starter: "Not enough evidence",
+      prompt: "Tradeoff (STAR template)",
+      answer_starter: "Not enough evidence — use a different example or skip this prompt.",
       evidence_refs: [],
       sufficient_evidence: false,
     });
@@ -723,8 +715,8 @@ function buildBehavioralHooks(
 
   if (input.warnings.length > 0) {
     hooks.push({
-      prompt: "What I learned",
-      answer_starter: `Static analysis surfaced gaps: ${input.warnings[0]}`,
+      prompt: "Learning takeaway (STAR template)",
+      answer_starter: `Note where static analysis had limited coverage: ${input.warnings[0]}`,
       evidence_refs: evidence.warningRefs.slice(0, 1),
       sufficient_evidence: true,
     });
@@ -732,8 +724,8 @@ function buildBehavioralHooks(
 
   if (input.runCommands.length > 0) {
     hooks.push({
-      prompt: "How I debugged/validated it",
-      answer_starter: `I would validate using ${input.runCommands[0].command} and cross-check docs.`,
+      prompt: "Validation approach (STAR template)",
+      answer_starter: `Describe validating changes with \`${input.runCommands[0].command}\` and cross-checking nearby docs.`,
       evidence_refs: refValues(evidence.commandRefs, 1),
       sufficient_evidence: true,
     });
@@ -756,8 +748,10 @@ export function buildCandidateBrief(input: BuildCandidateBriefInput): CandidateB
   const interview_questions = generateInterviewQuestions({
     projectProfile: input.projectProfile,
     dangerZones: input.dangerZones,
+    dangerZoneEvidenceRefs: Object.fromEntries(evidence.dangerZoneRefs),
     testInventory: input.testInventory,
     architectureInsights: input.architectureInsights,
+    architectureEvidenceRef: evidence.architectureRef,
   });
 
   return {

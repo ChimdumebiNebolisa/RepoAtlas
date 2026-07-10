@@ -1,6 +1,6 @@
 # RepoAtlas
 
-**Deterministic, no-AI repository analysis** — upload a repo zip and get an evidence-backed **Candidate Brief** for interviews, take-homes, onboarding, and open-source contribution prep.
+**Deterministic, no-AI repository analysis** — upload a repo zip or paste a **public GitHub URL** and get an evidence-backed **Candidate Brief** for interviews, take-homes, onboarding, and open-source contribution prep.
 
 RepoAtlas reads repository files as text only (never executes them) and produces:
 
@@ -14,7 +14,12 @@ RepoAtlas reads repository files as text only (never executes them) and produces
 
 Deep analysis is currently implemented for TypeScript/JavaScript, Python, and Java repositories.
 
-The primary workflow is zip upload through the web UI. RepoAtlas extracts the archive, analyzes the repository, stores the report, and returns a report ID that the UI can load or export.
+Two input modes are supported through the web UI:
+
+- **Upload ZIP** — best for local snapshots; up to **100 MB** compressed locally, **4 MB** on Vercel (platform body limit). Use GitHub URL mode for larger public repos when deployed.
+- **Public GitHub URL** — canonical `https://github.com/owner/repo` with optional branch/tag ref; server streams the public archive (up to 100 MB compressed).
+
+RepoAtlas extracts or downloads the archive, analyzes the repository, stores the report, and returns a report ID (read-only capability) that the UI can load or export.
 
 ---
 
@@ -44,7 +49,7 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
 
 ## Features
 
-- Single-input workflow: upload a zip (or try the sample Candidate Brief) and generate a report
+- Dual input: upload a zip **or** paste a public GitHub URL (or try the sample Candidate Brief)
 - Deterministic scoring: Start Here and Danger Zones are derived from measurable repo signals — no LLM calls
 - Multi-language packs: TS/JS, Python, and Java packs provide deeper static analysis
 - Interactive visualization: pan and zoom dependency view with ELK layout
@@ -55,15 +60,15 @@ The primary workflow is zip upload through the web UI. RepoAtlas extracts the ar
 - Read-only sharing: `/share/:token` (7-day opt-in links; report JSON only — never your uploaded zip)
 - Legacy direct view: `/report/:id` (prefer token sharing for recipients)
 
-See [docs/roadmap.md](docs/roadmap.md) for the full improvement plan.
+See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANGELOG.md) for shipped changes.
 
 ---
 
 ## How It Works
 
-1. A user uploads a zip file from the web UI.
-2. `POST /api/analyze` receives the file, saves it to a temp path, and starts analysis.
-3. Repo ingest extracts the zip to a temporary workspace.
+1. A user chooses **Upload ZIP** or **Public GitHub URL** in the web UI.
+2. `POST /api/analyze` receives a multipart zip, JSON `{ githubUrl, ref? }`, or `{ sample: true }`.
+3. Repo ingest extracts the upload or downloads the public GitHub archive to a temporary workspace.
 4. The indexing pipeline collects:
    - folder tree
    - file metadata and language hints
@@ -100,7 +105,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the full improvement plan.
 
 ## Tech Stack
 
-- Application framework: Next.js 14, React 18, TypeScript 5
+- Application framework: Next.js 15, React 19, TypeScript 5
 - Styling: Tailwind CSS, PostCSS, Autoprefixer
 - Graph and layout: `elkjs`, `react-zoom-pan-pinch`
 - Export: `html2canvas`, `jspdf`, Markdown formatter
@@ -111,7 +116,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the full improvement plan.
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 20+ (`package.json` `engines`)
 - npm 9+
 - Windows, macOS, or Linux with local filesystem and temp directory access
 
@@ -124,7 +129,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`, upload a zip of your repository, and click `Analyze Repository`.
+Open `http://localhost:3000`, upload a zip or paste a public GitHub URL, and click **Analyze Repository**.
 
 ---
 
@@ -163,7 +168,8 @@ You can also click **Try sample Candidate Brief** on the homepage to analyze `fi
 ### Web UI
 
 - Open the homepage
-- Upload a zip of your repository, for example from GitHub: `Code -> Download ZIP`
+- **Upload ZIP:** download from GitHub (`Code → Download ZIP`) or zip your tree locally
+- **GitHub URL:** paste `https://github.com/owner/repo` (public repos only; optional ref field for branch/tag)
 - View generated tabs:
   - **Candidate Brief** (default)
   - Overview
@@ -319,17 +325,17 @@ Common statuses:
 
 ### `GET /api/cron/cleanup`
 
-Returns report inventory metadata (`reportCount`, `ttlDays`, `maxReports`).
+Health check when `CRON_SECRET` is set (or in non-production). Returns instructions to POST for sweep.
 
 ### `POST /api/cron/cleanup`
 
-Runs TTL sweeps for expired reports (filesystem) and share tokens. When `CRON_SECRET` is set, send `Authorization: Bearer <CRON_SECRET>`.
+Runs TTL sweeps for expired reports (filesystem and Blob) and share tokens. In production, **fails closed** (`503 MISCONFIGURED`) when `CRON_SECRET` is unset. When set, requires `Authorization: Bearer <CRON_SECRET>`.
 
 ---
 
 ## Configuration
 
-See [`.env.example`](.env.example) for the full list. Highlights:
+See [`.env.example`](.env.example) for the full list and [SECURITY.md](SECURITY.md) for the security model. Highlights:
 
 - Vercel production: set `BLOB_READ_WRITE_TOKEN`
 - Local development: `REPORTS_DIR` is optional when not using Blob storage and defaults to `<project-root>/reports`
@@ -431,12 +437,16 @@ These are used for local regression checks and analyzer test coverage.
 
 ## Limits and Behavior
 
-Current enforced or expected limits:
+Centralized in `src/lib/ingestLimits.ts` (see [docs/adr/002-zip-limits.md](docs/adr/002-zip-limits.md)):
 
-- Analysis timeout: 120 seconds
-- Repository size guard: approximately 100 MB
-- File indexing cap: 10,000 files
-- Directory map depth cap: 10
+| Limit | Local dev | Vercel deploy |
+|-------|-----------|---------------|
+| ZIP upload (compressed) | 100 MB | **4 MB** — use GitHub URL for larger public repos |
+| GitHub archive download | 100 MB | 100 MB |
+| Uncompressed extract total | 50 MB | 50 MB |
+| Analysis timeout | 120 s | 120 s |
+| Indexed files | 10,000 | 10,000 |
+| Folder map depth | 10 | 10 |
 
 When analysis cannot perform a deep language pass, warnings are added to the report output.
 
@@ -444,11 +454,15 @@ When analysis cannot perform a deep language pass, warnings are added to the rep
 
 ## Security Notes
 
-- RepoAtlas performs static file analysis only
-- It does not execute target repository code
-- Zip extraction is hardened: magic-byte validation, path traversal rejection, entry count and uncompressed size limits
-- Temporary workspaces are cleaned up after analysis
-- Input and known failure modes are mapped to typed API errors (`ZIP_INVALID`, `REPO_TOO_LARGE`, etc.)
+See [SECURITY.md](SECURITY.md) for the full policy. Summary:
+
+- Static file analysis only — never executes target repository code
+- **Capability-link model:** report UUIDs are read-only; no public `DELETE` (retention via server-side TTL sweep)
+- **No caller-controlled paths:** JSON `zipRef` is rejected on `POST /api/analyze`
+- **Public GitHub only:** no server-owned `GITHUB_TOKEN` on user-supplied repo requests
+- Hardened zip extraction: magic-byte validation, path traversal rejection, entry count and uncompressed size limits
+- Report/share/export responses use `Cache-Control: no-store`
+- Typed API errors (`ZIP_INVALID`, `REPO_TOO_LARGE`, etc.)
 
 ## No AI Required
 

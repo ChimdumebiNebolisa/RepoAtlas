@@ -73,7 +73,8 @@ describe("buildCandidateBrief", () => {
     expect(brief.interview_talking_points.riskiest_areas).toBeDefined();
     expect(brief.interview_talking_points.improve_first).toBeDefined();
     expect(brief.interview_talking_points.first_week_contribution).toBeDefined();
-    expect(brief.first_pr_plan).toHaveLength(3);
+    expect(brief.first_pr_plan.length).toBeGreaterThan(0);
+    expect(brief.first_pr_plan.length).toBeLessThanOrEqual(3);
     expect(brief.resume_bullets.length).toBeGreaterThan(0);
     expect(brief.evidence_refs.length).toBeGreaterThan(0);
     expect(brief.warnings.length).toBeGreaterThan(0);
@@ -134,7 +135,8 @@ describe("buildCandidateBrief", () => {
 
     expect(brief.repo_summary.confidence).toBe("low");
     expect(brief.reading_path).toEqual([]);
-    expect(brief.first_pr_plan).toHaveLength(3);
+    expect(brief.first_pr_plan.length).toBeGreaterThan(0);
+    expect(brief.first_pr_plan.length).toBeLessThanOrEqual(3);
     expect(brief.first_pr_plan.every((idea) => idea.evidence_refs.length > 0)).toBe(true);
     expect(brief.interview_talking_points.riskiest_areas.confidence).toBe("low");
     expect(brief.warnings.some((warning) => warning.message.includes("No danger-zone"))).toBe(true);

@@ -6,7 +6,6 @@ const { sweepExpiredReportsMock, sweepExpiredShareTokensMock } = vi.hoisted(() =
 }));
 
 vi.mock("@/lib/storage", () => ({
-  listReportIds: vi.fn().mockResolvedValue(["a", "b"]),
   sweepExpiredReports: sweepExpiredReportsMock,
 }));
 
@@ -21,18 +20,23 @@ describe("cron cleanup route", () => {
     sweepExpiredReportsMock.mockReset();
     sweepExpiredShareTokensMock.mockReset();
     delete process.env.CRON_SECRET;
+    delete process.env.VERCEL;
   });
 
-  it("GET returns report inventory metadata", async () => {
-    const response = await GET();
+  it("GET returns ok health when not in production", async () => {
+    const response = await GET(new Request("http://localhost/api/cron/cleanup"));
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.reportCount).toBe(2);
-    expect(body.ttlDays).toBeGreaterThan(0);
-    expect(body.maxReports).toBeGreaterThan(0);
+    expect(body.ok).toBe(true);
   });
 
-  it("POST runs sweeps without auth when CRON_SECRET is unset", async () => {
+  it("GET fails closed in production without CRON_SECRET", async () => {
+    process.env.VERCEL = "1";
+    const response = await GET(new Request("http://localhost/api/cron/cleanup"));
+    expect(response.status).toBe(503);
+  });
+
+  it("POST runs sweeps without auth when CRON_SECRET is unset (non-production)", async () => {
     sweepExpiredReportsMock.mockResolvedValue({
       deleted: ["old-id"],
       retained: 1,
@@ -47,6 +51,13 @@ describe("cron cleanup route", () => {
     expect(body.reports.deleted).toEqual(["old-id"]);
     expect(body.shares.deleted).toEqual(["tok"]);
     expect(body.scannedAt).toBeTruthy();
+  });
+
+  it("POST fails closed in production without CRON_SECRET", async () => {
+    process.env.VERCEL = "1";
+    const response = await POST(new Request("http://localhost/api/cron/cleanup", { method: "POST" }));
+    expect(response.status).toBe(503);
+    expect(sweepExpiredReportsMock).not.toHaveBeenCalled();
   });
 
   it("POST rejects invalid cron secret", async () => {

@@ -18,7 +18,7 @@ RepoAtlas produces deterministic, evidence-backed Candidate Briefs **without AI*
 
 repo-atlas appears to be a Next.js application
 
-Evidence-backed Candidate Briefs for interviews and onboarding (extracted from README.md). RepoAtlas also found 3 reading candidates, 2 risk-ranked files, and 3 run commands.
+Evidence-backed Candidate Briefs for interviews and onboarding \(extracted from README.md\). RepoAtlas also found 3 reading candidates, 2 risk-ranked files, and 3 run commands.
 
 - **Confidence**: high
 - **Primary evidence**: `start-1`, `risk-1`, `arch-1`, `cmd-1`, `doc-1`
@@ -38,9 +38,9 @@ Evidence-backed Candidate Briefs for interviews and onboarding (extracted from R
 Walk through the repository from the ranked reading path, then connect that path to run commands, docs, and the architecture graph. Keep the explanation tied to detected files and commands.
 
 - **Confidence**: high
-- Start with `README.md`, `src/app/page.tsx`, `src/app/api/analyze/route.ts` because those files were ranked by deterministic reading signals.
-- Use `npm run dev`, `npm run build` to understand the available run workflow.
-- Reference `README.md`, `docs/guardrails.md` for onboarding or contribution context.
+- Start with \`README.md\`, \`src/app/page.tsx\`, \`src/app/api/analyze/route.ts\` because those files were ranked by deterministic reading signals.
+- Use \`npm run dev\`, \`npm run build\` to understand the available run workflow.
+- Reference \`README.md\`, \`docs/guardrails.md\` for onboarding or contribution context.
 - Describe the architecture as 6 graph nodes and 5 graph edges from supported import/dependency analysis.
 - **Evidence**: `start-1`, `start-2`, `start-3`, `cmd-1`, `cmd-2`, `doc-1`, `doc-2`, `arch-1`
 
@@ -68,9 +68,9 @@ Improve the repository through small, evidence-backed changes: clarify how to ru
 In the first week, use the reading path to build context, validate the run workflow, inspect the highest-risk files, and propose one small documentation, test, or validation PR.
 
 - **Confidence**: high
-- Day 1: read `README.md` and the next ranked files.
-- Validate the detected command path: `npm run dev`, `npm run build`.
-- Review the top risk-ranked file: `src/analyzer/scoring.ts`.
+- Day 1: read \`README.md\` and the next ranked files.
+- Validate the detected command path: \`npm run dev\`, \`npm run build\`.
+- Review the top risk-ranked file: \`src/analyzer/scoring.ts\`.
 - Open with a scoped PR idea: Verify and document the detected run commands.
 - **Evidence**: `start-1`, `start-2`, `cmd-1`, `cmd-2`, `risk-1`, `cmd-1`, `cmd-2`, `cmd-3`, `doc-1`, `doc-2`
 
@@ -92,11 +92,11 @@ _No Candidate Brief warnings._
 ### Evidence References
 
 - `arch-1` - architecture: Architecture graph summary; 6 nodes and 5 edges detected from supported import/dependency analysis.
-- `start-1` - start_here: Reading candidate: README.md; path=README.md; Priority 95: Project scope, setup, and quick start for onboarding.
-- `start-2` - start_here: Reading candidate: src/app/page.tsx; path=src/app/page.tsx; Priority 90: Main app shell, UX, and report wiring.
-- `start-3` - start_here: Reading candidate: src/app/api/analyze/route.ts; path=src/app/api/analyze/route.ts; Priority 86: Entry point for analysis and report generation.
-- `risk-1` - danger_zone: Risk candidate: src/analyzer/scoring.ts; path=src/analyzer/scoring.ts; Risk 82: Dense logic with multiple weighted heuristics and branching.
-- `risk-2` - danger_zone: Risk candidate: src/analyzer/packs/tsjs.ts; path=src/analyzer/packs/tsjs.ts; Risk 76: High fan-out and parser-like control flow patterns.
+- `start-1` - start\_here: Reading candidate: README.md; path=README.md; Priority 95: Project scope, setup, and quick start for onboarding.
+- `start-2` - start\_here: Reading candidate: src/app/page.tsx; path=src/app/page.tsx; Priority 90: Main app shell, UX, and report wiring.
+- `start-3` - start\_here: Reading candidate: src/app/api/analyze/route.ts; path=src/app/api/analyze/route.ts; Priority 86: Entry point for analysis and report generation.
+- `risk-1` - danger\_zone: Risk candidate: src/analyzer/scoring.ts; path=src/analyzer/scoring.ts; Risk 82: Dense logic with multiple weighted heuristics and branching.
+- `risk-2` - danger\_zone: Risk candidate: src/analyzer/packs/tsjs.ts; path=src/analyzer/packs/tsjs.ts; Risk 76: High fan-out and parser-like control flow patterns.
 - `cmd-1` - command: Run command: npm run dev; command=npm run dev; Source: package.json; Start dev server
 - `cmd-2` - command: Run command: npm run build; command=npm run build; Source: package.json; Build for production
 - `cmd-3` - command: Run command: npm run test; command=npm run test; Source: package.json; Run test suite

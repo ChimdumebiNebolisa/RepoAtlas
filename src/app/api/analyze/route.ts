@@ -9,7 +9,7 @@ import {
   toApiErrorPayload,
   toAppError,
 } from "@/lib/errors";
-import { MAX_ANALYSIS_TIME_MS, MAX_COMPRESSED_BYTES } from "@/lib/ingestLimits";
+import { MAX_ANALYSIS_TIME_MS, maxCompressedBytesForZipUpload, maxZipUploadMb } from "@/lib/ingestLimits";
 import {
   clientKeyFromHeaders,
   getMaxConcurrentAnalyses,
@@ -45,8 +45,8 @@ function logAnalyzeError(requestId: string, err: unknown): void {
   console.error(JSON.stringify({ level: "error", ...payload }));
 }
 
-function badRequest(code: string, message: string, status = 400) {
-  return NextResponse.json({ code, message }, { status });
+function badRequest(code: string, message: string, status = 400, requestId?: string) {
+  return NextResponse.json({ code, message, ...(requestId ? { requestId } : {}) }, { status });
 }
 
 export async function POST(request: NextRequest) {
@@ -77,10 +77,22 @@ export async function POST(request: NextRequest) {
       {
         code: ERROR_CODES.RATE_LIMIT_EXCEEDED,
         message: `Server is busy (max ${getMaxConcurrentAnalyses()} concurrent analyses). Please retry shortly.`,
+        requestId,
       },
       { status: 429, headers: { "Retry-After": "10" } }
     );
   }
+
+  const deadlineController = new AbortController();
+  const deadlineTimer = setTimeout(() => deadlineController.abort(), MAX_ANALYSIS_TIME_MS);
+  const abortSignal = (() => {
+    if (request.signal.aborted) {
+      deadlineController.abort();
+      return deadlineController.signal;
+    }
+    request.signal.addEventListener("abort", () => deadlineController.abort(), { once: true });
+    return deadlineController.signal;
+  })();
 
   try {
     const contentType = request.headers.get("content-type") ?? "";
@@ -94,11 +106,12 @@ export async function POST(request: NextRequest) {
       }
       const blob = file as Blob;
       const zipName = "name" in file && typeof file.name === "string" ? file.name : undefined;
-      if (blob.size > MAX_COMPRESSED_BYTES) {
+      if (blob.size > maxCompressedBytesForZipUpload()) {
         return badRequest(
           ERROR_CODES.REPO_TOO_LARGE,
-          "Repository exceeds the 100MB limit. Try a smaller zip.",
-          413
+          `Repository exceeds the ${maxZipUploadMb()}MB zip upload limit. For larger public repositories, use a GitHub URL instead.`,
+          413,
+          requestId
         );
       }
       const buffer = Buffer.from(await blob.arrayBuffer());
@@ -148,11 +161,12 @@ export async function POST(request: NextRequest) {
 
     const report = await analyzeRepository(analyzeInput, {
       deadlineMs: MAX_ANALYSIS_TIME_MS,
+      signal: abortSignal,
     });
 
     if (!report.reportId) {
       return NextResponse.json(
-        { code: ERROR_CODES.ANALYSIS_FAILED, message: "No report produced" },
+        { code: ERROR_CODES.ANALYSIS_FAILED, message: "No report produced", requestId },
         { status: 500 }
       );
     }
@@ -161,8 +175,9 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     logAnalyzeError(requestId, err);
     const { status, code, message } = toApiErrorPayload(err);
-    return NextResponse.json({ code, message }, { status });
+    return NextResponse.json({ code, message, requestId }, { status });
   } finally {
+    clearTimeout(deadlineTimer);
     slot.release();
     if (tempZipPath) {
       try {

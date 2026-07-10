@@ -9,8 +9,10 @@ import type {
 export interface QuestionGeneratorInput {
   projectProfile?: ProjectProfile;
   dangerZones: DangerZoneItem[];
+  dangerZoneEvidenceRefs?: Record<string, string>;
   testInventory?: TestInventory;
   architectureInsights?: ArchitectureInsights;
+  architectureEvidenceRef?: string;
 }
 
 export function generateInterviewQuestions(
@@ -28,10 +30,11 @@ export function generateInterviewQuestions(
 
   if (input.dangerZones[0]) {
     const dz = input.dangerZones[0];
+    const dzRef = input.dangerZoneEvidenceRefs?.[dz.path];
     questions.push({
       question: `What makes \`${dz.path}\` a danger zone in this codebase?`,
       rationale: "Top risk-ranked file with measurable breakdown.",
-      evidence_refs: [],
+      evidence_refs: dzRef ? [dzRef] : [],
     });
   }
 
@@ -48,6 +51,7 @@ export function generateInterviewQuestions(
     question: "What are the limits of static analysis for this repository?",
     rationale: "Warnings and missing git history bound confidence.",
     evidence_refs: [],
+    generic: true,
   });
 
   if (input.architectureInsights?.violations[0]) {
@@ -55,7 +59,7 @@ export function generateInterviewQuestions(
     questions.push({
       question: `Why might importing from \`${v.to}\` into \`${v.from}\` be worth discussing?`,
       rationale: v.reason,
-      evidence_refs: [],
+      evidence_refs: input.architectureEvidenceRef ? [input.architectureEvidenceRef] : [],
     });
   }
 

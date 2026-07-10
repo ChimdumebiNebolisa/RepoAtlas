@@ -50,7 +50,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     const reportId = analyzePayload.reportId as string;
 
     const reportResponse = await reportRoute.GET(new Request("http://localhost") as never, {
-      params: { id: reportId },
+      params: Promise.resolve({ id: reportId }),
     });
     expect(reportResponse.status).toBe(200);
 
@@ -65,7 +65,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(report.contribute_signals).toBeDefined();
 
     const exportResponse = await exportRoute.GET(new Request("http://localhost") as never, {
-      params: { id: reportId },
+      params: Promise.resolve({ id: reportId }),
     });
     expect(exportResponse.status).toBe(200);
     expect(exportResponse.headers.get("content-type")).toContain("text/markdown");
@@ -103,7 +103,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(analyzePayload.reportId).toBeTruthy();
 
     const reportResponse = await reportRoute.GET(new Request("http://localhost") as never, {
-      params: { id: analyzePayload.reportId as string },
+      params: Promise.resolve({ id: analyzePayload.reportId as string }),
     });
     expect(reportResponse.status).toBe(200);
 
@@ -163,7 +163,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
       expect(payload.reportId).toBeTruthy();
 
       const reportResponse = await reportRoute.GET(new Request("http://localhost") as never, {
-        params: { id: payload.reportId as string },
+        params: Promise.resolve({ id: payload.reportId as string }),
       });
       expect(reportResponse.status).toBe(200);
       const report = await reportResponse.json();
@@ -204,7 +204,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
   it("returns 404 for unknown report ID", async () => {
     const reportRoute = await import("@/app/api/reports/[id]/route");
     const response = await reportRoute.GET(new Request("http://localhost"), {
-      params: { id: "11111111-1111-4111-8111-111111111111" },
+      params: Promise.resolve({ id: "11111111-1111-4111-8111-111111111111" }),
     });
 
     expect(response.status).toBe(404);
@@ -217,7 +217,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
   it("returns 404 markdown export for unknown report ID", async () => {
     const exportRoute = await import("@/app/api/reports/[id]/export/md/route");
     const response = await exportRoute.GET(new Request("http://localhost") as never, {
-      params: { id: "11111111-1111-4111-8111-111111111111" },
+      params: Promise.resolve({ id: "11111111-1111-4111-8111-111111111111" }),
     });
 
     expect(response.status).toBe(404);

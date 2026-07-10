@@ -6,7 +6,7 @@
 import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
-import { get, put } from "@vercel/blob";
+import { del, get, list, put } from "@vercel/blob";
 import { getReport } from "@/lib/storage";
 
 const SHARES_BLOB_PREFIX = "shares/";
@@ -60,7 +60,10 @@ async function saveShareRecord(token: string, record: ShareRecord): Promise<void
   }
 
   ensureSharesDir();
-  await fs.promises.writeFile(path.join(getSharesDir(), `${token}.json`), body, "utf-8");
+  const target = path.join(getSharesDir(), `${token}.json`);
+  const tmp = `${target}.${process.pid}.tmp`;
+  await fs.promises.writeFile(tmp, body, { encoding: "utf-8", mode: 0o600 });
+  await fs.promises.rename(tmp, target);
 }
 
 async function loadShareRecord(token: string): Promise<ShareRecord | null> {
@@ -103,7 +106,17 @@ async function loadShareRecord(token: string): Promise<ShareRecord | null> {
 }
 
 async function deleteShareRecord(token: string): Promise<void> {
+  if (!isValidShareToken(token)) return;
+
   if (shouldUseBlobStorage()) {
+    const blobToken = getBlobToken();
+    try {
+      await del(`${SHARES_BLOB_PREFIX}${token}.json`, {
+        ...(blobToken && { token: blobToken }),
+      });
+    } catch {
+      /* ignore */
+    }
     return;
   }
   try {
@@ -113,12 +126,42 @@ async function deleteShareRecord(token: string): Promise<void> {
   }
 }
 
+async function findActiveShareForReport(reportId: string): Promise<ShareRecord | null> {
+  const tokens = await listShareTokens();
+  const now = new Date();
+  for (const token of tokens) {
+    const record = await loadShareRecord(token);
+    if (!record || record.reportId !== reportId) continue;
+    if (new Date(record.expiresAt) < now) {
+      await deleteShareRecord(token);
+      continue;
+    }
+    return record;
+  }
+  return null;
+}
+
 export async function createShareLink(
   reportId: string
 ): Promise<{ token: string; expiresAt: string; sharePath: string }> {
   const report = await getReport(reportId);
   if (!report) {
     throw new Error("NOT_FOUND");
+  }
+
+  const existing = await findActiveShareForReport(reportId);
+  if (existing) {
+    const tokens = await listShareTokens();
+    for (const token of tokens) {
+      const record = await loadShareRecord(token);
+      if (record?.reportId === reportId && record.expiresAt === existing.expiresAt) {
+        return {
+          token,
+          expiresAt: existing.expiresAt,
+          sharePath: `/share/${token}`,
+        };
+      }
+    }
   }
 
   const token = randomBytes(24).toString("base64url");
@@ -152,7 +195,26 @@ export async function resolveShareToken(token: string): Promise<ShareRecord | nu
 }
 
 export async function listShareTokens(): Promise<string[]> {
-  if (shouldUseBlobStorage()) return [];
+  if (shouldUseBlobStorage()) {
+    const blobToken = getBlobToken();
+    const tokens: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const result = await list({
+        prefix: SHARES_BLOB_PREFIX,
+        ...(cursor && { cursor }),
+        ...(blobToken && { token: blobToken }),
+      });
+      for (const blob of result.blobs) {
+        const name = blob.pathname.slice(SHARES_BLOB_PREFIX.length);
+        if (name.endsWith(".json")) {
+          tokens.push(name.replace(/\.json$/, ""));
+        }
+      }
+      cursor = result.hasMore ? result.cursor : undefined;
+    } while (cursor);
+    return tokens;
+  }
   ensureSharesDir();
   try {
     const files = await fs.promises.readdir(getSharesDir());
@@ -160,6 +222,19 @@ export async function listShareTokens(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/** Remove all share records pointing at a report (e.g. on report deletion). */
+export async function deleteSharesForReport(reportId: string): Promise<string[]> {
+  const deleted: string[] = [];
+  for (const token of await listShareTokens()) {
+    const record = await loadShareRecord(token);
+    if (record?.reportId === reportId) {
+      await deleteShareRecord(token);
+      deleted.push(token);
+    }
+  }
+  return deleted;
 }
 
 export async function sweepExpiredShareTokens(): Promise<{ deleted: string[]; scanned: number }> {

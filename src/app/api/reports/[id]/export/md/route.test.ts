@@ -54,7 +54,7 @@ describe("GET /api/reports/[id]/export/md", () => {
     exportReportToMarkdownMock.mockReturnValue("# Repo Analysis\n");
 
     const response = await GET(new Request("http://localhost") as any, {
-      params: { id: validId },
+      params: Promise.resolve({ id: validId }),
     });
 
     expect(response.status).toBe(200);
@@ -73,7 +73,7 @@ describe("GET /api/reports/[id]/export/md", () => {
     getReportMock.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost") as any, {
-      params: { id: validId },
+      params: Promise.resolve({ id: validId }),
     });
 
     expect(response.status).toBe(404);
@@ -86,7 +86,7 @@ describe("GET /api/reports/[id]/export/md", () => {
 
   it("returns 400 for malformed report id", async () => {
     const response = await GET(new Request("http://localhost") as any, {
-      params: { id: "bad/id" },
+      params: Promise.resolve({ id: "bad/id" }),
     });
 
     expect(response.status).toBe(400);
@@ -101,7 +101,7 @@ describe("GET /api/reports/[id]/export/md", () => {
     getReportMock.mockRejectedValue(new Error("boom"));
 
     const response = await GET(new Request("http://localhost") as any, {
-      params: { id: validId },
+      params: Promise.resolve({ id: validId }),
     });
 
     expect(response.status).toBe(500);

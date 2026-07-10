@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeStartHere, computeDangerZones } from "./scoring";
+import { MAX_DANGER_ZONE_ITEMS } from "@/lib/ingestLimits";
 import type { IndexingPipelineResult } from "./pipeline";
 
 function mockPipeline(overrides?: Partial<IndexingPipelineResult>): IndexingPipelineResult {
@@ -188,5 +189,46 @@ describe("computeDangerZones", () => {
     const result = computeDangerZones(pipeline, mockTsJs);
     expect(result.map((r) => r.path)).toEqual(["src/service.ts"]);
     expect(result.some((r) => r.path === "src/service.test.ts")).toBe(false);
+  });
+
+  it(`caps results at MAX_DANGER_ZONE_ITEMS (${MAX_DANGER_ZONE_ITEMS})`, () => {
+    const fileCount = MAX_DANGER_ZONE_ITEMS + 25;
+    const fileMetadata = new Map<string, { path: string; size: number; extension: string; language: string }>();
+    const fanIn = new Map<string, number>();
+    const fanOut = new Map<string, number>();
+    const complexity = new Map<string, number>();
+    const testProximity = new Map<string, number>();
+
+    for (let i = 0; i < fileCount; i++) {
+      const filePath = `src/file-${i}.ts`;
+      fileMetadata.set(filePath, {
+        path: filePath,
+        size: 100 + i,
+        extension: ".ts",
+        language: "typescript",
+      });
+      fanIn.set(filePath, i % 10);
+      fanOut.set(filePath, i % 5);
+      complexity.set(filePath, i % 20);
+      testProximity.set(filePath, i % 100);
+    }
+
+    const pipeline = mockPipeline({ file_metadata: fileMetadata });
+    const mockTsJs = {
+      architecture: { nodes: [], edges: [] },
+      imports: new Map<string, Set<string>>(),
+      fanIn,
+      fanOut,
+      entrypoints: new Set<string>(),
+      testFiles: new Set<string>(),
+      complexity,
+      loc: new Map<string, number>(),
+      maxNesting: new Map<string, number>(),
+      testProximity,
+      warnings: [],
+    };
+
+    const result = computeDangerZones(pipeline, mockTsJs);
+    expect(result).toHaveLength(MAX_DANGER_ZONE_ITEMS);
   });
 });

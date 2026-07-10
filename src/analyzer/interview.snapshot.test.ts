@@ -21,7 +21,8 @@ describe("Candidate Brief snapshots (repo-ts)", () => {
     if (!brief) return;
 
     expect(brief.reading_path.length).toBeGreaterThan(0);
-    expect(brief.first_pr_plan).toHaveLength(3);
+    expect(brief.first_pr_plan.length).toBeGreaterThan(0);
+    expect(brief.first_pr_plan.length).toBeLessThanOrEqual(3);
     expect(brief.evidence_refs.length).toBeGreaterThan(0);
 
     const knownIds = new Set(brief.evidence_refs.map((ref) => ref.id));

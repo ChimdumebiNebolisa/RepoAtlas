@@ -40,6 +40,8 @@ function githubUrlOf(input: AnalyzeInput): string | undefined {
 export interface AnalyzeOptions {
   /** Wall-clock budget for analysis. When exceeded after folder map, a partial report is saved. */
   deadlineMs?: number;
+  /** Cooperative cancellation for the full request lifecycle. */
+  signal?: AbortSignal;
 }
 
 export interface AnalyzeResult {
@@ -67,11 +69,17 @@ function readPackageDeps(workspacePath: string): Record<string, string> {
   }
 }
 
-function createDeadlineChecker(deadlineMs?: number) {
+function createDeadlineChecker(deadlineMs?: number, signal?: AbortSignal) {
   const start = Date.now();
   return {
     isExpired(): boolean {
+      if (signal?.aborted) return true;
       return deadlineMs != null && Date.now() - start >= deadlineMs;
+    },
+    throwIfAborted(): void {
+      if (signal?.aborted) {
+        throw new Error("Analysis aborted");
+      }
     },
   };
 }
@@ -116,13 +124,36 @@ function runLanguagePacks(
   };
 }
 
-function resolveArchitecture(packs: PackResults): Report["architecture"] {
-  return (
-    packs.tsjs?.architecture ??
-    packs.python?.architecture ??
-    packs.java?.architecture ??
-    { nodes: [], edges: [] }
-  );
+function combineArchitecture(packs: PackResults): Report["architecture"] {
+  const nodes: Report["architecture"]["nodes"] = [];
+  const edges: Report["architecture"]["edges"] = [];
+  const seenNodeIds = new Set<string>();
+
+  const addPack = (
+    prefix: string,
+    arch?: Report["architecture"] | null
+  ): void => {
+    if (!arch) return;
+    for (const node of arch.nodes) {
+      const id = `${prefix}:${node.id}`;
+      if (seenNodeIds.has(id)) continue;
+      seenNodeIds.add(id);
+      nodes.push({ ...node, id });
+    }
+    for (const edge of arch.edges) {
+      edges.push({
+        ...edge,
+        from: `${prefix}:${edge.from}`,
+        to: `${prefix}:${edge.to}`,
+      });
+    }
+  };
+
+  addPack("tsjs", packs.tsjs?.architecture);
+  addPack("python", packs.python?.architecture);
+  addPack("java", packs.java?.architecture);
+
+  return { nodes, edges };
 }
 
 function buildPartialReport(input: {
@@ -197,8 +228,9 @@ export async function analyzeRepository(
   options: AnalyzeOptions = {}
 ): Promise<AnalyzeResult> {
   const reportId = randomUUID();
-  const deadline = createDeadlineChecker(options.deadlineMs);
-  const workspace = await ingestRepo(input);
+  const deadline = createDeadlineChecker(options.deadlineMs, options.signal);
+  const workspace = await ingestRepo(input, { signal: options.signal });
+  deadline.throwIfAborted();
 
   try {
     const pipeline = await runIndexingPipeline(workspace.path);
@@ -225,7 +257,7 @@ export async function analyzeRepository(
     const packs = runLanguagePacks(workspace.path, pipeline, filePaths);
 
     if (deadline.isExpired()) {
-      const architecture = resolveArchitecture(packs);
+      const architecture = combineArchitecture(packs);
       const report = buildPartialReport({
         analyzeInput: input,
         workspacePath: workspace.path,
@@ -241,7 +273,7 @@ export async function analyzeRepository(
       return persistReport(reportId, report);
     }
 
-    const architecture = resolveArchitecture(packs);
+    const architecture = combineArchitecture(packs);
     const commit_insights = await analyzeCommitInsights(workspace.path, {
       githubUrl: githubUrlOf(input),
     });

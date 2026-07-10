@@ -15,9 +15,10 @@ function isValidReportId(id: string): boolean {
 
 export async function GET(
   _request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const id = context.params?.id?.trim() ?? "";
+  const { id: rawId } = await context.params;
+  const id = rawId?.trim() ?? "";
 
   if (!isValidReportId(id)) {
     return NextResponse.json(

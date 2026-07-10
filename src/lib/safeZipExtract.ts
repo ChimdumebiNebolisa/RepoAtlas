@@ -94,6 +94,7 @@ export function safeExtractZip(buffer: Buffer, extractRoot: string): void {
     }
   }
 
+  let actualUncompressed = 0;
   for (const entry of entries) {
     const targetPath = resolveSafeZipEntryPath(extractRoot, entry.entryName);
     if (entry.isDirectory) {
@@ -101,7 +102,23 @@ export function safeExtractZip(buffer: Buffer, extractRoot: string): void {
       continue;
     }
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    fs.writeFileSync(targetPath, entry.getData());
+    const data = entry.getData();
+    if (data.length > MAX_SINGLE_FILE_BYTES) {
+      throw new AppError({
+        code: ERROR_CODES.REPO_TOO_LARGE,
+        status: 413,
+        message: "Zip contains a file exceeding size limits.",
+      });
+    }
+    actualUncompressed += data.length;
+    if (actualUncompressed > MAX_UNCOMPRESSED_BYTES) {
+      throw new AppError({
+        code: ERROR_CODES.REPO_TOO_LARGE,
+        status: 413,
+        message: "Zip exceeds uncompressed size limit.",
+      });
+    }
+    fs.writeFileSync(targetPath, data);
   }
 }
 

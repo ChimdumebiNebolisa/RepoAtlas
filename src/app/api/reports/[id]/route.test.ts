@@ -31,7 +31,7 @@ describe("GET /api/reports/[id]", () => {
     getReportMock.mockResolvedValue(report);
 
     const response = await GET(new Request("http://localhost/api/reports"), {
-      params: { id: validId },
+      params: Promise.resolve({ id: validId }),
     });
 
     expect(response.status).toBe(200);
@@ -47,7 +47,7 @@ describe("GET /api/reports/[id]", () => {
 
   it("returns 400 for invalid report ids", async () => {
     const response = await GET(new Request("http://localhost/api/reports"), {
-      params: { id: "   " },
+      params: Promise.resolve({ id: "   " }),
     });
 
     expect(response.status).toBe(400);
@@ -62,7 +62,7 @@ describe("GET /api/reports/[id]", () => {
     getReportMock.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost/api/reports"), {
-      params: { id: validId },
+      params: Promise.resolve({ id: validId }),
     });
 
     expect(response.status).toBe(404);
@@ -82,7 +82,7 @@ describe("GET /api/reports/[id]", () => {
     });
 
     const response = await GET(new Request("http://localhost/api/reports"), {
-      params: { id: validId },
+      params: Promise.resolve({ id: validId }),
     });
 
     expect(toApiErrorPayloadMock).toHaveBeenCalledWith(thrown);

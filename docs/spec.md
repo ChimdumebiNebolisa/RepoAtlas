@@ -1,6 +1,6 @@
 # RepoAtlas Engineering Specification
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Status:** Living spec (validated against `main` 2026-07-10)  
 **Target:** Local dev first; optional Vercel Blob storage  
 
@@ -161,11 +161,11 @@ flowchart TB
 
 ### Data Flow
 
-1. **Request**: Client `POST /api/analyze` with multipart zip file (primary), or JSON `{ zipRef }` for testing.
-2. **Ingest**: Server extracts uploaded zip (or uses zipRef path) into temp workspace.
+1. **Request**: Client `POST /api/analyze` with multipart zip (`file` or `zip`), JSON `{ githubUrl, ref? }`, or `{ sample: true }`. JSON `zipRef` is **rejected**.
+2. **Ingest**: Server extracts uploaded zip (server-created temp path only) or downloads a public GitHub archive into temp workspace.
 3. **Analysis**: Analyzer walks workspace, runs common pipeline + applicable language packs.
-4. **Report**: Analyzer produces `Report` JSON; server writes to disk and returns `{ reportId }`.
-5. **Render**: UI immediately renders report data already returned by the analyze call path.
+4. **Report**: Analyzer produces `Report` JSON; server validates size, writes to storage, returns `{ reportId }`.
+5. **Render**: UI fetches report by id; stored JSON is validated at read time (`src/lib/reportSchema.ts`).
 
 ---
 
@@ -201,17 +201,23 @@ Rejected: non-HTTPS, non-`github.com` hosts, `tree`/`blob` subpaths, query strin
 ### Zip Upload Strategy
 
 - **Endpoint**: Multipart form upload to `POST /api/analyze` with `file` or `zip` field.
+- **Compressed limit (environment-aware)**:
+  - **Vercel deployment:** `MAX_DEPLOYED_ZIP_BYTES` = **4 MB** (Function body cap ~4.5 MB). Direct users to GitHub URL mode for larger public repos.
+  - **Local dev:** `MAX_COMPRESSED_BYTES` = **100 MB**.
+  - Selected by `maxCompressedBytesForZipUpload()` in `src/lib/ingestLimits.ts`.
 - **Validation**: Check magic bytes `50 4B 03 04` or `50 4B 05 06` (PK) for zip.
 - **Extraction**: `adm-zip` via `src/lib/safeZipExtract.ts` — path jail, entry count cap, uncompressed size cap.
 - **Path traversal**: For each entry, resolve path relative to extract root; reject if resolved path is outside root or contains `..`.
-- **Size limit**: Max uncompressed size 50MB per spec policy; abort extraction if exceeded.
+- **Size limit**: Max cumulative uncompressed **50 MB**; abort extraction if exceeded.
 
 **Acceptance criteria**: Valid zip extracts; zip with `../../../etc/passwd` entries rejected; oversized zip aborted. See `src/lib/safeZipExtract.test.ts`.
 
 ### Workspace Cleanup Rules
 
 - Delete temp dir on analysis completion (success **or** failure). `analyzeRepository()` wraps the whole run in `try/finally` and always invokes `workspace.cleanup()`, including when report persistence throws (regression test: `src/analyzer/cleanup.test.ts`).
-- Report files: **both** filesystem and Vercel Blob storage support deletion and a TTL/max-count sweep. `sweepExpiredReports()` uses `analyzed_at` on the filesystem and blob upload timestamps for blob storage. Retention is `REPORT_TTL_DAYS` (default 30) and `REPORT_MAX_COUNT` (default 100). Run via `POST /api/cron/cleanup`, which also sweeps share tokens.
+- Report files: filesystem and Vercel Blob storage support deletion and a TTL/max-count sweep. `sweepExpiredReports()` uses `analyzed_at` on the filesystem and blob upload timestamps for blob storage. Retention is `REPORT_TTL_DAYS` (default 30; 7 when Blob token is set) and `REPORT_MAX_COUNT` (default 100).
+- Share tokens: 7-day TTL; `sweepExpiredShareTokens()` lists and deletes expired records on **both** filesystem and Blob (`src/lib/sharing.ts`).
+- Cron: `POST /api/cron/cleanup` runs report + share sweeps. In **production** (`VERCEL=1` or `NODE_ENV=production`), the route **fails closed** with `503 MISCONFIGURED` when `CRON_SECRET` is unset; when set, requires `Authorization: Bearer <CRON_SECRET>`.
 
 ### Centralized Limits (`src/lib/ingestLimits.ts`)
 
@@ -219,7 +225,8 @@ All size/count/timeout budgets live in one module so the API route, ZIP extracto
 
 | Limit | Constant | Value | Behavior |
 |-------|----------|-------|----------|
-| Max compressed archive | `MAX_COMPRESSED_BYTES` | 100 MB | Abort upload/download if exceeded |
+| Max ZIP upload (Vercel) | `MAX_DEPLOYED_ZIP_BYTES` | 4 MB | Multipart body cap on deployed Functions |
+| Max compressed archive (local ZIP + GitHub) | `MAX_COMPRESSED_BYTES` | 100 MB | Abort upload/download if exceeded |
 | Max uncompressed total | `MAX_UNCOMPRESSED_BYTES` | 50 MB | Abort extraction if exceeded |
 | Max entries | `MAX_ENTRIES` | 10,000 | Abort extraction |
 | Max single file | `MAX_SINGLE_FILE_BYTES` | 10 MB | Abort extraction |
@@ -346,7 +353,7 @@ StartHereScore = (
 
 **Normalization**: For each metric, compute percentile rank (0–100) within repo.
 
-**RiskScore formula** (when churn unavailable — default for zip uploads without `.git`):
+**RiskScore formula** (test files excluded from ranking; when churn unavailable — default for zip uploads without `.git`):
 
 ```
 RiskScore = (
@@ -354,11 +361,24 @@ RiskScore = (
   0.25 * fan_in_percentile +
   0.20 * fan_out_percentile +
   0.25 * complexity_percentile +
-  0.10 * (100 - test_proximity_score)
+  0.10 * (100 - test_proximity_percentile)
 )
 ```
 
-When `commit_insights.mode` is `local_git` or `github_api` and churn data exists, weights rebalance to include **10% churn percentile** (see `src/analyzer/scoring.ts`).
+When `commit_insights.mode` is `local_git` or `github_api` and churn data exists:
+
+```
+RiskScore = (
+  0.18 * size_percentile +
+  0.22 * fan_in_percentile +
+  0.18 * fan_out_percentile +
+  0.22 * complexity_percentile +
+  0.10 * (100 - test_proximity_percentile) +
+  0.10 * churn_percentile
+)
+```
+
+See `src/analyzer/scoring.ts` and [adr/003-scoring-semantics.md](./adr/003-scoring-semantics.md).
 
 - Clamp to 0–100.
 - Sort by RiskScore descending.
@@ -417,6 +437,15 @@ When `commit_insights.mode` is `local_git` or `github_api` and churn data exists
 ```
 
 `candidate_brief` is the primary interview-facing output. `partial: true` indicates a timeout after folder map was saved. Deep-analysis fields (`project_profile`, `test_inventory`, `architecture_insights`, `commit_insights`) are optional and populated when signals are available.
+
+### Runtime validation (`src/lib/reportSchema.ts`)
+
+Stored report JSON is validated at read time in `getReport()`:
+
+- **corrupt** — missing required fields, wrong types, invalid JSON → treated as not found
+- **incompatible** — `report_version` greater than `REPORT_VERSION` → treated as not found
+
+New reports are stamped `report_version: 2`. A versioned migration layer is future work (see [roadmap.md](./roadmap.md)).
 
 ### TypeScript Types
 
@@ -520,17 +549,17 @@ See `src/types/report.ts` for full `CandidateBrief`, `EvidenceRef`, and deep-ana
 | Route file | Methods | Public endpoint | Notes |
 |---|---|---|---|
 | `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` | Accepts multipart upload (`file` or `zip`), JSON `{ "githubUrl", "ref"? }`, or JSON `{ "sample": true }`. JSON `zipRef` is rejected. Rate-limited + concurrency-gated. |
-| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` | Returns persisted report JSON with `Cache-Control: no-store`. No public mutation — the delete endpoint was removed; retention is handled by the server-side TTL sweep. |
+| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` | Returns persisted report JSON with `Cache-Control: no-store`. UUID validated before storage access. **No public DELETE** — see [adr/001-capability-access.md](./adr/001-capability-access.md). Stored JSON validated at read time (`parseAndValidateReport`). |
 | `src/app/api/reports/[id]/share/route.ts` | `POST` | `/api/reports/:id/share` | Creates 7-day read-only share token |
 | `src/app/api/share/[token]/route.ts` | `GET` | `/api/share/:token` | Resolves share token to report JSON |
 | `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` | Returns `text/markdown` with attachment headers |
-| `src/app/api/cron/cleanup/route.ts` | `GET`, `POST` | `/api/cron/cleanup` | `GET` inventory; `POST` sweeps expired reports + share tokens |
+| `src/app/api/cron/cleanup/route.ts` | `GET`, `POST` | `/api/cron/cleanup` | `GET` health (auth when secret set); `POST` sweeps expired reports + share tokens. **Fails closed in production** without `CRON_SECRET`. |
 
 Maintenance rule: when route handlers are added/removed/renamed, update this table in the same PR by checking the route files directly.
 
 ### POST /api/analyze
 
-**Request (zip):** `multipart/form-data` with a single zip file (field `file` or `zip`). Max 100MB.
+**Request (zip):** `multipart/form-data` with a single zip file (field `file` or `zip`). Max **4 MB** on Vercel, **100 MB** locally (`maxCompressedBytesForZipUpload()`).
 
 **Request (GitHub):** `Content-Type: application/json`:
 
@@ -560,12 +589,18 @@ Maintenance rule: when route handlers are added/removed/renamed, update this tab
 | 403 | `{ "code": "REPO_PRIVATE", "message": "..." }` | Repository is private/restricted |
 | 404 | `{ "code": "REPO_NOT_FOUND", "message": "..." }` | Repository not found (or private, unauthenticated) |
 | 404 | `{ "code": "MISSING_REF", "message": "..." }` | Requested branch/tag not found |
-| 413 | `{ "code": "REPO_TOO_LARGE", "message": "..." }` | Upload/archive exceeds 100MB |
+| 413 | `{ "code": "REPO_TOO_LARGE", "message": "..." }` | Upload/archive exceeds compressed limit (4 MB on Vercel, 100 MB otherwise) |
 | 429 | `{ "code": "RATE_LIMITED", "message": "..." }` | GitHub API rate limit |
 | 429 | `{ "code": "RATE_LIMIT_EXCEEDED", "message": "..." }` | Per-instance request limit / concurrency cap |
 | 504 | `{ "code": "DOWNLOAD_TIMEOUT", "message": "..." }` | GitHub request/download timed out |
 | 504 | `{ "code": "TIMEOUT", "message": "..." }` | Analysis timeout (may instead return `partial: true`) |
 | 500 | `{ "code": "ANALYSIS_FAILED", "message": "..." }` | Analysis error |
+
+### GET /api/reports/:id
+
+Returns persisted report JSON. The id must match a strict UUID shape. Loaded JSON is validated via `parseAndValidateReport()`; corrupt or future-incompatible (`report_version` > supported) payloads are treated as **not found** (404), not served as partial data.
+
+There is **no public DELETE**. Report ids are read-only capabilities; retention is server-side TTL sweep only ([adr/001-capability-access.md](./adr/001-capability-access.md)).
 
 ### API availability
 
@@ -635,22 +670,26 @@ else {
 
 | Concern | Mitigation |
 |---------|------------|
-| Arbitrary server file read | Public API rejects JSON `zipRef`; only server-created temp paths and server-owned fixtures reach the zip ingest path (finding A). Report ids are validated against a strict UUID shape before any storage access. |
+| Capability-link access | Report UUID is a read-only capability; public `DELETE` removed. See [adr/001-capability-access.md](./adr/001-capability-access.md). |
+| Arbitrary server file read | Public API rejects JSON `zipRef`; only server-created temp paths and server-owned fixtures reach the zip ingest path. Report ids validated as UUID before storage access. |
+| Corrupt stored JSON | `parseAndValidateReport()` at read time; invalid payloads return not found. |
 | Path traversal (zip) | `src/lib/safeZipExtract.ts` — resolve paths; reject `..`; jail to extract root |
 | Code execution | Never `require()`, `import()`, or `exec()` repo code; parse as text only |
-| Private repo exposure | User-supplied GitHub ingestion is **always unauthenticated** — the server `GITHUB_TOKEN` is never attached. Repos reported private, or 404/403, are refused before download (finding B). |
+| Private repo exposure | User-supplied GitHub ingestion is **always unauthenticated** — no `GITHUB_TOKEN` on user requests. Repos reported private, or 404/403, are refused before download. |
 | SSRF / redirect abuse | Only canonical `github.com` URLs are accepted; archive redirects are followed only to known GitHub hosts. |
-| Zip bombs / oversized archives | Compressed and uncompressed caps, entry-count and per-file caps, plus streamed download with an abort-on-cap (findings D). |
+| Zip bombs / oversized archives | Deployment-aware compressed caps ([adr/002-zip-limits.md](./adr/002-zip-limits.md)), uncompressed caps, entry-count and per-file caps, streamed GitHub download with abort-on-cap. |
 | Fetch hangs | GitHub API and archive requests have `AbortController` timeouts. |
-| Rate limiting | **Conservative controls implemented; durable limiting isolated.** `src/lib/rateLimit.ts` provides a process-local concurrency gate (`MAX_CONCURRENT_ANALYSES`, default 4) — a legitimate resource bound — plus a best-effort per-key sliding window (`ANALYZE_RATE_LIMIT_PER_MIN`, default 30). The in-memory window is explicitly documented as **not** reliable distributed rate limiting on serverless; the `RateLimiter` interface can be swapped for a Redis/KV backend via `setRateLimiter()` with no route changes. |
+| Rate limiting | Process-local concurrency gate (`MAX_CONCURRENT_ANALYSES`) plus best-effort sliding window (`ANALYZE_RATE_LIMIT_PER_MIN`). `RateLimiter` interface swappable for Redis/KV. |
+| Cron misconfiguration | Production cleanup returns `503` when `CRON_SECRET` unset; mutation requires bearer secret when configured. |
+| Share token cleanup on Blob | `listShareTokens()` and `deleteShareRecord()` use Vercel Blob list/del with `shares/` prefix. |
 
 **Security assumptions & remaining limitations:**
 
 - Only **public** GitHub repositories are supported. There is no user-scoped GitHub auth; private-repo support would require a deliberately designed OAuth flow.
 - The default rate limiter is per-instance. Production quotas require a shared-store backend (or a WAF/API-gateway rule) injected through the isolated interface.
-- Blob-store retention relies on the cron sweep (`POST /api/cron/cleanup`); schedule it (e.g. Vercel Cron) in production.
+- Blob-store retention relies on the cron sweep (`POST /api/cron/cleanup`); schedule it (e.g. Vercel Cron) in production and set `CRON_SECRET`.
 
-**Acceptance criteria**: Zip with `../../etc/passwd` does not write outside extract dir; analyzer never executes repo code; a private repo cannot be read via server credentials; JSON `zipRef` cannot analyze an arbitrary server path (see `src/lib/ingest.github.test.ts`, `src/app/api/reports/reports-api.integration.test.ts`).
+**Acceptance criteria**: Zip with `../../etc/passwd` does not write outside extract dir; analyzer never executes repo code; a private repo cannot be read via server credentials; JSON `zipRef` cannot analyze an arbitrary server path; corrupt stored report JSON is not served (see `src/lib/reportSchema.test.ts`, `src/app/api/reports/reports-api.integration.test.ts`).
 
 ---
 
@@ -676,8 +715,10 @@ else {
 
 ### Integration Tests
 
-- Full analyze flow: POST /api/analyze with multipart fixture zip or JSON `zipRef` → assert `{ reportId }` response and persisted report artifact.
-- Error mapping: send invalid payloads/content types and assert documented `INVALID_INPUT`, `ZIP_INVALID`, `ZIP_NOT_FOUND`, `REPO_TOO_LARGE`, `TIMEOUT`.
+- Full analyze flow: POST /api/analyze with multipart fixture zip or internal `analyzeRepository({ zipRef })` in tests → assert `{ reportId }` and persisted report artifact.
+- Public API rejects JSON `zipRef` with `400 INVALID_INPUT`.
+- Error mapping: invalid payloads/content types → documented `INVALID_INPUT`, `ZIP_INVALID`, `REPO_TOO_LARGE`, `TIMEOUT`.
+- Stored report validation: corrupt JSON → `404` on GET.
 
 ### Fixtures
 
@@ -815,16 +856,7 @@ flowchart LR
 
 ## 15. Implementation Checklist
 
-- [ ] Create `docs/spec.md` and paste the generated spec.
-- [ ] Create repo skeleton: Next.js app, API route placeholders, analyzer worker folder, shared types.
-- [ ] Implement repo ingest: GitHub clone path, zip upload path (optional).
-- [ ] Implement analyzer indexing pipeline (all repos).
-- [ ] Implement TS/JS language pack: imports, entrypoints, test proximity, complexity proxy.
-- [ ] Implement Start Here and Danger Zones scoring with explanation strings.
-- [ ] Build UI tabs and render report JSON.
-- [ ] Add Markdown export.
-- [ ] Add tests and fixtures.
-- [ ] Record demo and ensure acceptance tests pass.
+MVP items are shipped. For current status see [CHANGELOG.md](../CHANGELOG.md); for planned work see [roadmap.md](./roadmap.md). When changing enforced behavior, update this spec and add an ADR under `docs/adr/` when the decision is security- or policy-sensitive.
 
 ---
 

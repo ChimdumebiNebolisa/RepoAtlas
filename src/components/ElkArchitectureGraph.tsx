@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import type { Architecture } from "@/types/report";
 import { layoutGraph, type LayoutResult } from "@/lib/elkLayout";
@@ -10,6 +10,8 @@ interface ElkArchitectureGraphProps {
 }
 
 export function ElkArchitectureGraph({ architecture }: ElkArchitectureGraphProps) {
+  const rawMarkerId = useId();
+  const arrowMarkerId = `arrowhead-${rawMarkerId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const [layout, setLayout] = useState<LayoutResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +92,7 @@ export function ElkArchitectureGraph({ architecture }: ElkArchitectureGraphProps
                 >
                   <defs>
                     <marker
-                      id="arrowhead"
+                      id={arrowMarkerId}
                       markerWidth="10"
                       markerHeight="10"
                       refX="8"
@@ -129,7 +131,7 @@ export function ElkArchitectureGraph({ architecture }: ElkArchitectureGraphProps
                           stroke="currentColor"
                           strokeWidth="1.5"
                           className="text-slate-400"
-                          markerEnd="url(#arrowhead)"
+                          markerEnd={`url(#${arrowMarkerId})`}
                         />
                       );
                     })}

@@ -4,6 +4,7 @@
 
 import path from "path";
 import type { CommitInsights, StartHereItem, DangerZoneItem } from "@/types/report";
+import { MAX_DANGER_ZONE_ITEMS } from "@/lib/ingestLimits";
 import { churnScoreForFile } from "./gitHistory";
 import type { IndexingPipelineResult } from "./pipeline";
 import type { TsJsPackResult } from "./packs/tsjs";
@@ -402,5 +403,5 @@ export function computeDangerZones(
   }
 
   items.sort((a, b) => b.score - a.score);
-  return items;
+  return items.slice(0, MAX_DANGER_ZONE_ITEMS);
 }
