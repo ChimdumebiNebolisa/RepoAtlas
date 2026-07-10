@@ -5,12 +5,19 @@
 import fs from "fs";
 import path from "path";
 import type { Report } from "@/types/report";
-import { put, get } from "@vercel/blob";
+import { put, get, list, del } from "@vercel/blob";
 import { getReportMaxCount, getReportTtlMs } from "@/lib/reportTtl";
 
 const REPORTS_BLOB_PREFIX = "reports/";
 const UUID_FILE_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.json$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Validates a report id shape so callers cannot address arbitrary blob paths. */
+export function isValidReportId(reportId: string): boolean {
+  return UUID_RE.test(reportId);
+}
 
 function getReportsDir(): string {
   return process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
@@ -68,6 +75,8 @@ export async function saveReport(reportId: string, report: Report): Promise<void
 }
 
 export async function getReport(reportId: string): Promise<Report | null> {
+  if (!isValidReportId(reportId)) return null;
+
   if (shouldUseBlobStorage()) {
     const pathname = `${REPORTS_BLOB_PREFIX}${reportId}.json`;
     const token = getBlobToken();
@@ -110,8 +119,18 @@ export async function getReport(reportId: string): Promise<Report | null> {
 }
 
 export async function deleteReport(reportId: string): Promise<boolean> {
+  if (!isValidReportId(reportId)) return false;
+
   if (shouldUseBlobStorage()) {
-    return false;
+    const token = getBlobToken();
+    try {
+      await del(`${REPORTS_BLOB_PREFIX}${reportId}.json`, {
+        ...(token && { token }),
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   const filePath = path.join(getReportsDir(), `${reportId}.json`);
@@ -123,9 +142,39 @@ export async function deleteReport(reportId: string): Promise<boolean> {
   }
 }
 
+interface StoredReportEntry {
+  id: string;
+  /** Milliseconds since epoch for retention decisions (blob upload time). */
+  storedAt: number;
+}
+
+async function listBlobReports(): Promise<StoredReportEntry[]> {
+  const token = getBlobToken();
+  const entries: StoredReportEntry[] = [];
+  let cursor: string | undefined;
+  do {
+    const result = await list({
+      prefix: REPORTS_BLOB_PREFIX,
+      ...(cursor && { cursor }),
+      ...(token && { token }),
+    });
+    for (const blob of result.blobs) {
+      const file = blob.pathname.slice(REPORTS_BLOB_PREFIX.length);
+      if (!UUID_FILE_RE.test(file)) continue;
+      entries.push({
+        id: file.replace(/\.json$/i, ""),
+        storedAt: blob.uploadedAt instanceof Date ? blob.uploadedAt.getTime() : 0,
+      });
+    }
+    cursor = result.hasMore ? result.cursor : undefined;
+  } while (cursor);
+  return entries;
+}
+
 export async function listReportIds(): Promise<string[]> {
   if (shouldUseBlobStorage()) {
-    return [];
+    const entries = await listBlobReports();
+    return entries.map((e) => e.id).sort();
   }
 
   ensureReportsDir();
@@ -137,32 +186,34 @@ export async function listReportIds(): Promise<string[]> {
 }
 
 export async function sweepExpiredReports(): Promise<SweepReportsResult> {
-  if (shouldUseBlobStorage()) {
-    return { deleted: [], retained: 0, scanned: 0, skippedBlob: true };
-  }
-
-  const ids = await listReportIds();
   const ttlMs = getReportTtlMs();
   const maxCount = getReportMaxCount();
   const now = Date.now();
 
-  const entries: Array<{ id: string; analyzedAt: number }> = [];
-  for (const id of ids) {
-    const report = await getReport(id);
-    if (!report) continue;
-    const analyzedAt = Date.parse(report.repo_metadata.analyzed_at);
-    entries.push({
-      id,
-      analyzedAt: Number.isFinite(analyzedAt) ? analyzedAt : 0,
-    });
+  const entries: Array<{ id: string; storedAt: number }> = [];
+
+  if (shouldUseBlobStorage()) {
+    // Blob metadata carries an upload timestamp, so retention can run without
+    // downloading every report body.
+    for (const entry of await listBlobReports()) {
+      entries.push({ id: entry.id, storedAt: entry.storedAt });
+    }
+  } else {
+    const ids = await listReportIds();
+    for (const id of ids) {
+      const report = await getReport(id);
+      if (!report) continue;
+      const analyzedAt = Date.parse(report.repo_metadata.analyzed_at);
+      entries.push({ id, storedAt: Number.isFinite(analyzedAt) ? analyzedAt : 0 });
+    }
   }
 
-  entries.sort((a, b) => b.analyzedAt - a.analyzedAt);
+  entries.sort((a, b) => b.storedAt - a.storedAt);
 
   const deleted: string[] = [];
   for (let i = 0; i < entries.length; i++) {
-    const { id, analyzedAt } = entries[i];
-    const expired = analyzedAt > 0 && now - analyzedAt > ttlMs;
+    const { id, storedAt } = entries[i];
+    const expired = storedAt > 0 && now - storedAt > ttlMs;
     const overMax = i >= maxCount;
     if (expired || overMax) {
       if (await deleteReport(id)) deleted.push(id);
