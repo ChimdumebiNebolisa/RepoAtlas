@@ -116,7 +116,7 @@ test.describe("Report UI flows", () => {
     await page.locator('input[type="file"]').setInputFiles(txtPath);
     await expect(page.getByText(/Please select a \.zip file/i)).toBeVisible();
     await page.getByRole("button", { name: /Analyze Repository/i }).first().click();
-    await expect(page.getByRole("alert")).toHaveTextContent(/zip/i);
+    await expect(page.getByRole("alert")).toContainText(/zip/i);
   });
 
   test("missing report id on /report/:id shows error", async ({ page }) => {
@@ -124,15 +124,11 @@ test.describe("Report UI flows", () => {
     await expect(page.getByText(/not found|Report not found/i)).toBeVisible();
   });
 
-  test("demo mode toggle hides raw evidence ids on Candidate Brief", async ({ page }) => {
+  test("demo mode toggle is development-only (hidden in production builds)", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
-    const demoCheckbox = page
-      .getByRole("checkbox", { name: /Screenshot \/ demo mode/i })
-      .last();
-    await demoCheckbox.check();
     await expect(
-      page.locator("section").filter({ hasText: "Generated report ready for" }).getByText("evidence").first()
-    ).toBeVisible();
+      page.getByRole("checkbox", { name: /Screenshot \/ demo mode/i })
+    ).toHaveCount(0);
   });
 });
 

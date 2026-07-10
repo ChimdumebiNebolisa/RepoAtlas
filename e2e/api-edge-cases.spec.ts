@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import { randomUUID } from "crypto";
 import {
   REPORTS_DIR,
   VALID_UUID,
@@ -98,7 +99,8 @@ test.describe("API edge cases", () => {
   });
 
   test("GET /api/reports returns 404 for missing report", async ({ request }) => {
-    const res = await request.get(`/api/reports/${VALID_UUID}`);
+    const missingId = randomUUID();
+    const res = await request.get(`/api/reports/${missingId}`);
     expect(res.status()).toBe(404);
     const body = await res.json();
     expect(body.code).toBe("NOT_FOUND");
@@ -123,7 +125,8 @@ test.describe("API edge cases", () => {
   });
 
   test("GET /api/reports/:id/export/md returns 404 for missing report", async ({ request }) => {
-    const res = await request.get(`/api/reports/${VALID_UUID}/export/md`);
+    const missingId = randomUUID();
+    const res = await request.get(`/api/reports/${missingId}/export/md`);
     expect(res.status()).toBe(404);
   });
 
@@ -140,7 +143,8 @@ test.describe("API edge cases", () => {
   });
 
   test("POST /api/reports/:id/share returns 404 for missing report", async ({ request }) => {
-    const res = await request.post(`/api/reports/${VALID_UUID}/share`);
+    const missingId = randomUUID();
+    const res = await request.post(`/api/reports/${missingId}/share`);
     expect(res.status()).toBe(404);
   });
 
