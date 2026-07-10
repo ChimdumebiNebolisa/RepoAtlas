@@ -104,17 +104,22 @@ test.describe("API edge cases", () => {
     expect(body.code).toBe("NOT_FOUND");
   });
 
-  test("DELETE /api/reports returns 404 for missing report", async ({ request }) => {
-    const res = await request.delete(`/api/reports/${VALID_UUID}`);
-    expect(res.status()).toBe(404);
-  });
-
-  test("DELETE /api/reports removes seeded report", async ({ request }) => {
+  test("DELETE /api/reports is not exposed (public mutation removed)", async ({ request }) => {
+    // The public delete mutation was intentionally removed; there is no
+    // ownership model, so a guessable capability id must not destroy reports.
     const reportId = await analyzeSample(request);
     const del = await request.delete(`/api/reports/${reportId}`);
-    expect(del.status()).toBe(204);
+    expect(del.status()).toBe(405);
+    // The report is still retrievable — it was not deleted.
     const get = await request.get(`/api/reports/${reportId}`);
-    expect(get.status()).toBe(404);
+    expect(get.status()).toBe(200);
+  });
+
+  test("GET /api/reports/:id sets no-store cache header", async ({ request }) => {
+    const reportId = await analyzeSample(request);
+    const res = await request.get(`/api/reports/${reportId}`);
+    expect(res.ok()).toBe(true);
+    expect(res.headers()["cache-control"]).toContain("no-store");
   });
 
   test("GET /api/reports/:id/export/md returns 404 for missing report", async ({ request }) => {
