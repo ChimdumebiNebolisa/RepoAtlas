@@ -74,6 +74,7 @@ Verified against `main` source/tests on 2026-07-11:
 - Initial `npm run test:e2e`: exit 1; 55 Chromium/API tests passed and 19 WebKit tests could not launch because the pinned browser binary was absent (environment-only failure).
 - `npx playwright install webkit`: exit 0; installed pinned WebKit 2311.
 - `npx playwright test --project=mobile`: exit 0; 37/37 passed, including the axe accessibility check. Combined evidence covers all 74 configured cases across the initial Chromium run and mobile rerun.
+- PR #25's first GitHub E2E check: exit 1; 55 passed and all 19 WebKit-backed mobile cases failed to launch because CI installed Chromium only. `.github/workflows/ci.yml` was corrected to install both engines configured by `playwright.config.ts`; a fresh required-check run is publication evidence for the fix.
 - `npm audit --omit=dev --audit-level=low`: exit 1; 2 moderate production findings (`postcss` XSS advisory, transitively bundled through Next.js).
 - `npm audit --audit-level=low`: exit 1; 7 total findings (4 moderate, 1 high, 2 critical), including the production PostCSS path and development Vitest/Vite/esbuild paths. Do not use the audit tool's suggested downgrade to Next.js 9.3.3.
 
@@ -87,6 +88,7 @@ No representative analyzer performance fixture was measured in this documentatio
 - Architecture decision: preserve the existing in-process deterministic analyzer and filesystem/Vercel Blob adapters; no database, private-repository auth, or AI analysis is justified.
 - Performance baseline: production first-load JS is 566 kB landing, 561 kB report, 564 kB share. These are observations, not budgets.
 - Coverage risk: `app/api/analyze` branch coverage is 46.87%; share routes and much of the frontend have little/no unit coverage despite browser coverage.
+- CI decision: the E2E job installs Chromium and WebKit explicitly because the configured Desktop Chrome and iPhone 13 projects require those two engines.
 
 ## Repository history and stale work
 
@@ -105,4 +107,3 @@ No representative analyzer performance fixture was measured in this documentatio
 ## Commands executed
 
 See the dated verification section for commands, results, totals, warnings, audit findings, coverage, and bundle measurements. GitHub inspection also used `git remote -v`, `git branch -a`, `gh auth status`, and `gh pr list --state all --limit 30 ...`; authentication was available and PR/branch state was recorded above.
-
