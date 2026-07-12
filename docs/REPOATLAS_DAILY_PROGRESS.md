@@ -115,6 +115,16 @@ No representative analyzer performance fixture was measured in this documentatio
 
 No runtime code, API behavior, analyzer behavior, report schema behavior, frontend rendering logic, or deployment configuration changed. No representative analyzer performance fixture was measured.
 
+## Publication results (2026-07-12)
+
+- Branch: `agent/postcss-production-audit`.
+- Commit before merge: `a898c957a6c0b8f75675ef4221a8bd49bca984df`.
+- Pull request: `https://github.com/ChimdumebiNebolisa/RepoAtlas/pull/26`; opened as draft, labeled `codex`, marked ready after checks passed, then squash-merged.
+- Merge commit on `main`: `8aff7948b01bcd6fff9708b9e23fe6ead66d6485`.
+- GitHub PR checks before merge: `test` passed, `e2e` passed, GitGuardian passed, Vercel preview passed. `codex-automation` label was unavailable; only `codex` existed.
+- GitHub main CI after merge: run `29203007031` passed. `test` passed in 1m24s and included Linux `npm ci`, lint, typecheck, coverage, and build. `e2e` passed in 2m57s with 74 tests. GitHub emitted Node.js 20 deprecation annotations for actions, but no job failed.
+- Vercel production deployment: `dpl_852Mx9QzZDBovV9ez6Q2QgJxqUb3`, target `production`, state `READY`, commit `8aff7948b01bcd6fff9708b9e23fe6ead66d6485`, URL `https://repo-atlas-72wwehoei-chimdumebinebolisagmailcoms-projects.vercel.app`, inspector `https://vercel.com/chimdumebinebolisagmailcoms-projects/repo-atlas/852Mx9QzZDBovV9ez6Q2QgJxqUb3`.
+
 ## Security, schema, performance, and architecture decisions
 
 - Security finding: production dependency audit is clean after pinning and overriding PostCSS to `8.5.16`; keep the override until the installed Next line declares a patched PostCSS dependency directly.
