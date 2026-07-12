@@ -7,15 +7,16 @@ This file is a persistent evidence record, not a substitute for checking the cur
 ## Current state
 
 - Current phase: Phase 2 — dependency and platform security.
-- Completed work unit: Phase 2 production dependency remediation for Next's nested PostCSS advisory (2026-07-12).
+- Completed work unit: Phase 2 development dependency remediation for Vitest/Vite/esbuild advisories (2026-07-12).
 - Current in-progress work unit: none.
-- Next incomplete work unit: Phase 2 development dependency audit policy/remediation plan for Vitest/Vite/esbuild advisories.
+- Next incomplete work unit: Phase 2 Next.js upgrade implementation assessment.
 - Blockers: none. WebKit was initially absent locally and was installed; the complete mobile project then passed.
 
 ## Ordered work-unit checklist
 
 - [x] Phase 1: baseline, repository inventory, recent-work verification, stale-branch review, and blast-radius map.
 - [x] Phase 2: production dependency baseline and Next.js/PostCSS remediation.
+- [x] Phase 2: development dependency remediation and audit release-gate evidence.
 - [ ] Phase 2: Next.js upgrade implementation.
 - [ ] Phase 2: production and development audit policies.
 - [ ] Phase 2: CSP capability inventory and tested CSP.
@@ -41,6 +42,16 @@ Selected work unit: Phase 2 production dependency remediation for the Next-bundl
 Blast radius: dependency resolution only (`package.json` and `package-lock.json`) plus this progress record. Runtime code, ingestion, archive extraction, analyzer behavior, report schema/storage, sharing/export APIs, frontend rendering, and Vercel configuration are not intentionally changed. Verification must prove the production audit is clean and that typecheck, lint, unit coverage, and production build still pass under the overridden dependency graph.
 
 Result: complete. `postcss` is pinned and overridden to `8.5.16`; the lockfile no longer installs `next/node_modules/postcss@8.4.31`, and Next resolves to the patched top-level PostCSS package. This was chosen after checking `next@16.2.10` and `next@16.3.0-canary.83`; both still declare `postcss@8.4.31`, so a framework-major upgrade would not directly clear the production advisory.
+
+### 2026-07-12 development dependency hardening
+
+Selected work unit: Phase 2 development dependency remediation for the Vitest/Vite/esbuild advisory chain.
+
+Blast radius: development tooling and tests only (`package.json`, `package-lock.json`, `src/lib/safeZipExtract.test.ts`, `src/lib/evidenceIndex.test.ts`, and `src/lib/elkLayout.test.ts`) plus this progress record. No production dependency, ingestion, archive limit, analyzer implementation, report schema, storage, export, frontend, or deployment configuration changed.
+
+Result: complete. Vitest and `@vitest/coverage-v8` now resolve to the security-fixed 3.2.6 line, Vite is directly constrained to the patched 6.4.3 line, and esbuild resolves to 0.25.12. The existing 63% statements/lines coverage gate was preserved. Vitest 3's V8 coverage model measured the pre-existing suite at 62.06%, so deterministic tests were added for the previously untested evidence index and ELK layout helpers rather than lowering the threshold. The ZIP-bomb test received an explicit 20-second timeout because V8 instrumentation makes its 51 MB adversarial fixture exceed the old 5-second default; the assertion and production limit are unchanged.
+
+Audit policy: `npm audit --omit=dev --audit-level=low` is the production dependency gate; `npm audit --audit-level=low` is the full release gate. Development dependency upgrades must clear both audits and pass typecheck, lint, coverage, build, and CI before publication. `npm audit fix --force` remains disallowed for major-version migrations without compatibility evidence.
 
 ### Systems
 

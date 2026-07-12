@@ -56,5 +56,5 @@ describe("safeExtractZip", () => {
     withTempDir((extractRoot) => {
       expect(() => safeExtractZip(buffer, extractRoot)).toThrow(AppError);
     });
-  });
+  }, 20_000);
 });
