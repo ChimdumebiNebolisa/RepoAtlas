@@ -164,3 +164,28 @@ No runtime code, API behavior, analyzer behavior, report schema behavior, fronte
 ## Commands executed
 
 See the dated verification section for commands, results, totals, warnings, audit findings, coverage, and bundle measurements. GitHub inspection also used `git remote -v`, `git branch -a`, `gh auth status`, and `gh pr list --state all --limit 30 ...`; authentication was available and PR/branch state was recorded above.
+
+## Development hardening verification and publication (2026-07-12)
+
+- `npm install --ignore-scripts`: exit 0; dependency tree synchronized, npm reported 0 vulnerabilities.
+- `npm ls vitest @vitest/coverage-v8 vite vite-node esbuild --depth=3`: exit 0; Vitest 3.2.6, coverage 3.2.6, Vite 6.4.3, vite-node 3.2.4, and esbuild 0.25.12 resolved without invalid or duplicate vulnerable versions.
+- `npm audit --audit-level=low`: exit 0; 0 vulnerabilities.
+- `npm audit --omit=dev --audit-level=low`: exit 0; 0 production vulnerabilities.
+- `npx vitest run src/lib/evidenceIndex.test.ts src/lib/elkLayout.test.ts --coverage=false`: exit 0; 2 files and 4 tests passed.
+- `npm run test:coverage`: exit 0; 37 files and 209 tests passed. Statements/lines 63.29% (5292/8361), branches 79.36% (1400/1764), functions 85.56% (249/291). The 63% statements/lines threshold remains unchanged.
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0; no ESLint warnings/errors. Existing `next lint` deprecation warning remains.
+- `npm run build`: exit 0; Next.js 15.5.20 production build passed. First-load JS remained 566 kB landing, 561 kB report, 564 kB share, and 103 kB shared. Existing six-month `caniuse-lite` warning remains.
+- `npm run test:e2e`: exit 124 after six minutes locally without test output; this is an environment/startup limitation and is not counted as a local pass. GitHub E2E is the authoritative browser result for this publication.
+- `git diff --check`: exit 1 because Git treats repository-native CRLF line endings as trailing whitespace in changed lines; no semantic whitespace was introduced.
+
+Publication evidence:
+
+- Dependency chunk commit: `cc58ac13a8012f72fffbf69025f8a4f61b616ba7`.
+- Test/documentation chunk commit: `d406d58ab5892c5a867c5041b8686ba7cd9e1ddb`.
+- Branch pushed: `agent/vitest-dev-audit`.
+- Pull request: `https://github.com/ChimdumebiNebolisa/RepoAtlas/pull/27`, labeled `codex`, marked ready, and squash-merged.
+- GitHub required run `29207411270`: `test` passed in 1m24s, `e2e` passed in 2m28s, GitGuardian passed, Vercel preview passed, and Vercel passed.
+- Merge commit: `bfebc85119885e3547be43a7da2f3398014e1c04`.
+- Vercel production deployment for the merge commit: `dpl_9JuHVCLVC6YBxfjjPop1uQ7YuviK`, state `READY`, URL `https://repo-atlas-rarr4bph8-chimdumebinebolisagmailcoms-projects.vercel.app`.
+- The local Vercel CLI had no credentials; deployment completed through the repository's linked Vercel Git integration.
