@@ -1,21 +1,21 @@
 # RepoAtlas Daily Product Hardening Progress
 
-Last updated: 2026-07-11 (America/Chicago)
+Last updated: 2026-07-12 (America/Chicago)
 
 This file is a persistent evidence record, not a substitute for checking the current default branch. Each run must compare it with source, tests, configuration, and recent history before selecting work.
 
 ## Current state
 
 - Current phase: Phase 2 — dependency and platform security.
-- Completed work unit: Phase 1 baseline, inventory, and producer-to-consumer map (2026-07-11).
+- Completed work unit: Phase 2 production dependency remediation for Next's nested PostCSS advisory (2026-07-12).
 - Current in-progress work unit: none.
-- Next incomplete work unit: production dependency baseline/remediation plan for the Next.js-bundled PostCSS advisory.
+- Next incomplete work unit: Phase 2 development dependency audit policy/remediation plan for Vitest/Vite/esbuild advisories.
 - Blockers: none. WebKit was initially absent locally and was installed; the complete mobile project then passed.
 
 ## Ordered work-unit checklist
 
 - [x] Phase 1: baseline, repository inventory, recent-work verification, stale-branch review, and blast-radius map.
-- [ ] Phase 2: production dependency baseline and Next.js upgrade/remediation plan.
+- [x] Phase 2: production dependency baseline and Next.js/PostCSS remediation.
 - [ ] Phase 2: Next.js upgrade implementation.
 - [ ] Phase 2: production and development audit policies.
 - [ ] Phase 2: CSP capability inventory and tested CSP.
@@ -33,6 +33,14 @@ This file is a persistent evidence record, not a substitute for checking the cur
 - [ ] Phase 17: documentation reconciliation.
 
 ## Baseline inventory and blast radius
+
+### 2026-07-12 selected work-unit blast radius
+
+Selected work unit: Phase 2 production dependency remediation for the Next-bundled PostCSS advisory.
+
+Blast radius: dependency resolution only (`package.json` and `package-lock.json`) plus this progress record. Runtime code, ingestion, archive extraction, analyzer behavior, report schema/storage, sharing/export APIs, frontend rendering, and Vercel configuration are not intentionally changed. Verification must prove the production audit is clean and that typecheck, lint, unit coverage, and production build still pass under the overridden dependency graph.
+
+Result: complete. `postcss` is pinned and overridden to `8.5.16`; the lockfile no longer installs `next/node_modules/postcss@8.4.31`, and Next resolves to the patched top-level PostCSS package. This was chosen after checking `next@16.2.10` and `next@16.3.0-canary.83`; both still declare `postcss@8.4.31`, so a framework-major upgrade would not directly clear the production advisory.
 
 ### Systems
 
@@ -80,9 +88,37 @@ Verified against `main` source/tests on 2026-07-11:
 
 No representative analyzer performance fixture was measured in this documentation-only unit. No deploy-specific behavior was exercised.
 
+## Verification results (2026-07-12)
+
+- `git status --short`: exit 0 at start; clean.
+- `npm view next version dist-tags --json`: exit 0; latest `16.2.10`, backport `15.5.20`, canary `16.3.0-canary.83`.
+- `npm view next@16.2.10 dependencies.postcss --json`: exit 0; still `8.4.31`.
+- `npm view next@16.3.0-canary.83 dependencies.postcss --json`: exit 0; still `8.4.31`.
+- `npm audit --omit=dev --audit-level=low` before remediation: exit 1; 2 moderate production findings from `next/node_modules/postcss <8.5.10`.
+- `npm install --package-lock-only`: exit 0 after adding the compatible override and pin.
+- `npm install`: exit 0; removed the stale nested PostCSS package locally.
+- `npm explain postcss`: exit 0; `next@15.5.20` now uses overridden `postcss@8.5.16`; no nested `next/node_modules/postcss` package remains.
+- `npm ci`: exit 124 locally after timeout; left `node_modules/next` partially installed because existing local Node/Playwright/dev-server processes held workspace files. This was not counted as CI-install evidence.
+- Stale verification processes and the repo-local `npm run dev` process were stopped to release Windows file locks.
+- `npm install` after cleanup: exit 0 in about 5 minutes; restored a valid local dependency tree.
+- `npm ls next postcss --depth=1`: exit 0; `next@15.5.20` uses deduped `postcss@8.5.16`.
+- `npm audit --omit=dev --audit-level=low`: exit 0; found 0 production vulnerabilities.
+- `npm audit --audit-level=low`: exit 1; 5 remaining dev-only findings through Vitest/Vite/esbuild. Deferred to the development dependency audit policy/remediation work unit; `npm audit fix --force` would be a breaking Vitest major upgrade.
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0; no warnings/errors. Note: `next lint` deprecation warning.
+- `npm run test:coverage`: exit 0; 35 files and 205 tests passed. Statements 65.69% (6761/10292), branches 79.45% (1377/1733), functions 83.79% (243/290), lines 65.69%.
+- `npm run build`: exit 0; Next.js 15.5.20 production build passed. First-load JS: landing 566 kB, report 561 kB, share 564 kB, shared 103 kB. Browser data warning: `caniuse-lite` six months old.
+- `npx playwright test e2e/accessibility.spec.ts --project=chromium`: exit 124 twice; command timed out without test results because the configured Playwright web server rebuilds before startup and did not complete within local command limits. Not counted as passed.
+- Direct production-server smoke: exit 0; `npm.cmd run start` on `PORT=3137` served `/` with HTTP 200 and `RepoAtlas` content, length 30151.
+- Post-repair `npm run build`: exit 0; Next.js 15.5.20 production build passed. First-load JS unchanged: landing 566 kB, report 561 kB, share 564 kB, shared 103 kB. Browser data warning: `caniuse-lite` six months old.
+- `git diff --check`: exit 1 with CRLF trailing-whitespace warnings on package JSON additions when files use repository-native CRLF under `core.autocrlf=true`; normalizing to LF made the warning disappear but caused unacceptable whole-file line-ending churn, so package files were restored to scoped CRLF diffs.
+
+No runtime code, API behavior, analyzer behavior, report schema behavior, frontend rendering logic, or deployment configuration changed. No representative analyzer performance fixture was measured.
+
 ## Security, schema, performance, and architecture decisions
 
-- Security finding: production dependency audit is not clean. Remediation must be a separate Next.js compatibility unit, not `npm audit fix --force`.
+- Security finding: production dependency audit is clean after pinning and overriding PostCSS to `8.5.16`; keep the override until the installed Next line declares a patched PostCSS dependency directly.
+- Security finding: development dependency audit still reports Vitest/Vite/esbuild advisories. Remediation must be a separate compatibility unit, not `npm audit fix --force`.
 - Security finding: the adversarial ZIP suite currently covers only a subset of the full contract; remaining path/metadata/collision/cancellation families stay incomplete.
 - Report-schema decision: current writes use version 2; runtime validation rejects future versions. Previous-version fixtures, migration semantics, incompatible-report UI, and export compatibility remain open.
 - Architecture decision: preserve the existing in-process deterministic analyzer and filesystem/Vercel Blob adapters; no database, private-repository auth, or AI analysis is justified.
@@ -92,7 +128,7 @@ No representative analyzer performance fixture was measured in this documentatio
 
 ## Repository history and stale work
 
-- Current source of truth: `main` at start-of-run commit `235affd`.
+- Current source of truth: `main` at start-of-run commit `a050c2a`.
 - PR #22 is merged and contains the ingestion/document hardening that must not be reapplied.
 - PR #24 is open against the already-merged feature branch rather than `main`; treat it as stale evidence only and compare every idea with current `main`.
 - PR #23 is open against `main` for cloud environment setup; it is unrelated to product hardening and was not changed.
