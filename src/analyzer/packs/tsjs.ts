@@ -1,33 +1,37 @@
 /**
- * TS/JS language pack: import extraction, entrypoints, test proximity, complexity proxy.
+ * TS/JS language pack: parser-backed semantic graph, coupling, complexity, entrypoints.
  */
 
 import fs from "fs";
 import path from "path";
 import type { Architecture } from "@/types/report";
+import type { SemanticEdge, SemanticGraph, SemanticNode } from "@/types/semanticGraph";
 import type { IndexingPipelineResult } from "../pipeline";
 import { shouldSkipPath } from "../ignoreRules";
-
-const STATIC_IMPORT_RE =
-  /\bimport\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
-const DYNAMIC_IMPORT_RE = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
-const REQUIRE_RE = /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g;
+import {
+  deriveArchitectureFromSemantic,
+  edgeId,
+  fanMapsFromImports,
+  fileNodeId,
+  finalizeSemanticGraph,
+  importsFromSemanticGraph,
+  normalizeRelPath,
+  packageNodeId,
+} from "../semanticGraph";
+import {
+  computeAstComplexity,
+  extractModuleRefsFromSource,
+  scriptKindForPath,
+} from "./tsjsExtract";
+import { createTsJsResolver } from "./tsjsResolve";
+import { detectTsJsEntrypoints } from "./tsjsEntrypoints";
 
 const TEST_PATTERNS = [
   /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/i,
   /__tests__\//,
 ];
 
-const COMPLEXITY_RE =
-  /\b(if|else|for|while|switch|catch|\?\s*:|\|\||&&)\b/g;
-const SCRIPT_PATH_RE =
-  /(?:^|\s|["'])(\.{0,2}\/?[\w./-]+\.(?:ts|tsx|js|jsx|mjs|cjs))(?=\s|["']|$)/g;
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
-const RESOLUTION_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
-const INDEX_CANDIDATES = ["/index.ts", "/index.tsx", "/index.js", "/index.jsx"];
-const ENTRY_SCRIPT_NAMES = new Set(["dev", "start", "build"]);
-const ARCH_NODE_CAP = 50;
-const ARCH_EDGE_CAP = 200;
 
 export interface TsJsPackResult {
   architecture: Architecture;
@@ -41,46 +45,13 @@ export interface TsJsPackResult {
   maxNesting?: Map<string, number>;
   testProximity?: Map<string, number>;
   warnings?: string[];
-}
-
-function resolveImport(
-  fromFile: string,
-  importPath: string,
-  workspacePath: string
-): string | null {
-  if (!importPath.startsWith("./") && !importPath.startsWith("../")) return null;
-
-  const fromDir = path.dirname(fromFile);
-  const baseResolved = path.normalize(path.join(fromDir, importPath));
-  const ext = path.extname(baseResolved);
-
-  if (ext) {
-    const candidate = path.join(workspacePath, baseResolved);
-    if (fs.existsSync(candidate)) return normalizeRelPath(baseResolved);
-    return null;
-  }
-
-  for (const extension of RESOLUTION_EXTENSIONS) {
-    const resolvedPath = baseResolved + extension;
-    const candidate = path.join(workspacePath, resolvedPath);
-    if (fs.existsSync(candidate)) return normalizeRelPath(resolvedPath);
-  }
-
-  for (const indexPath of INDEX_CANDIDATES) {
-    const resolvedPath = baseResolved + indexPath;
-    const candidate = path.join(workspacePath, resolvedPath);
-    if (fs.existsSync(candidate)) return normalizeRelPath(resolvedPath);
-  }
-
-  return null;
+  semanticGraph?: SemanticGraph;
+  /** Evidence map: path -> entrypoint reason */
+  entrypointReasons?: Map<string, string>;
 }
 
 function isIgnoredPath(relPath: string): boolean {
   return shouldSkipPath(relPath);
-}
-
-function normalizeRelPath(relPath: string): string {
-  return relPath.replace(/\\/g, "/");
 }
 
 function stripExtension(relPath: string): string {
@@ -89,151 +60,6 @@ function stripExtension(relPath: string): string {
 
 function stripTestSuffix(relPath: string): string {
   return relPath.replace(/\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/i, "");
-}
-
-function extractImportSpecifiers(content: string): string[] {
-  const specs: string[] = [];
-  let match: RegExpExecArray | null;
-
-  STATIC_IMPORT_RE.lastIndex = 0;
-  while ((match = STATIC_IMPORT_RE.exec(content))) {
-    specs.push(match[1]);
-  }
-
-  DYNAMIC_IMPORT_RE.lastIndex = 0;
-  while ((match = DYNAMIC_IMPORT_RE.exec(content))) {
-    specs.push(match[1]);
-  }
-
-  REQUIRE_RE.lastIndex = 0;
-  while ((match = REQUIRE_RE.exec(content))) {
-    specs.push(match[1]);
-  }
-
-  return specs;
-}
-
-function computeComplexitySignals(content: string): {
-  loc: number;
-  branchCount: number;
-  maxNesting: number;
-  score: number;
-} {
-  const loc = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(
-      (line) =>
-        line.length > 0 &&
-        !line.startsWith("//") &&
-        !line.startsWith("/*") &&
-        !line.startsWith("*") &&
-        !line.startsWith("*/")
-    ).length;
-
-  const branchMatches = content.match(COMPLEXITY_RE);
-  const branchCount = branchMatches ? branchMatches.length : 0;
-
-  let currentDepth = 0;
-  let maxNesting = 0;
-  for (const ch of content) {
-    if (ch === "{") {
-      currentDepth += 1;
-      if (currentDepth > maxNesting) {
-        maxNesting = currentDepth;
-      }
-    } else if (ch === "}") {
-      currentDepth = Math.max(0, currentDepth - 1);
-    }
-  }
-
-  const score = branchCount * 3 + maxNesting * 2 + Math.round(loc / 40);
-  return { loc, branchCount, maxNesting, score };
-}
-
-function parseEntrypointsFromScripts(
-  workspacePath: string,
-  fileByNormalized: Map<string, string>
-): { entrypoints: Set<string>; warning?: string } {
-  const entrypoints = new Set<string>();
-  const pkgPath = path.join(workspacePath, "package.json");
-  if (!fs.existsSync(pkgPath)) return { entrypoints };
-
-  try {
-    const pkgRaw = fs.readFileSync(pkgPath, "utf-8");
-    const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, unknown> };
-    const scripts = pkg.scripts ?? {};
-
-    for (const [name, cmdValue] of Object.entries(scripts)) {
-      if (!ENTRY_SCRIPT_NAMES.has(name)) continue;
-      if (typeof cmdValue !== "string") continue;
-
-      const cmd = cmdValue.trim();
-      let match: RegExpExecArray | null;
-      SCRIPT_PATH_RE.lastIndex = 0;
-      while ((match = SCRIPT_PATH_RE.exec(cmd))) {
-        const candidate = normalizeRelPath(match[1].replace(/^\.\//, ""));
-        const resolved = fileByNormalized.get(candidate);
-        if (resolved) {
-          entrypoints.add(resolved);
-        }
-      }
-    }
-  } catch {
-    return { entrypoints, warning: "Could not parse package.json for entrypoints" };
-  }
-
-  return { entrypoints };
-}
-
-function detectEntrypoints(
-  files: string[],
-  workspacePath: string
-): { entrypoints: Set<string>; warnings: string[] } {
-  const entrypoints = new Set<string>();
-  const warnings: string[] = [];
-  const fileByNormalized = new Map<string, string>();
-  for (const file of files) {
-    fileByNormalized.set(normalizeRelPath(file), file);
-  }
-
-  for (const file of files) {
-    const n = normalizeRelPath(file);
-    if (
-      /^src\/app\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n) ||
-      /^app\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n) ||
-      /^src\/app\/layout\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n) ||
-      /^app\/layout\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n) ||
-      /^src\/app\/api\/.+\/route\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n) ||
-      /^app\/api\/.+\/route\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n)
-    ) {
-      entrypoints.add(file);
-    }
-  }
-
-  for (const ext of CODE_EXTENSIONS) {
-    const common = [
-      `src/index${ext}`,
-      `src/main${ext}`,
-      `src/server${ext}`,
-      `src/app${ext}`,
-    ];
-    for (const candidate of common) {
-      const resolved = fileByNormalized.get(candidate);
-      if (resolved) {
-        entrypoints.add(resolved);
-      }
-    }
-  }
-
-  const { entrypoints: fromScripts, warning: scriptWarning } =
-    parseEntrypointsFromScripts(workspacePath, fileByNormalized);
-  for (const ep of fromScripts) {
-    entrypoints.add(ep);
-  }
-  if (scriptWarning) warnings.push(scriptWarning);
-
-  return { entrypoints, warnings };
 }
 
 function computeTestProximityScore(
@@ -280,120 +106,27 @@ function computeTestProximityScore(
   return best;
 }
 
-function toFolderPath(filePath: string): string {
-  const normalized = normalizeRelPath(filePath);
-  const dir = path.posix.dirname(normalized);
-  return dir === "." ? "." : dir;
-}
-
-function buildReducedArchitecture(
-  files: string[],
-  imports: Map<string, Set<string>>
-): { architecture: Architecture; warnings: string[] } {
-  const warnings: string[] = [];
-  const folderFileCounts = new Map<string, number>();
-
-  for (const file of files) {
-    const folder = toFolderPath(file);
-    folderFileCounts.set(folder, (folderFileCounts.get(folder) ?? 0) + 1);
-  }
-
-  const edgeWeights = new Map<string, number>();
-  for (const [fromFile, toFiles] of imports) {
-    const fromFolder = toFolderPath(fromFile);
-    for (const toFile of toFiles) {
-      const toFolder = toFolderPath(toFile);
-      const key = `${fromFolder}=>${toFolder}`;
-      edgeWeights.set(key, (edgeWeights.get(key) ?? 0) + 1);
-    }
-  }
-
-  const folderDegree = new Map<string, number>();
-  for (const [edgeKey, weight] of edgeWeights) {
-    const [from, to] = edgeKey.split("=>");
-    folderDegree.set(from, (folderDegree.get(from) ?? 0) + weight);
-    folderDegree.set(to, (folderDegree.get(to) ?? 0) + weight);
-  }
-  for (const folder of folderFileCounts.keys()) {
-    if (!folderDegree.has(folder)) {
-      folderDegree.set(folder, 0);
-    }
-  }
-
-  const sortedFolders = Array.from(folderFileCounts.keys()).sort((a, b) => {
-    const degreeDelta = (folderDegree.get(b) ?? 0) - (folderDegree.get(a) ?? 0);
-    if (degreeDelta !== 0) return degreeDelta;
-    const fileCountDelta = (folderFileCounts.get(b) ?? 0) - (folderFileCounts.get(a) ?? 0);
-    if (fileCountDelta !== 0) return fileCountDelta;
-    return a.localeCompare(b);
-  });
-
-  const selectedFolders = sortedFolders.slice(0, ARCH_NODE_CAP);
-  if (sortedFolders.length > ARCH_NODE_CAP) {
-    warnings.push(
-      `Architecture nodes capped at ${ARCH_NODE_CAP} folders (from ${sortedFolders.length}).`
-    );
-  }
-
-  if (files.length > selectedFolders.length) {
-    warnings.push(
-      `Architecture reduced from file-level (${files.length} files) to folder-level (${selectedFolders.length} folders).`
-    );
-  }
-
-  const selectedFolderSet = new Set(selectedFolders);
-  const edges = Array.from(edgeWeights.entries())
-    .map(([edgeKey, weight]) => {
-      const [from, to] = edgeKey.split("=>");
-      return { from, to, weight };
-    })
-    .filter((edge) => selectedFolderSet.has(edge.from) && selectedFolderSet.has(edge.to))
-    .sort((a, b) => {
-      const weightDelta = b.weight - a.weight;
-      if (weightDelta !== 0) return weightDelta;
-      const fromDelta = a.from.localeCompare(b.from);
-      if (fromDelta !== 0) return fromDelta;
-      return a.to.localeCompare(b.to);
-    })
-    .slice(0, ARCH_EDGE_CAP)
-    .map(({ from, to }) => ({ from, to, type: "import" as const }));
-
-  const fullEdgeCount = Array.from(edgeWeights.keys()).filter((edgeKey) => {
-    const [from, to] = edgeKey.split("=>");
-    return selectedFolderSet.has(from) && selectedFolderSet.has(to);
-  }).length;
-  if (fullEdgeCount > ARCH_EDGE_CAP) {
-    warnings.push(
-      `Architecture edges capped at ${ARCH_EDGE_CAP} links (from ${fullEdgeCount}).`
-    );
-  }
-
-  const nodes = selectedFolders.map((folder) => ({
-    id: folder,
-    label: folder === "." ? "." : folder,
-    type: "folder" as const,
-  }));
-
-  return { architecture: { nodes, edges }, warnings };
+function languageFor(relPath: string): string {
+  const ext = path.extname(relPath).toLowerCase();
+  if (ext === ".ts" || ext === ".tsx") return "typescript";
+  return "javascript";
 }
 
 export function runTsJsPack(
   workspacePath: string,
   pipeline: IndexingPipelineResult
 ): TsJsPackResult {
-  const imports = new Map<string, Set<string>>();
-  const fanIn = new Map<string, number>();
-  const fanOut = new Map<string, number>();
-  const entrypoints = new Set<string>();
   const testFiles = new Set<string>();
   const complexity = new Map<string, number>();
   const loc = new Map<string, number>();
   const maxNesting = new Map<string, number>();
   const testProximity = new Map<string, number>();
+  const warnings: string[] = [];
 
-  const files = Array.from(pipeline.file_metadata.keys()).filter((f) =>
-    CODE_EXTENSIONS.includes(path.extname(f)) && !isIgnoredPath(f)
+  const files = Array.from(pipeline.file_metadata.keys()).filter(
+    (f) => CODE_EXTENSIONS.includes(path.extname(f)) && !isIgnoredPath(f)
   );
+  const fileIndex = new Set(files.map((f) => normalizeRelPath(f)));
   const fileByNormalized = new Map(
     files.map((file) => [normalizeRelPath(file), file])
   );
@@ -403,65 +136,204 @@ export function runTsJsPack(
     if (TEST_PATTERNS.some((p) => p.test(normalized))) testFiles.add(f);
   }
 
-  const { entrypoints: detectedEntrypoints, warnings: entrypointWarnings } =
-    detectEntrypoints(files, workspacePath);
-  for (const ep of detectedEntrypoints) {
-    entrypoints.add(ep);
+  const resolver = createTsJsResolver(workspacePath, fileIndex, isIgnoredPath);
+  warnings.push(...resolver.warnings);
+
+  const packageJsonRels = [
+    ...new Set([
+      "package.json",
+      ...resolver.workspacePackages.map((p) => p.packageJsonRel),
+    ]),
+  ].filter((rel) => fs.existsSync(path.join(workspacePath, rel)));
+
+  const { entrypoints: entrypointMap, warnings: entrypointWarnings } =
+    detectTsJsEntrypoints(files, workspacePath, packageJsonRels);
+  warnings.push(...entrypointWarnings);
+
+  const nodesById = new Map<string, SemanticNode>();
+  const edges: SemanticEdge[] = [];
+
+  const ensureFileNode = (relPath: string, kind: SemanticNode["kind"] = "file") => {
+    const id = fileNodeId(relPath);
+    const existing = nodesById.get(id);
+    if (existing) {
+      if (kind === "entrypoint" && existing.kind !== "entrypoint") {
+        existing.kind = "entrypoint";
+        existing.entrypoint_reason = entrypointMap.get(relPath);
+      }
+      return existing;
+    }
+    const node: SemanticNode = {
+      id,
+      kind,
+      label: normalizeRelPath(relPath),
+      language: languageFor(relPath),
+      entrypoint_reason:
+        kind === "entrypoint" ? entrypointMap.get(relPath) : undefined,
+    };
+    nodesById.set(id, node);
+    return node;
+  };
+
+  const ensurePackageNode = (name: string) => {
+    const id = packageNodeId(name);
+    if (!nodesById.has(id)) {
+      nodesById.set(id, {
+        id,
+        kind: "package",
+        label: name,
+        language: "typescript",
+      });
+    }
+    return id;
+  };
+
+  for (const [epPath, reason] of entrypointMap) {
+    const node = ensureFileNode(epPath, "entrypoint");
+    node.entrypoint_reason = reason;
+  }
+
+  for (const pkg of resolver.workspacePackages) {
+    ensurePackageNode(pkg.name);
   }
 
   for (const f of files) {
+    ensureFileNode(f, entrypointMap.has(f) ? "entrypoint" : "file");
+
     const fullPath = path.join(workspacePath, f);
     let content: string;
     try {
       content = fs.readFileSync(fullPath, "utf-8");
     } catch {
+      warnings.push(`Could not read ${normalizeRelPath(f)} for semantic analysis.`);
       continue;
     }
 
-    const complexitySignals = computeComplexitySignals(content);
+    const scriptKind = scriptKindForPath(f);
+    const complexitySignals = computeAstComplexity(content, f, scriptKind);
     complexity.set(f, complexitySignals.score);
     loc.set(f, complexitySignals.loc);
     maxNesting.set(f, complexitySignals.maxNesting);
     testProximity.set(f, computeTestProximityScore(f, testFiles));
 
-    const targets = new Set<string>();
-    for (const imp of extractImportSpecifiers(content)) {
-      const resolvedPath = resolveImport(f, imp, workspacePath);
-      const resolved = resolvedPath
-        ? fileByNormalized.get(normalizeRelPath(resolvedPath))
-        : undefined;
-      if (
-        resolved &&
-        pipeline.file_metadata.has(resolved) &&
-        !isIgnoredPath(resolved)
-      ) {
-        targets.add(resolved);
+    const { refs } = extractModuleRefsFromSource(f, content, scriptKind);
+    const fromId = fileNodeId(f);
+
+    for (const ref of refs) {
+      if (ref.specifier == null) {
+        edges.push({
+          id: edgeId({
+            from: fromId,
+            kind: ref.kind,
+            specifier: "<non_literal>",
+            line: ref.lineStart,
+          }),
+          from: fromId,
+          specifier: "<non_literal>",
+          kind: ref.kind,
+          resolution: "unresolved",
+          reason: ref.reason ?? "non_literal_specifier",
+          type_only: ref.typeOnly || undefined,
+          evidence: {
+            path: normalizeRelPath(f),
+            line_start: ref.lineStart,
+            line_end: ref.lineEnd,
+            snippet: ref.snippet,
+          },
+        });
+        continue;
       }
-    }
-    imports.set(f, targets);
-    fanOut.set(f, targets.size);
-    for (const t of targets) {
-      fanIn.set(t, (fanIn.get(t) ?? 0) + 1);
+
+      const outcome = resolver.resolve(f, ref.specifier);
+      let to: string | undefined;
+      let resolution = outcome.status;
+      let reason: string | undefined;
+
+      if (outcome.status === "resolved_internal") {
+        const resolved =
+          fileByNormalized.get(normalizeRelPath(outcome.relPath)) ??
+          outcome.relPath;
+        ensureFileNode(resolved);
+        to = fileNodeId(resolved);
+      } else if (outcome.status === "resolved_external") {
+        to = ensurePackageNode(outcome.packageName);
+      } else if (outcome.status === "ignored") {
+        reason = outcome.reason;
+      } else {
+        reason = outcome.reason;
+      }
+
+      edges.push({
+        id: edgeId({
+          from: fromId,
+          kind: ref.kind,
+          specifier: ref.specifier,
+          line: ref.lineStart,
+          to,
+        }),
+        from: fromId,
+        to,
+        specifier: ref.specifier,
+        kind: ref.kind,
+        resolution,
+        reason,
+        type_only: ref.typeOnly || undefined,
+        evidence: {
+          path: normalizeRelPath(f),
+          line_start: ref.lineStart,
+          line_end: ref.lineEnd,
+          snippet: ref.snippet,
+        },
+      });
     }
   }
 
-  const { architecture, warnings: archWarnings } = buildReducedArchitecture(
+  // Deduplicate edges that share the same id (e.g. identical dual visits).
+  const edgeById = new Map<string, SemanticEdge>();
+  for (const edge of edges) {
+    if (!edgeById.has(edge.id)) edgeById.set(edge.id, edge);
+  }
+
+  const semanticGraph = finalizeSemanticGraph({
+    language: "typescript",
+    adapter: "tsjs-typescript-compiler-api",
+    nodes: Array.from(nodesById.values()),
+    edges: Array.from(edgeById.values()),
+    warnings: [],
+  });
+
+  const imports = importsFromSemanticGraph(semanticGraph);
+  // Ensure every analyzed file has an imports entry for Start Here BFS.
+  for (const f of files) {
+    if (!imports.has(f)) imports.set(f, new Set());
+  }
+  const { fanIn, fanOut } = fanMapsFromImports(files, imports);
+
+  const { architecture, warnings: archWarnings } = deriveArchitectureFromSemantic(
     files,
-    imports
+    semanticGraph
   );
-  const warnings = [...entrypointWarnings, ...archWarnings];
+  warnings.push(...archWarnings);
+
+  if (semanticGraph.stats.unresolved > 0) {
+    warnings.push(
+      `TS/JS semantic graph recorded ${semanticGraph.stats.unresolved} unresolved import edge(s).`
+    );
+  }
 
   return {
     architecture,
     imports,
     fanIn,
     fanOut,
-    entrypoints,
+    entrypoints: new Set(entrypointMap.keys()),
+    entrypointReasons: entrypointMap,
     testFiles,
     complexity,
     loc,
     maxNesting,
     testProximity,
     warnings,
+    semanticGraph,
   };
 }
