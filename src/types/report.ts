@@ -3,7 +3,10 @@
  * See docs/spec.md Section 7 (Data Models).
  */
 
-export const REPORT_VERSION = 2;
+import type { SemanticGraph } from "./semanticGraph";
+
+export type { SemanticGraph } from "./semanticGraph";
+export const REPORT_VERSION = 3;
 
 export interface RepoMetadata {
   name: string;
@@ -271,6 +274,11 @@ export interface Report {
   repo_metadata: RepoMetadata;
   folder_map: FolderMapNode;
   architecture: Architecture;
+  /**
+   * Optional parser-backed semantic dependency graph (TS/JS first).
+   * Folder-level `architecture` is derived from resolved internal edges.
+   */
+  semantic_graph?: SemanticGraph;
   start_here: StartHereItem[];
   danger_zones: DangerZoneItem[];
   run_commands: RunCommand[];
