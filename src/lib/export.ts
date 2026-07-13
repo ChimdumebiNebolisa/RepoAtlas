@@ -187,6 +187,28 @@ export function exportReportToMarkdown(report: Report): string {
     md += "_No architecture data_\n\n";
   }
 
+  if (report.semantic_graph) {
+    const stats = report.semantic_graph.stats;
+    md += "### Semantic graph\n\n";
+    md += `- **Adapter**: ${escapeMarkdownInline(report.semantic_graph.adapter)}\n`;
+    md += `- **Language**: ${escapeMarkdownInline(report.semantic_graph.language)}\n`;
+    md += `- **Nodes**: ${stats.node_count}\n`;
+    md += `- **Edges**: ${stats.edge_count}\n`;
+    md += `- **Resolved internal**: ${stats.resolved_internal}\n`;
+    md += `- **Resolved external**: ${stats.resolved_external}\n`;
+    md += `- **Unresolved**: ${stats.unresolved}\n`;
+    md += `- **Entrypoints**: ${stats.entrypoint_count}\n\n`;
+    if (stats.unresolved > 0) {
+      md += "Unresolved import edges (bounded sample):\n\n";
+      for (const edge of report.semantic_graph.edges
+        .filter((e) => e.resolution === "unresolved")
+        .slice(0, 20)) {
+        md += `- ${wrapInlineCode(`${edge.evidence.path}:${edge.evidence.line_start}`)} ${wrapInlineCode(edge.specifier)}${edge.reason ? ` (${escapeMarkdownInline(edge.reason)})` : ""}\n`;
+      }
+      md += "\n";
+    }
+  }
+
   md += "## Start Here\n\n";
   md += "| Path | Score | Signals |\n";
   md += "|------|-------|---------|\n";

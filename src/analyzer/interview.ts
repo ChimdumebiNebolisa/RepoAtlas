@@ -15,6 +15,7 @@ import type {
   ProjectProfile,
   ProjectPurpose,
   RunCommand,
+  SemanticGraph,
   StartHereItem,
   TechnicalDecision,
   TestInventory,
@@ -34,6 +35,7 @@ export interface BuildCandidateBriefInput {
   runCommands: RunCommand[];
   contributeSignals: ContributeSignals;
   architecture: Architecture;
+  semanticGraph?: SemanticGraph;
   warnings: string[];
   projectProfile?: ProjectProfile;
   projectPurpose?: ProjectPurpose;
@@ -138,6 +140,39 @@ function buildEvidenceIndex(input: BuildCandidateBriefInput): EvidenceIndex {
     "arch",
     1
   );
+
+  if (input.semanticGraph) {
+    const stats = input.semanticGraph.stats;
+    addEvidence(
+      refs,
+      {
+        kind: "architecture",
+        label: "Semantic graph summary",
+        detail: `${stats.resolved_internal} internal, ${stats.resolved_external} external, ${stats.unresolved} unresolved edges via ${input.semanticGraph.adapter}.`,
+      },
+      "arch",
+      2
+    );
+    input.semanticGraph.edges
+      .filter((edge) => edge.resolution === "resolved_internal")
+      .slice(0, 12)
+      .forEach((edge, index) => {
+        addEvidence(
+          refs,
+          {
+            kind: "architecture",
+            label: `Import ${edge.specifier}`,
+            path: edge.evidence.path,
+            detail: `${edge.kind} → ${edge.to ?? "unknown"}`,
+            line_start: edge.evidence.line_start,
+            line_end: edge.evidence.line_end,
+            snippet: edge.evidence.snippet,
+          },
+          "sem",
+          index + 1
+        );
+      });
+  }
 
   const startHereRefs = new Map<string, string>();
   input.startHere.forEach((item, index) => {

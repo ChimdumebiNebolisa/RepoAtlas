@@ -47,7 +47,10 @@ export function ReportDocument({ report }: ReportDocumentProps) {
       <section>
         <h2 className="text-xl font-semibold text-slate-900">Architecture Map</h2>
         <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
-          <ElkArchitectureGraph architecture={report.architecture} />
+          <ElkArchitectureGraph
+            architecture={report.architecture}
+            semanticGraph={report.semantic_graph}
+          />
         </div>
       </section>
 

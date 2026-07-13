@@ -478,7 +478,10 @@ export function ReportTabs({
         {activeTab === "Folder Map" && <FolderMapTree node={report.folder_map} />}
 
         {activeTab === "Architecture Map" && (
-          <ElkArchitectureGraph architecture={report.architecture} />
+          <ElkArchitectureGraph
+            architecture={report.architecture}
+            semanticGraph={report.semantic_graph}
+          />
         )}
 
         {activeTab === "Start Here" && <StartHereTable items={report.start_here} />}
