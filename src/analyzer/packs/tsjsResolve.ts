@@ -399,7 +399,20 @@ export function createTsJsResolver(
 
     const rel = absToWorkspaceRel(workspacePath, resolvedName);
     if (!rel) {
-      // Resolved outside workspace (node_modules etc.) — treat as external.
+      // Resolved outside workspace (rare) — treat as external.
+      const pkgName = packageNameFromSpecifier(specifier);
+      if (pkgName) return { status: "resolved_external", packageName: pkgName };
+      return { status: "unresolved", reason: "outside_workspace" };
+    }
+
+    // Dependencies installed under node_modules are external package edges,
+    // not internal coupling — even when the extract includes node_modules/.
+    const normalizedRel = normalizeRelPath(rel);
+    if (
+      normalizedRel === "node_modules" ||
+      normalizedRel.startsWith("node_modules/") ||
+      normalizedRel.includes("/node_modules/")
+    ) {
       const pkgName = packageNameFromSpecifier(specifier);
       if (pkgName) return { status: "resolved_external", packageName: pkgName };
       return { status: "unresolved", reason: "outside_workspace" };
