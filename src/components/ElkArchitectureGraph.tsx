@@ -2,14 +2,18 @@
 
 import { useEffect, useId, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
-import type { Architecture } from "@/types/report";
+import type { Architecture, SemanticGraph } from "@/types/report";
 import { layoutGraph, type LayoutResult } from "@/lib/elkLayout";
 
 interface ElkArchitectureGraphProps {
   architecture: Architecture;
+  semanticGraph?: SemanticGraph;
 }
 
-export function ElkArchitectureGraph({ architecture }: ElkArchitectureGraphProps) {
+export function ElkArchitectureGraph({
+  architecture,
+  semanticGraph,
+}: ElkArchitectureGraphProps) {
   const rawMarkerId = useId();
   const arrowMarkerId = `arrowhead-${rawMarkerId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const [layout, setLayout] = useState<LayoutResult | null>(null);
@@ -45,8 +49,46 @@ export function ElkArchitectureGraph({ architecture }: ElkArchitectureGraphProps
   const padding = 20;
   const viewBox = `0 0 ${layout.width + padding * 2} ${layout.height + padding * 2}`;
 
+  const unresolvedCount = semanticGraph?.stats.unresolved ?? 0;
+  const externalCount = semanticGraph?.stats.resolved_external ?? 0;
+  const unresolvedSample =
+    semanticGraph?.edges
+      .filter((edge) => edge.resolution === "unresolved")
+      .slice(0, 8) ?? [];
+
   return (
     <div className="rounded bg-gray-50 p-4 min-h-[400px]">
+      {semanticGraph && (
+        <div className="mb-3 space-y-2 text-sm text-slate-700">
+          <p>
+            Semantic graph: {semanticGraph.stats.resolved_internal} internal,{" "}
+            {externalCount} external, {unresolvedCount} unresolved edge
+            {unresolvedCount === 1 ? "" : "s"} (adapter {semanticGraph.adapter}).
+          </p>
+          {unresolvedCount > 0 && (
+            <details className="rounded border border-amber-200 bg-amber-50 p-2">
+              <summary className="cursor-pointer font-medium text-amber-900">
+                Unresolved imports ({unresolvedCount})
+              </summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-950">
+                {unresolvedSample.map((edge) => (
+                  <li key={edge.id}>
+                    <code>{edge.evidence.path}:{edge.evidence.line_start}</code>{" "}
+                    <code>{edge.specifier}</code>
+                    {edge.reason ? ` (${edge.reason})` : ""}
+                  </li>
+                ))}
+                {unresolvedCount > unresolvedSample.length && (
+                  <li>
+                    …and {unresolvedCount - unresolvedSample.length} more (see
+                    report JSON / Markdown export)
+                  </li>
+                )}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
       <TransformWrapper
         initialScale={1}
         minScale={0.5}

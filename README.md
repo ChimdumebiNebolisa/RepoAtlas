@@ -74,18 +74,19 @@ See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANG
    - file metadata and language hints
    - key docs and CI config signals
    - runnable commands from `package.json` scripts
-5. Language packs for TS/JS, Python, and Java compute imports, entrypoints, complexity, and proximity.
+5. Language packs for TS/JS, Python, and Java compute imports, entrypoints, complexity, and proximity. The TS/JS pack builds a parser-backed `semantic_graph` (TypeScript Compiler API) and derives the folder architecture graph from resolved internal edges; see [docs/semantic-graph.md](docs/semantic-graph.md).
 6. Scoring computes `start_here` ranking and `danger_zones` risk score (with optional churn dimension).
-7. The interview builder assembles the **Candidate Brief** from extracted signals and evidence refs.
-8. The report is saved and returned by report ID.
-9. The UI loads the report and supports export and sharing.
+7. The interview builder assembles the **Candidate Brief** from extracted signals and evidence refs (including line-bounded semantic import evidence when present).
+8. Optional commit insights run when git metadata or GitHub URL context is available.
+9. The report is validated, stored, and returned by report ID.
+10. The UI loads the report and supports export and sharing.
 
 ---
 
 ## Architecture
 
 - Flow: ZIP upload or public GitHub URL -> ingest -> analyzer -> storage -> API returns report ID -> UI fetches and exports by report ID
-- Runtime Architecture Map UI: interactive dependency graph using ELK layout with pan and zoom controls
+- Runtime Architecture Map UI: interactive dependency graph using ELK layout with pan and zoom controls; when `semantic_graph` is present, the UI shows unresolved-edge counts without dumping every unresolved edge into the main graph
 - Markdown artifact rendering: Mermaid syntax is used only in exported markdown artifacts, not as the runtime graph renderer
 - Frontend: Next.js App Router, React, Tailwind CSS
 - API routes:

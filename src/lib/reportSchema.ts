@@ -58,6 +58,38 @@ export function validateReport(data: unknown): ReportLoadResult {
     return { ok: false, reason: "corrupt" };
   }
 
+  // Optional semantic_graph must be structurally valid when present.
+  if (data.semantic_graph != null) {
+    if (!isObject(data.semantic_graph)) return { ok: false, reason: "corrupt" };
+    const g = data.semantic_graph;
+    if (typeof g.version !== "number") return { ok: false, reason: "corrupt" };
+    if (typeof g.language !== "string" || typeof g.adapter !== "string") {
+      return { ok: false, reason: "corrupt" };
+    }
+    if (!Array.isArray(g.nodes) || !Array.isArray(g.edges)) {
+      return { ok: false, reason: "corrupt" };
+    }
+    if (!isObject(g.stats)) return { ok: false, reason: "corrupt" };
+    if (!Array.isArray(g.warnings)) return { ok: false, reason: "corrupt" };
+    for (const edge of g.edges) {
+      if (!isObject(edge)) return { ok: false, reason: "corrupt" };
+      if (typeof edge.from !== "string" || typeof edge.specifier !== "string") {
+        return { ok: false, reason: "corrupt" };
+      }
+      if (typeof edge.kind !== "string" || typeof edge.resolution !== "string") {
+        return { ok: false, reason: "corrupt" };
+      }
+      if (!isObject(edge.evidence)) return { ok: false, reason: "corrupt" };
+      if (
+        typeof edge.evidence.path !== "string" ||
+        typeof edge.evidence.line_start !== "number" ||
+        typeof edge.evidence.line_end !== "number"
+      ) {
+        return { ok: false, reason: "corrupt" };
+      }
+    }
+  }
+
   return { ok: true, report: data as unknown as Report };
 }
 

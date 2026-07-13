@@ -39,7 +39,7 @@ export function DangerZonesTable({ items }: DangerZonesTableProps) {
           Prepare for questions about tradeoffs and future improvements.
         </p>
         <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-          Risk 0–100 from size, coupling, complexity, and test proximity. Hover a score for details.
+          Risk 0–100 from size, coupling, structural complexity, and test proximity. Hover a score for details.
         </p>
       </div>
       <div className="overflow-x-auto">
