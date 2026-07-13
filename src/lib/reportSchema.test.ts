@@ -44,4 +44,54 @@ describe("reportSchema", () => {
   it("returns corrupt for invalid JSON text", () => {
     expect(parseAndValidateReport("{not json").ok).toBe(false);
   });
+
+  it("accepts a valid optional semantic_graph", () => {
+    const result = validateReport({
+      ...minimalReport,
+      semantic_graph: {
+        version: 1,
+        language: "typescript",
+        adapter: "tsjs-typescript-compiler-api",
+        nodes: [{ id: "file:src/a.ts", kind: "file", label: "src/a.ts" }],
+        edges: [
+          {
+            id: "e1",
+            from: "file:src/a.ts",
+            to: "file:src/b.ts",
+            specifier: "./b",
+            kind: "import",
+            resolution: "resolved_internal",
+            evidence: { path: "src/a.ts", line_start: 1, line_end: 1 },
+          },
+        ],
+        stats: {
+          node_count: 1,
+          edge_count: 1,
+          resolved_internal: 1,
+          resolved_external: 0,
+          unresolved: 0,
+          ignored: 0,
+          entrypoint_count: 0,
+        },
+        warnings: [],
+      },
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects a corrupt semantic_graph without accepting partial graph data", () => {
+    const result = validateReport({
+      ...minimalReport,
+      semantic_graph: {
+        version: 1,
+        language: "typescript",
+        adapter: "x",
+        nodes: [],
+        edges: [{ from: "file:a", specifier: "./b" }],
+        stats: {},
+        warnings: [],
+      },
+    });
+    expect(result).toEqual({ ok: false, reason: "corrupt" });
+  });
 });
