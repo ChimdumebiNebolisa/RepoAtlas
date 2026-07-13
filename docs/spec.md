@@ -270,13 +270,15 @@ Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `sr
 
 | Aspect | Rules |
 |--------|-------|
-| **Import extraction** | Regex: `import\s+.*\s+from\s+['"]([^'"]+)['"]`, `require\s*\(\s*['"]([^'"]+)['"]\s*\)`, `import\s+['"]([^'"]+)['"]`. Resolve relative paths (., ..) to absolute repo paths. |
-| **Entrypoint heuristics** | `package.json` `main`, `bin` values; files named `index.{js,ts,mjs,cjs}`; `__main__` in JS (rare). |
+| **Import extraction** | TypeScript Compiler API AST walk (`src/analyzer/packs/tsjsExtract.ts`). Collects static `import`, side-effect imports, `import()`, `require()`, `export … from`, `export * from`, and type-only import/export. Comments and string literals never produce edges. |
+| **Module resolution** | `ts.resolveModuleName` with `tsconfig.json` / `jsconfig.json` (`baseUrl`, `paths`), relative/extensionless/index resolution, `package.json` `main`/`module`/`exports`, and npm/pnpm workspace package names (`src/analyzer/packs/tsjsResolve.ts`). Never leaves the extracted workspace. |
+| **Semantic graph** | Language-neutral `semantic_graph` (optional on Report, `report_version` 3+) stores nodes/edges with resolution status, line-bounded evidence, and stats. Folder-level `architecture` is **derived** from `resolved_internal` edges only. Unresolved edges are recorded and must not inflate fan-in/fan-out. External package edges are recorded separately. |
+| **Entrypoint heuristics** | Next.js App Router `page`/`layout`/`route`/`middleware`, package `main`/`module`/`browser`/`bin`/`exports`, narrow `dev`/`start`/`build` script path literals, and common `src/index|main|server|cli` files — each with an evidence reason. |
 | **Test proximity** | Test files: `*.test.{js,ts}`, `*.spec.{js,ts}`, `__tests__/*`, `*.test.{jsx,tsx}`. Proximity = same dir or nearest test dir distance. |
-| **Complexity proxy** | Line-based: `(if|else|for|while|switch|catch|\?\s*:|\&\&|\|\|)` count per file. Or AST cyclomatic if `@babel/parser` available. |
-| **Graph collapse** | Module = file; folder = directory. Collapse: group nodes by parent dir; edge A→B becomes dir(A)→dir(B). |
+| **Structural complexity** | AST decision-point count (if/for/while/do/switch cases/catch/conditionals/`&&`/`\|\|`/`??`) plus block nesting depth and LOC. Score = `branches*3 + nesting*2 + round(loc/40)`. This is a **structural complexity score**, not claimed as cyclomatic complexity. |
+| **Graph collapse** | Module = file; folder = directory. Collapse: group nodes by parent dir; edge A→B becomes dir(A)→dir(B). Caps: 50 nodes / 200 edges. |
 
-**Acceptance criteria**: TS repo with `src/index.ts` importing `./utils` produces edge `index.ts → utils.ts`; `index.ts` detected as entrypoint.
+**Acceptance criteria**: TS repo with `src/index.ts` importing `./utils` produces a `resolved_internal` semantic edge and folder architecture edge; fake `import` text in comments/strings does not; unresolved imports appear in `semantic_graph.stats.unresolved` without inflating fan-out.
 
 ### Language Pack: Python
 
@@ -395,7 +397,7 @@ See `src/analyzer/scoring.ts` and [adr/003-scoring-semantics.md](./adr/003-scori
 
 ```json
 {
-  "report_version": 2,
+  "report_version": 3,
   "partial": false,
   "repo_metadata": {
     "name": "string",
@@ -408,6 +410,15 @@ See `src/analyzer/scoring.ts` and [adr/003-scoring-semantics.md](./adr/003-scori
   "architecture": {
     "nodes": [],
     "edges": []
+  },
+  "semantic_graph": {
+    "version": 1,
+    "language": "typescript",
+    "adapter": "tsjs-typescript-compiler-api",
+    "nodes": [],
+    "edges": [],
+    "stats": {},
+    "warnings": []
   },
   "start_here": [],
   "danger_zones": [],
@@ -436,7 +447,7 @@ See `src/analyzer/scoring.ts` and [adr/003-scoring-semantics.md](./adr/003-scori
 }
 ```
 
-`candidate_brief` is the primary interview-facing output. `partial: true` indicates a timeout after folder map was saved. Deep-analysis fields (`project_profile`, `test_inventory`, `architecture_insights`, `commit_insights`) are optional and populated when signals are available.
+`candidate_brief` is the primary interview-facing output. `partial: true` indicates a timeout after folder map was saved. Deep-analysis fields (`project_profile`, `test_inventory`, `architecture_insights`, `commit_insights`, `semantic_graph`) are optional and populated when signals are available. `report_version` is **3** when `semantic_graph` may be present; older stored reports without it remain readable.
 
 ### Runtime validation (`src/lib/reportSchema.ts`)
 
@@ -445,7 +456,7 @@ Stored report JSON is validated at read time in `getReport()`:
 - **corrupt** — missing required fields, wrong types, invalid JSON → treated as not found
 - **incompatible** — `report_version` greater than `REPORT_VERSION` → treated as not found
 
-New reports are stamped `report_version: 2`. A versioned migration layer is future work (see [roadmap.md](./roadmap.md)).
+New reports are stamped `report_version: 3`. Older v2 reports without `semantic_graph` remain readable. A broader migration layer is future work (see [roadmap.md](./roadmap.md)).
 
 ### TypeScript Types
 
@@ -519,6 +530,7 @@ export interface Report {
   repo_metadata: RepoMetadata;
   folder_map: FolderMapNode;
   architecture: Architecture;
+  semantic_graph?: SemanticGraph;
   start_here: StartHereItem[];
   danger_zones: DangerZoneItem[];
   run_commands: RunCommand[];
@@ -536,6 +548,7 @@ export interface Report {
 }
 ```
 
+`SemanticGraph` is defined in `src/types/semanticGraph.ts` (versioned nodes/edges with resolution status and line-bounded evidence). Python and Java adapters are follow-up work.
 `document_inventory` (see `src/types/report.ts`) captures every discovered document, duplicate groups (with canonical + suppressed paths and a reason), optional similar groups, and the chosen `canonical_readme`.
 
 See `src/types/report.ts` for full `CandidateBrief`, `EvidenceRef`, and deep-analysis type definitions.

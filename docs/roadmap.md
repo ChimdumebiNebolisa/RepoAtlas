@@ -72,8 +72,8 @@ Details: [CHANGELOG.md](../CHANGELOG.md). ADRs: [001](./adr/001-capability-acces
 
 ### Analyzer depth
 
-- **Path alias resolution** — `@/`, tsconfig paths, workspace package imports in TS/JS pack.
-- **Combined multi-language architecture** — single graph when monorepo mixes languages.
+- **Python / Java semantic adapters** — implement the same language-neutral `semantic_graph` contract beyond the TS/JS vertical slice.
+- **Combined multi-language architecture** — single reduced graph when monorepo mixes languages (packs already prefix-merge today).
 - **Calibrated small-sample risk** — stable percentiles on tiny repos (fewer than ~5 scored files).
 - **Manifest-accurate detection** — framework and test tooling from lockfiles/deps, not filename guesses only.
 
