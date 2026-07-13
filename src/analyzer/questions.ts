@@ -38,17 +38,11 @@ export function generateInterviewQuestions(
   if (input.testInventory?.untested_high_risk_files[0]) {
     const target = input.testInventory.untested_high_risk_files[0];
     questions.push({
-      question: `How would you improve test coverage around \`${target}\`?`,
-      rationale: "High-risk file with low test proximity.",
+      question: `What tests would you add near \`${target}\`?`,
+      rationale: "High-risk file with low test proximity (a static signal, not measured coverage).",
       evidence_refs: input.testInventory.evidence_refs,
     });
   }
-
-  questions.push({
-    question: "How does RepoAtlas avoid executing uploaded repository code?",
-    rationale: "Static analysis only — relevant for security interviews.",
-    evidence_refs: [],
-  });
 
   questions.push({
     question: "What are the limits of static analysis for this repository?",

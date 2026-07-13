@@ -25,7 +25,7 @@ export async function GET(
         code: ERROR_CODES.INVALID_INPUT,
         message: "Invalid report id.",
       },
-      { status: 400 }
+      { status: 400, headers: { "Cache-Control": "no-store" } }
     );
   }
 
@@ -38,7 +38,7 @@ export async function GET(
           code: "NOT_FOUND",
           message: "Report not found.",
         },
-        { status: 404 }
+        { status: 404, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -54,10 +54,11 @@ export async function GET(
       headers: {
         "Content-Type": "text/markdown; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "no-store",
       },
     });
   } catch (err) {
     const { status, code, message } = toApiErrorPayload(err);
-    return NextResponse.json({ code, message }, { status });
+    return NextResponse.json({ code, message }, { status, headers: { "Cache-Control": "no-store" } });
   }
 }

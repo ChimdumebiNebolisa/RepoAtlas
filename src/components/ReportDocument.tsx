@@ -7,6 +7,7 @@ import { StartHereTable } from "./StartHereTable";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
+import { repoSourceLabel, formatTimestamp } from "@/lib/format";
 
 interface ReportDocumentProps {
   report: Report;
@@ -20,12 +21,12 @@ export function ReportDocument({ report }: ReportDocumentProps) {
         <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm text-slate-800">
           <dt className="font-medium text-slate-600">Name:</dt>
           <dd>{report.repo_metadata.name}</dd>
-          <dt className="font-medium text-slate-600">URL:</dt>
-          <dd>{report.repo_metadata.url}</dd>
+          <dt className="font-medium text-slate-600">Source:</dt>
+          <dd>{repoSourceLabel(report.repo_metadata.url)}</dd>
           <dt className="font-medium text-slate-600">Branch:</dt>
           <dd>{report.repo_metadata.branch}</dd>
           <dt className="font-medium text-slate-600">Analyzed:</dt>
-          <dd>{report.repo_metadata.analyzed_at}</dd>
+          <dd>{formatTimestamp(report.repo_metadata.analyzed_at).display}</dd>
         </dl>
       </section>
 

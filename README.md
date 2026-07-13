@@ -79,14 +79,13 @@ See [docs/roadmap.md](docs/roadmap.md) for the full improvement plan.
 
 ## Architecture
 
-- Flow: zip upload or JSON `zipRef` -> ingest -> analyzer -> storage -> API returns report ID -> UI fetches and exports by report ID
+- Flow: ZIP upload or public GitHub URL -> ingest -> analyzer -> storage -> API returns report ID -> UI fetches and exports by report ID
 - Runtime Architecture Map UI: interactive dependency graph using ELK layout with pan and zoom controls
 - Markdown artifact rendering: Mermaid syntax is used only in exported markdown artifacts, not as the runtime graph renderer
 - Frontend: Next.js App Router, React, Tailwind CSS
 - API routes:
   - `POST /api/analyze`
   - `GET /api/reports/:id`
-  - `DELETE /api/reports/:id`
   - `GET /api/reports/:id/export/md`
   - `POST /api/reports/:id/share`
   - `GET /api/share/:token`
@@ -182,22 +181,27 @@ You can also click **Try sample Candidate Brief** on the homepage to analyze `fi
 - PNG: full report snapshot export
 - Markdown: `GET /api/reports/:id/export/md`, also available from UI export controls
 
-### API: multipart upload or JSON `zipRef`
+### API: multipart upload or public GitHub URL
 
-Primary upload flow:
+Primary upload flow (multipart ZIP):
 
 ```bash
 curl -X POST http://localhost:3000/api/analyze \
   -F "file=@/path/to/repo.zip"
 ```
 
-Testing or CLI flow:
+Public GitHub URL flow (JSON):
 
 ```bash
 curl -X POST http://localhost:3000/api/analyze \
   -H "Content-Type: application/json" \
-  -d "{\"zipRef\":\"C:/path/to/local/repo-or-fixture\"}"
+  -d '{"githubUrl":"https://github.com/owner/repo"}'
 ```
+
+> The public API accepts only multipart ZIP uploads and public `githubUrl`
+> values. A caller-controlled `zipRef` path is intentionally **rejected** with
+> `400 INVALID_INPUT` — the server never reads arbitrary local paths supplied by
+> a request.
 
 After analysis, fetch the report JSON:
 
@@ -222,7 +226,7 @@ These routes are implemented from the files in `src/app/api/**/route.ts`:
 | Route file | Methods | Public endpoint |
 | --- | --- | --- |
 | `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` |
-| `src/app/api/reports/[id]/route.ts` | `GET`, `DELETE` | `/api/reports/:id` |
+| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` |
 | `src/app/api/reports/[id]/share/route.ts` | `POST` | `/api/reports/:id/share` |
 | `src/app/api/share/[token]/route.ts` | `GET` | `/api/share/:token` |
 | `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` |
@@ -231,14 +235,14 @@ These routes are implemented from the files in `src/app/api/**/route.ts`:
 ### `POST /api/analyze`
 
 - Accepts `multipart/form-data` with a single zip file in `file` or `zip`
-- Also accepts JSON with `zipRef` for local testing
-- Max upload size: 100 MB
+- Also accepts JSON with a public `githubUrl` (canonical `https://github.com/owner/repo`, optional `ref`)
+- A caller-supplied `zipRef` path is rejected with `400 INVALID_INPUT`
 
 Example JSON body:
 
 ```json
 {
-  "zipRef": "C:/path/to/local/repo-or-fixture"
+  "githubUrl": "https://github.com/owner/repo"
 }
 ```
 
@@ -261,11 +265,16 @@ Common error codes exposed by the current route:
 Common statuses:
 
 - `200` on success
-- `400` for malformed payloads or unsupported content type
-- `404` when JSON `zipRef` does not exist
-- `413` when upload exceeds 100 MB
+- `400` for malformed payloads, unsupported content type, or a non-canonical/private GitHub URL
+- `413` when the upload exceeds the configured size limit
 - `500` for unexpected failures
-- `504` when analysis exceeds 120 seconds
+- `504` when analysis exceeds the deadline
+
+Report `GET`, share, and Markdown export responses are served with
+`Cache-Control: no-store` so untrusted repository data is never cached by
+browsers or shared CDNs. A baseline set of security headers (`nosniff`,
+`SAMEORIGIN`, referrer and permissions policy, plus HSTS in production) is
+applied to all responses via `next.config.js`.
 
 ### `GET /api/reports/:id`
 
@@ -303,9 +312,10 @@ Common statuses:
 - `400` for invalid report IDs
 - `404` when the report does not exist
 
-### `DELETE /api/reports/:id`
-
-Deletes a report from filesystem storage (no-op when using Vercel Blob).
+> **No public delete endpoint.** RepoAtlas has no user/ownership model, so a
+> guessable report id must not be able to destroy stored reports. Report
+> retention is handled server-side by the TTL sweep (see cron cleanup below),
+> which calls the storage library internally.
 
 ### `GET /api/cron/cleanup`
 
@@ -319,12 +329,19 @@ Runs TTL sweeps for expired reports (filesystem) and share tokens. When `CRON_SE
 
 ## Configuration
 
+See [`.env.example`](.env.example) for the full list. Highlights:
+
 - Vercel production: set `BLOB_READ_WRITE_TOKEN`
 - Local development: `REPORTS_DIR` is optional when not using Blob storage and defaults to `<project-root>/reports`
 - Local Blob testing: `BLOB_READ_WRITE_TOKEN` can also be set locally if you want to exercise Blob storage
 - Report retention (filesystem): `REPORT_TTL_DAYS` (default 30; 7 when Blob token is set), `REPORT_MAX_COUNT` (default 100)
 - Cron cleanup auth: optional `CRON_SECRET` for `POST /api/cron/cleanup`
-- GitHub commit insights (fallback when no local `.git`): optional `GITHUB_TOKEN` for higher API rate limits
+- Rate limiting: optional `ANALYZE_RATE_LIMIT_PER_MIN`, `MAX_CONCURRENT_ANALYSES`
+
+> **Security note:** RepoAtlas analyzes only public GitHub repositories and
+> **never attaches a server-owned GitHub token** to a user-supplied repository
+> request. Public GitHub API access is unauthenticated and rate-limited per
+> server IP; commit-history insights degrade gracefully when unavailable.
 
 No `.env` file is required for local development by default.
 
@@ -366,20 +383,22 @@ reports/
 ## Development
 
 ```bash
-npm run dev         # Start Next.js dev server
-npm run build       # Build for production
-npm run start       # Run production build
-npm run lint        # Run ESLint
-npm run test        # Run Vitest once
-npm run test:watch  # Run Vitest in watch mode
+npm run dev            # Start Next.js dev server
+npm run build          # Build for production
+npm run start          # Run production build
+npm run lint           # Run ESLint
+npm run typecheck      # Type-check with tsc --noEmit
+npm run test           # Run Vitest once
+npm run test:coverage  # Run Vitest with coverage thresholds
+npm run test:watch     # Run Vitest in watch mode
 ```
 
 ---
 
 ## Testing
 
-- Unit and integration-style tests: Vitest (121 tests)
-- End-to-end tests: Playwright (32 tests) — API edge cases, full UI flows, share/export/upload, legacy report fallback
+- Unit and integration-style tests: Vitest, with coverage collected via `npm run test:coverage` (production `src/**` scope; non-regression thresholds enforced in `vitest.config.ts`)
+- End-to-end tests: Playwright — API edge cases, full UI flows, share/export/upload, legacy report fallback
 - Portfolio capture is separate: `npm run capture:portfolio` (not run during default `npm run test:e2e`)
 
 Run:

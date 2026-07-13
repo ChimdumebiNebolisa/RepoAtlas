@@ -300,16 +300,23 @@ export function computeDangerZones(
   java?: JavaPackResult | null,
   commitInsights?: CommitInsights | null
 ): DangerZoneItem[] {
+  // Exclude test files from production risk ranking. Test files are not
+  // production surface area, and including them both pollutes the ranking and
+  // skews the percentile baselines used to score the remaining files.
   const tsjsFiles = tsjs
-    ? Array.from(pipeline.file_metadata.keys()).filter((f) =>
-        CODE_EXTENSIONS.has(path.extname(f))
+    ? Array.from(pipeline.file_metadata.keys()).filter(
+        (f) => CODE_EXTENSIONS.has(path.extname(f)) && !tsjs.testFiles.has(f)
       )
     : [];
   const pythonFiles = python
-    ? Array.from(pipeline.file_metadata.keys()).filter((f) => path.extname(f) === PYTHON_EXTENSION)
+    ? Array.from(pipeline.file_metadata.keys()).filter(
+        (f) => path.extname(f) === PYTHON_EXTENSION && !python.testFiles.has(f)
+      )
     : [];
   const javaFiles = java
-    ? Array.from(pipeline.file_metadata.keys()).filter((f) => path.extname(f) === JAVA_EXTENSION)
+    ? Array.from(pipeline.file_metadata.keys()).filter(
+        (f) => path.extname(f) === JAVA_EXTENSION && !java.testFiles.has(f)
+      )
     : [];
   const files = [...tsjsFiles, ...pythonFiles, ...javaFiles];
 

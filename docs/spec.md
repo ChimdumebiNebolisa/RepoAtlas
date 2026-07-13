@@ -520,7 +520,7 @@ See `src/types/report.ts` for full `CandidateBrief`, `EvidenceRef`, and deep-ana
 | Route file | Methods | Public endpoint | Notes |
 |---|---|---|---|
 | `src/app/api/analyze/route.ts` | `POST` | `/api/analyze` | Accepts multipart upload (`file` or `zip`), JSON `{ "githubUrl", "ref"? }`, or JSON `{ "sample": true }`. JSON `zipRef` is rejected. Rate-limited + concurrency-gated. |
-| `src/app/api/reports/[id]/route.ts` | `GET`, `DELETE` | `/api/reports/:id` | Returns or deletes persisted report JSON |
+| `src/app/api/reports/[id]/route.ts` | `GET` | `/api/reports/:id` | Returns persisted report JSON with `Cache-Control: no-store`. No public mutation — the delete endpoint was removed; retention is handled by the server-side TTL sweep. |
 | `src/app/api/reports/[id]/share/route.ts` | `POST` | `/api/reports/:id/share` | Creates 7-day read-only share token |
 | `src/app/api/share/[token]/route.ts` | `GET` | `/api/share/:token` | Resolves share token to report JSON |
 | `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` | Returns `text/markdown` with attachment headers |
@@ -569,7 +569,7 @@ Maintenance rule: when route handlers are added/removed/renamed, update this tab
 
 ### API availability
 
-- **Current API routes:** `POST /api/analyze`, `GET`/`DELETE /api/reports/:id`, `POST /api/reports/:id/share`, `GET /api/share/:token`, `GET /api/reports/:id/export/md`, and `GET`/`POST /api/cron/cleanup`.
+- **Current API routes:** `POST /api/analyze`, `GET /api/reports/:id`, `POST /api/reports/:id/share`, `GET /api/share/:token`, `GET /api/reports/:id/export/md`, and `GET`/`POST /api/cron/cleanup`. There is no public `DELETE` route (removed; retention via server-side TTL sweep).
 - There is no separate `POST /api/upload`; uploads are handled by `POST /api/analyze` via multipart fields `file` or `zip`.
 - UI report rendering/export can use `/api/reports/:id` and `/api/reports/:id/export/md` after analysis returns `reportId`.
 

@@ -37,6 +37,12 @@ describe("GET /api/reports/[id]", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(report);
     expect(getReportMock).toHaveBeenCalledWith(validId);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("does not export a DELETE handler (public mutation removed)", async () => {
+    const routeModule = await import("./route");
+    expect((routeModule as Record<string, unknown>).DELETE).toBeUndefined();
   });
 
   it("returns 400 for invalid report ids", async () => {

@@ -163,4 +163,30 @@ describe("computeDangerZones", () => {
       test_proximity: 0,
     });
   });
+
+  it("excludes test files from production risk ranking", () => {
+    const pipeline = mockPipeline({
+      file_metadata: new Map([
+        ["src/service.ts", { path: "src/service.ts", size: 300, extension: ".ts", language: "typescript" }],
+        ["src/service.test.ts", { path: "src/service.test.ts", size: 400, extension: ".ts", language: "typescript" }],
+      ]),
+    });
+    const mockTsJs = {
+      architecture: { nodes: [], edges: [] },
+      imports: new Map<string, Set<string>>(),
+      fanIn: new Map([["src/service.ts", 3], ["src/service.test.ts", 0]]),
+      fanOut: new Map([["src/service.ts", 1], ["src/service.test.ts", 5]]),
+      entrypoints: new Set<string>(),
+      testFiles: new Set<string>(["src/service.test.ts"]),
+      complexity: new Map([["src/service.ts", 8], ["src/service.test.ts", 12]]),
+      loc: new Map<string, number>(),
+      maxNesting: new Map<string, number>(),
+      testProximity: new Map([["src/service.ts", 0], ["src/service.test.ts", 100]]),
+      warnings: [],
+    };
+
+    const result = computeDangerZones(pipeline, mockTsJs);
+    expect(result.map((r) => r.path)).toEqual(["src/service.ts"]);
+    expect(result.some((r) => r.path === "src/service.test.ts")).toBe(false);
+  });
 });

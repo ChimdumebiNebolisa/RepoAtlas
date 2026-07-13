@@ -2,6 +2,65 @@
 
 Evidence-backed Candidate Briefs for interviews, take-homes, and open-source contribution prep — without AI.
 
+---
+
+## Stabilization pass — deferred backlog (evidence-backed)
+
+A stabilization/correctness pass landed the following: typecheck + coverage
+infrastructure and CI gates; non-breaking production security-dependency
+upgrades (jsPDF critical, undici/lodash-es high, dompurify/uuid moderate);
+analyzer correctness (Python `from . import x` dot bug, nested test-directory
+detection, Danger-Zones test-file exclusion, honest "test proximity" copy,
+removal of noisy per-language warnings and a self-referential interview
+question); removal of the public `DELETE` mutation; `no-store` + baseline
+security headers; and honest report source/date rendering. See the PR for full
+detail.
+
+The following high-impact items from the deep audit are **intentionally
+deferred** because each is a large, individually-reviewable change that a single
+automated pass cannot land safely with adequate regression coverage. They are
+listed here with evidence and a concrete next step rather than shipped as
+half-features:
+
+- **Next.js 15/16 framework migration (P1, security).** `npm audit --omit=dev`
+  still reports 2 Next-only advisories that require Next 15+ (a breaking upgrade:
+  React 19 + async `params`/`searchParams`, route-handler and page typing
+  changes). Exploitability in this app is limited: it uses the App Router with no
+  `next/image`, custom middleware, i18n, rewrites, CSP nonces, or WebSocket
+  upgrades — the surfaces those advisories target. Next step: dedicated upgrade
+  commit to `next@15.5.x` (or `16.x`), migrate `params` to promises, bump React,
+  re-run full lint/typecheck/test/build/e2e.
+- **Deployment-honest ZIP cap + streaming extraction (P1).** UI/API still
+  advertise a 100 MB ZIP while Vercel caps Function bodies at ~4.5 MB, and
+  `safeExtractZipFromFile` whole-buffers the archive. Next step: single
+  source-of-truth per-mode limits consumed by API/UI/docs, stream extraction
+  with actual-byte accounting, and direct large public repos to GitHub URL mode.
+- **Total request deadline / AbortSignal propagation (P1).** The 120s budget is
+  polled between phases only. Next step: thread one `AbortSignal` through
+  metadata resolution, download, extraction, analysis, history, and storage.
+- **Global coverage to 80%/75% (P1).** Corrected baseline is ~64% statements /
+  ~80% branches (production `src`), dominated by frontend components lacking a
+  DOM test environment. Next step: add jsdom + `@testing-library` behavior-level
+  component tests, then raise `vitest.config.ts` thresholds.
+- **Blob share-cleanup parity + cron fail-closed (P1).** `deleteShareRecord`/
+  `listShareTokens` are no-ops for Blob and cron cleanup only authenticates when
+  `CRON_SECRET` exists. Next step: implement Blob share listing/deletion and make
+  cleanup fail closed in production.
+- **Runtime schema validation + versioned migration for stored JSON (P1).**
+  Stored report/share JSON is cast without validation. Next step: validate at
+  read time and treat incompatible/corrupt data distinctly from "not found".
+- **Analyzer depth (P2):** `@/`/tsconfig-alias + workspace import resolution,
+  combined multi-language architecture, calibrated small-sample risk, and
+  manifest-accurate framework/test detection.
+- **Frontend performance + a11y (P1/P2):** lazy-load html2canvas/jsPDF and the
+  offscreen export tree (landing first-load is ~723 kB; target < 250 kB),
+  paginated/bounded PDF/PNG export, full keyboard/ARIA tab semantics, and an
+  automated accessibility scan in E2E.
+- **Markdown export sanitization (P1):** context-aware escaping of untrusted
+  repository strings in headings/tables/code/Mermaid.
+
+---
+
 This document maps improvement items **1–38** to concrete files, dependencies, acceptance criteria, and suggested PR sequence. Work is grouped into **milestones** that can ship incrementally; you do not need to implement everything at once.
 
 **Related docs:** [spec.md](./spec.md) (engineering spec), [guardrails.md](./guardrails.md) (constraints)

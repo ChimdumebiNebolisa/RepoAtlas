@@ -43,3 +43,6 @@ reports
 # Keep API report routes tracked
 !src/app/api/reports/
 !src/app/api/reports/**
+
+# TypeScript incremental build info
+*.tsbuildinfo
