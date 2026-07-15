@@ -1,6 +1,6 @@
 # RepoAtlas Daily Product Hardening Progress
 
-Last updated: 2026-07-14 (America/Chicago)
+Last updated: 2026-07-15 (America/Chicago)
 
 This file is a persistent evidence record, not a substitute for checking the current default branch. Each run must compare it with source, tests, configuration, and recent history before selecting work.
 
@@ -9,7 +9,7 @@ This file is a persistent evidence record, not a substitute for checking the cur
 - Current phase: Phase 2 — dependency and platform security.
 - Completed work unit: Phase 2 Next.js 16 framework and lint-toolchain upgrade (2026-07-14).
 - Current in-progress work unit: none.
-- Current source of truth before this run's publication: `main` at `15508a8`.
+- Current source of truth after this run's merge: `main` at `4c1587750e354cda23081fa71ff486407e7f0028`.
 - Next incomplete work unit: Phase 2 CSP capability inventory and tested CSP.
 - Blockers: no product blocker. Local Windows TypeScript semantic-resolution tests fail on the current main baseline; the local E2E web-server window is too short for the Next 16 Windows build. Both are recorded below and require no change to this framework slice.
 
@@ -26,6 +26,8 @@ Implementation: `.github/workflows/audit.yml` now runs separate fail-closed prod
 Local verification before publication: both audit commands exited 0 with `found 0 vulnerabilities`; `npm run lint` exited 0; `npm run typecheck` exited 0; `git diff --check` exited 0; and workflow/policy assertions confirmed both audit commands are present and `continue-on-error` is absent. No runtime tests or production build were run because this slice changes only workflow and security documentation; GitHub CI remains the authoritative runtime regression check.
 
 Self-review: corrected documentation wording from “required checks” to “enforced checks” because branch-protection configuration is not part of this repository change. No dependency versions, runtime behavior, ingestion boundaries, analyzer semantics, report compatibility, exports, frontend behavior, or deployment settings were changed.
+
+Publication: branch `agent/audit-policy` commit `044837b1df158639b49aaa5be0c9ee400be0831c` was pushed and opened as [PR #30](https://github.com/ChimdumebiNebolisa/RepoAtlas/pull/30), labeled `codex`, marked ready, and squash-merged as `4c1587750e354cda23081fa71ff486407e7f0028`. The `codex-automation` label was unavailable. PR checks passed: CI run `29414100404` (`test`, `e2e`), Security audit run `29414100442` (`Production dependency audit`, `Full dependency audit`), GitGuardian, Vercel, and Vercel Preview Comments. The Vercel preview check completed successfully; production deployment for the merged commit remains to be verified.
 
 ## Ordered work-unit checklist
 
