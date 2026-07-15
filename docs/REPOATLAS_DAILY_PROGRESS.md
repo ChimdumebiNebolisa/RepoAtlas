@@ -9,9 +9,23 @@ This file is a persistent evidence record, not a substitute for checking the cur
 - Current phase: Phase 2 — dependency and platform security.
 - Completed work unit: Phase 2 Next.js 16 framework and lint-toolchain upgrade (2026-07-14).
 - Current in-progress work unit: none.
-- Current source of truth after publication: `main` at `a96e32042869fc066ff8c4aedaca0f55cc79720f`.
-- Next incomplete work unit: Phase 2 production and development audit policies.
+- Current source of truth before this run's publication: `main` at `15508a8`.
+- Next incomplete work unit: Phase 2 CSP capability inventory and tested CSP.
 - Blockers: no product blocker. Local Windows TypeScript semantic-resolution tests fail on the current main baseline; the local E2E web-server window is too short for the Next 16 Windows build. Both are recorded below and require no change to this framework slice.
+
+### 2026-07-15 selected work-unit blast radius
+
+Selected work unit: Phase 2 production and development audit policies.
+
+Existing-state verification: current `main` is clean at `15508a8`; `npm audit --omit=dev --audit-level=low` and `npm audit --audit-level=low` both pass locally, but `.github/workflows/audit.yml` only runs the production audit, uses `continue-on-error: true`, and is scheduled/manual only. The policy gap is enforcement and documentation, not dependency remediation.
+
+Blast radius before editing: `.github/workflows/audit.yml`, `SECURITY.md`, and this progress record. No runtime code, ingestion limits, archive extraction, analyzer semantics, report schema/storage, exports, frontend behavior, or deployment configuration is in scope.
+
+Implementation: `.github/workflows/audit.yml` now runs separate fail-closed production and full dependency audits on pull requests targeting `main`, pushes to `main`, the weekly schedule, and manual dispatch. Both jobs use `npm ci --ignore-scripts`; the production gate runs `npm audit --omit=dev --audit-level=low`, and the full gate runs `npm audit --audit-level=low`. `SECURITY.md` documents the commands, triggers, failure semantics, and the prohibition on automatic `npm audit fix --force` major migrations.
+
+Local verification before publication: both audit commands exited 0 with `found 0 vulnerabilities`; `npm run lint` exited 0; `npm run typecheck` exited 0; `git diff --check` exited 0; and workflow/policy assertions confirmed both audit commands are present and `continue-on-error` is absent. No runtime tests or production build were run because this slice changes only workflow and security documentation; GitHub CI remains the authoritative runtime regression check.
+
+Self-review: corrected documentation wording from “required checks” to “enforced checks” because branch-protection configuration is not part of this repository change. No dependency versions, runtime behavior, ingestion boundaries, analyzer semantics, report compatibility, exports, frontend behavior, or deployment settings were changed.
 
 ## Ordered work-unit checklist
 
@@ -19,7 +33,7 @@ This file is a persistent evidence record, not a substitute for checking the cur
 - [x] Phase 2: production dependency baseline and Next.js/PostCSS remediation.
 - [x] Phase 2: development dependency remediation and audit release-gate evidence.
 - [x] Phase 2: Next.js upgrade implementation.
-- [ ] Phase 2: production and development audit policies.
+- [x] Phase 2: production and development audit policies.
 - [ ] Phase 2: CSP capability inventory and tested CSP.
 - [ ] Phase 3: adversarial ZIP families, one boundary family per unit.
 - [ ] Phase 4: end-to-end deadlines and request budgets.
