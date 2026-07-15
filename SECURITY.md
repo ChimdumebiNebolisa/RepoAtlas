@@ -11,6 +11,21 @@ minimal issue that describes impact without including a working exploit. Do not
 disclose publicly until a fix is available. We aim to acknowledge reports
 promptly and will credit reporters who wish to be named.
 
+## Dependency audit policy
+
+The [security-audit workflow](.github/workflows/audit.yml) runs for pull requests
+targeting `main`, pushes to `main`, a weekly schedule, and manual dispatch. It
+has two enforced checks:
+
+- Production dependencies: `npm audit --omit=dev --audit-level=low`
+- Full dependency tree, including development tooling: `npm audit --audit-level=low`
+
+Either audit failing fails the workflow; findings are not suppressed with
+`continue-on-error`. The workflow installs from the committed lockfile with
+`npm ci --ignore-scripts`, and dependency changes must clear both checks. Major
+dependency migrations require separate compatibility evidence; `npm audit fix
+--force` is not an automated remediation policy.
+
 ## Security model
 
 - **Static analysis only.** RepoAtlas reads repository files as text. It never

@@ -1,6 +1,10 @@
 name: Security audit
 
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch:
@@ -9,7 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  audit:
+  production:
+    name: Production dependency audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +22,17 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-      - run: npm ci
-      - run: npm audit --omit=dev
-        continue-on-error: true
+      - run: npm ci --ignore-scripts
+      - run: npm audit --omit=dev --audit-level=low
+
+  full:
+    name: Full dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm audit --audit-level=low
