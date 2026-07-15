@@ -1,23 +1,23 @@
 # RepoAtlas Daily Product Hardening Progress
 
-Last updated: 2026-07-12 (America/Chicago)
+Last updated: 2026-07-14 (America/Chicago)
 
 This file is a persistent evidence record, not a substitute for checking the current default branch. Each run must compare it with source, tests, configuration, and recent history before selecting work.
 
 ## Current state
 
 - Current phase: Phase 2 — dependency and platform security.
-- Completed work unit: Phase 2 development dependency remediation for Vitest/Vite/esbuild advisories (2026-07-12).
+- Completed work unit: Phase 2 Next.js 16 framework and lint-toolchain upgrade (2026-07-14).
 - Current in-progress work unit: none.
-- Next incomplete work unit: Phase 2 Next.js upgrade implementation assessment.
-- Blockers: none. WebKit was initially absent locally and was installed; the complete mobile project then passed.
+- Next incomplete work unit: Phase 2 production and development audit policies.
+- Blockers: no product blocker. Local Windows TypeScript semantic-resolution tests fail on the current main baseline; the local E2E web-server window is too short for the Next 16 Windows build. Both are recorded below and require no change to this framework slice.
 
 ## Ordered work-unit checklist
 
 - [x] Phase 1: baseline, repository inventory, recent-work verification, stale-branch review, and blast-radius map.
 - [x] Phase 2: production dependency baseline and Next.js/PostCSS remediation.
 - [x] Phase 2: development dependency remediation and audit release-gate evidence.
-- [ ] Phase 2: Next.js upgrade implementation.
+- [x] Phase 2: Next.js upgrade implementation.
 - [ ] Phase 2: production and development audit policies.
 - [ ] Phase 2: CSP capability inventory and tested CSP.
 - [ ] Phase 3: adversarial ZIP families, one boundary family per unit.
@@ -79,7 +79,8 @@ Verified against `main` source/tests on 2026-07-11:
 - GitHub downloads are streamed with a compressed-byte cap; extraction is bounded and temporary resources have cleanup coverage.
 - Limits are centralized in `src/lib/ingestLimits.ts`; ingestion errors are typed.
 - Document discovery and duplicate grouping are deterministic and covered by fixtures/tests.
-- Stored reports are stamped with `report_version: 2`, validated at read time, and future versions are rejected; migration/older-version behavior remains incomplete.
+- Stored reports are stamped with `report_version: 3`, validated at read time, and future versions are rejected; migration/older-version behavior remains incomplete.
+- Next.js 16.2.10 and React 19.2.7 are installed on the current `main`; lint runs through the explicit ESLint CLI with a flat configuration.
 - Public report deletion is absent, report/share/export responses are `no-store`, and production cron cleanup fails closed without its secret.
 - Frontend repository source labels and analyzed timestamps use corrected format helpers.
 
@@ -149,10 +150,10 @@ No runtime code, API behavior, analyzer behavior, report schema behavior, fronte
 
 ## Repository history and stale work
 
-- Current source of truth: `main` at start-of-run commit `a050c2a`.
+- Current source of truth before this run: `main` at `056bfa6` (`056bfa67c131e43e1ac8f9630551b072a1040bc2`).
+- PR #28 was merged after the prior progress update and is now part of `main`; its TypeScript semantic graph, AST import resolution, workspace fixtures, and report schema v3 behavior must not be rebuilt.
 - PR #22 is merged and contains the ingestion/document hardening that must not be reapplied.
-- PR #24 is open against the already-merged feature branch rather than `main`; treat it as stale evidence only and compare every idea with current `main`.
-- PR #23 is open against `main` for cloud environment setup; it is unrelated to product hardening and was not changed.
+- PR #24 and PR #23 are now merged; they were inspected as historical context and were not reapplied.
 - Numerous remote `codex/*` and `cursor/*` branches remain. They were inventoried but not modified, closed, or deleted.
 
 ## Deferred items, unsupported cases, and deployment uncertainty
@@ -189,3 +190,38 @@ Publication evidence:
 - Merge commit: `bfebc85119885e3547be43a7da2f3398014e1c04`.
 - Vercel production deployment for the merge commit: `dpl_9JuHVCLVC6YBxfjjPop1uQ7YuviK`, state `READY`, URL `https://repo-atlas-rarr4bph8-chimdumebinebolisagmailcoms-projects.vercel.app`.
 - The local Vercel CLI had no credentials; deployment completed through the repository's linked Vercel Git integration.
+
+## Next.js 16 upgrade verification and publication (2026-07-14)
+
+Selected work unit: Phase 2 Next.js upgrade implementation.
+
+Existing-state verification: the fetched default branch was clean at `056bfa67c131e43e1ac8f9630551b072a1040bc2`, still pinned to Next.js 15.5.20, ESLint 8, the legacy `.eslintrc.json`, and `next lint`. Official Next.js 16 guidance requires Node 20.9+, removes `next lint`, and recommends ESLint flat config. React 19.2.7 and TypeScript 5.9.3 were already compatible.
+
+Blast radius: dependency/runtime toolchain (`package.json`, `package-lock.json`, `next-env.d.ts`, `tsconfig.json`), lint configuration, two route-page state initializations required by ESLint 9’s React Hooks rule, one stale fixture lint directive, documentation, and this progress record. No ingestion limits, archive extraction, analyzer algorithms, report schema/storage/export contracts, or Vercel configuration were changed.
+
+Changes: upgraded `next` and `eslint-config-next` to `16.2.10`, ESLint to `9.39.2`, and the Node engine floor to `>=20.9.0`; replaced `next lint` with an explicit source/config/test lint command; migrated `.eslintrc.json` to `eslint.config.mjs` with the existing Core Web Vitals preset and generated-artifact ignores; accepted Next’s required TypeScript config and route-type reference updates; updated framework documentation; and preserved route behavior while satisfying the new hooks rule.
+
+Self-review: no private-repository support, limits, report fields, analyzer semantics, or security headers changed. The explicit lint scope covers `src`, `e2e`, fixtures, scripts, and all project configs while avoiding generated reports/coverage. Next 16’s Turbopack build emits an existing dynamic filesystem tracing warning from `src/lib/storage.ts`; it does not fail the build and was not broadened by this patch. The local TypeScript semantic-resolution failures were reproduced with changes stashed on the current main baseline and remain deferred to the analyzer correctness track.
+
+Verification:
+
+- `git fetch origin main; git merge --ff-only origin/main`: exit 0; local `main` fast-forwarded from `0f6d4fc` to `056bfa6`.
+- `npm install --package-lock-only --ignore-scripts --no-audit --no-fund --prefer-offline`: exit 0; lockfile regenerated for Next 16/ESLint 9.
+- `npm install --ignore-scripts --no-audit --no-fund --prefer-offline`: exit 0.
+- `npm run lint`: exit 0; zero errors and zero warnings.
+- `npm run typecheck`: exit 0.
+- `npx vitest run src/components/InputForm.test.ts src/components/ReportTabs.test.ts src/lib/reportSchema.test.ts`: exit 0; 4 files and 13 tests passed.
+- `npm run build`: exit 0; Next.js 16.2.10 Turbopack production build passed. Existing warnings: six-month `caniuse-lite` data, deprecated Vitest `environmentMatchGlobs`, and dynamic filesystem NFT tracing from storage.
+- `npm audit --omit=dev --audit-level=low`: exit 0; 0 production vulnerabilities.
+- `npm audit --audit-level=low`: exit 0; 0 total vulnerabilities.
+- `npm test`: exit 1 on the current Windows environment; 37 files passed and 2 existing TS/JS analyzer files failed in 13 tests because import sets were empty. The same focused failure reproduced with all Next-upgrade changes stashed on the current-main baseline; no framework files were involved.
+- `npm run test:coverage`: exit 1 on the same baseline analyzer failures; 37 files passed and 2 failed, with 214 passed and 12 failed tests in the coverage run. Coverage percentages were not accepted as release evidence because the required suite was red.
+- `PLAYWRIGHT_PORT=3100 npm run test:e2e`: exit 1 before tests; the configured 180-second web-server window expired while the Windows Next 16 production build/start command was still preparing. GitHub E2E is required publication evidence.
+- Direct built-server smoke was attempted but did not produce a reliable HTTP result within the local process timeout; no local browser pass is claimed.
+- `git diff --check`: reports repository-native CRLF warnings on changed lines; no semantic whitespace change was introduced.
+
+Performance/bundle measurements: Next 16 build completed locally in approximately 154 seconds including TypeScript and static generation; no first-load bundle report was emitted by the Turbopack build. Previous Next 15 first-load observations remain historical and are not treated as Next 16 measurements.
+
+Publication status: branch `agent/next16-upgrade`; commit, push, PR, merge, and Vercel status are recorded below after the remote publication step.
+
+Regression status: public GitHub URL analysis, caller-controlled `zipRef` rejection, exact-SHA-first download, streamed archive extraction, centralized limits, typed ingestion errors, cleanup, deterministic document discovery, duplicate handling, report API corrections, frontend source labels, and frontend timestamps were unchanged and remain covered by the current main regression suite/CI. Report schema v3 and the semantic graph from PR #28 were preserved.

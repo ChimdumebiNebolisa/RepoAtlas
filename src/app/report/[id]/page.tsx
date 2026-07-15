@@ -9,15 +9,13 @@ export default function SharedReportPage() {
   const params = useParams<{ id: string }>();
   const reportId = params?.id ?? "";
   const [report, setReport] = useState<Report | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(
+    reportId ? null : "Missing report id."
+  );
+  const [loading, setLoading] = useState(Boolean(reportId));
 
   useEffect(() => {
-    if (!reportId) {
-      setError("Missing report id.");
-      setLoading(false);
-      return;
-    }
+    if (!reportId) return;
 
     let alive = true;
     (async () => {

@@ -11,17 +11,17 @@ export default function TokenSharePage() {
   const token = params?.token ?? "";
   const [report, setReport] = useState<Report | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(
+    token ? null : "Missing share token."
+  );
+  const [loading, setLoading] = useState(Boolean(token));
   const [retryCount, setRetryCount] = useState(0);
 
   const loadReport = useCallback(async (signal: AbortSignal) => {
-    if (!token) {
-      setError("Missing share token.");
-      setLoading(false);
-      return;
-    }
+    if (!token) return;
 
+    await Promise.resolve();
+    if (signal.aborted) return;
     setLoading(true);
     setError(null);
     setReport(null);
@@ -47,7 +47,7 @@ export default function TokenSharePage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void loadReport(controller.signal);
+    void Promise.resolve().then(() => loadReport(controller.signal));
     return () => controller.abort();
   }, [loadReport, retryCount]);
 
