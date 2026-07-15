@@ -106,12 +106,12 @@ See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANG
 
 ## Tech Stack
 
-- Application framework: Next.js 15, React 19, TypeScript 5
+- Application framework: Next.js 16, React 19, TypeScript 5
 - Styling: Tailwind CSS, PostCSS, Autoprefixer
 - Graph and layout: `elkjs`, `react-zoom-pan-pinch`
 - Export: `html2canvas`, `jspdf`, Markdown formatter
 - Testing: Vitest
-- Linting: ESLint via `next lint`
+- Linting: ESLint via `npm run lint`
 
 ---
 

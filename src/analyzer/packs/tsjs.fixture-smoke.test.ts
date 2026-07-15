@@ -13,7 +13,6 @@ describe("fixture semantic graph smoke", () => {
       expect(result.semanticGraph).toBeTruthy();
       expect(result.semanticGraph!.stats.edge_count).toBeGreaterThanOrEqual(0);
       // Keep console output for before/after documentation in PRs.
-      // eslint-disable-next-line no-console
       console.log(
         JSON.stringify(
           {

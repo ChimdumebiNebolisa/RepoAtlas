@@ -1,6 +1,6 @@
 # RepoAtlas
 
-RepoAtlas is a single Next.js 14 (App Router) + React 18 + TypeScript app that performs deterministic, no-AI static analysis of an uploaded repository zip and produces a "Candidate Brief". See `README.md` for the full product overview, API reference, and standard commands.
+RepoAtlas is a single Next.js 16 (App Router) + React 19 + TypeScript app that performs deterministic, no-AI static analysis of an uploaded repository zip and produces a "Candidate Brief". See `README.md` for the full product overview, API reference, and standard commands.
 
 ## Cursor Cloud specific instructions
 

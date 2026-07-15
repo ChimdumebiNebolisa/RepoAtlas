@@ -21,6 +21,7 @@ Near-term focus: deepen trust (evidence, performance, accessibility), harden pla
 Shipped and enforced as of 2026-07-10:
 
 - Dual input (ZIP + public GitHub URL), deployment-aware ZIP caps, hardened extraction
+- Next.js 16 / React 19 runtime with explicit ESLint CLI linting
 - Capability-link report access (GET only), share tokens, Markdown export
 - Deterministic Candidate Brief, Start Here, Danger Zones (test files excluded from risk ranking)
 - Cron TTL sweep with production fail-closed auth; Blob share cleanup parity
@@ -84,7 +85,7 @@ Details: [CHANGELOG.md](../CHANGELOG.md). ADRs: [001](./adr/001-capability-acces
 
 ### Framework maintenance
 
-- Stay current on Next.js security advisories; major upgrades as dedicated, tested PRs.
+- Stay current on Next.js security advisories; major upgrades as dedicated, tested PRs. Next.js 16.2.10 is the current pinned line.
 
 ---
 
@@ -142,4 +143,4 @@ Large items (Next.js major upgrades, OAuth for private GitHub) deserve dedicated
 | [SECURITY.md](../SECURITY.md) | Vulnerability reporting and security model |
 | [adr/](./adr/) | Architecture decision records |
 
-*Last updated: 2026-07-10*
+*Last updated: 2026-07-14*
