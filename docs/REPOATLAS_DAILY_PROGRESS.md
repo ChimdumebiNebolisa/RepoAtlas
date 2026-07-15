@@ -9,6 +9,7 @@ This file is a persistent evidence record, not a substitute for checking the cur
 - Current phase: Phase 2 — dependency and platform security.
 - Completed work unit: Phase 2 Next.js 16 framework and lint-toolchain upgrade (2026-07-14).
 - Current in-progress work unit: none.
+- Current source of truth after publication: `main` at `a96e32042869fc066ff8c4aedaca0f55cc79720f`.
 - Next incomplete work unit: Phase 2 production and development audit policies.
 - Blockers: no product blocker. Local Windows TypeScript semantic-resolution tests fail on the current main baseline; the local E2E web-server window is too short for the Next 16 Windows build. Both are recorded below and require no change to this framework slice.
 
@@ -160,7 +161,7 @@ No runtime code, API behavior, analyzer behavior, report schema behavior, fronte
 
 - Deferred to ordered phases: full ZIP adversarial matrix; end-to-end request budgets; distributed abuse control; fixture corpus expansion; analyzer correctness changes; schema migrations; adapter equivalence; export sanitization; large-report UX; bundle budgets; observability; final docs reconciliation.
 - Unsupported analyzer cases remain explicit for layouts outside the current TS/JS, Python, and Java heuristics, including unproven workspace/alias/import variants listed in the roadmap. No correctness claim was added.
-- Vercel production Blob credentials, cleanup secret/schedule, deployment request limits, live required checks, and production observability were not verified in this run.
+- Vercel production Blob credentials, cleanup secret/schedule, deployment request limits, and production observability were not verified in this run. The live required GitHub checks and merged Vercel deployment were verified below.
 
 ## Commands executed
 
@@ -222,6 +223,10 @@ Verification:
 
 Performance/bundle measurements: Next 16 build completed locally in approximately 154 seconds including TypeScript and static generation; no first-load bundle report was emitted by the Turbopack build. Previous Next 15 first-load observations remain historical and are not treated as Next 16 measurements.
 
-Publication status: branch `agent/next16-upgrade`; commit, push, PR, merge, and Vercel status are recorded below after the remote publication step.
+Publication status: branch `agent/next16-upgrade`; commit `d56f518683a324079f5523d64461a83c1d1b17de` pushed successfully; PR #29 opened at https://github.com/ChimdumebiNebolisa/RepoAtlas/pull/29, labeled `codex`, marked ready, and squash-merged as `a96e32042869fc066ff8c4aedaca0f55cc79720f`.
+
+- PR CI run `29381846551`: `test` passed in 1m12s and `e2e` passed in 2m36s; GitGuardian, Vercel, and Vercel Preview Comments passed. `codex-automation` was unavailable because the label does not exist.
+- Main CI run `29381994976`: `test` passed in 1m10s and `e2e` passed in 1m45s. Coverage and production build passed; E2E passed for the configured Chromium/WebKit projects. GitHub emitted only the existing Node.js 20 action deprecation annotation.
+- Vercel production deployment `dpl_6Uu9R1inRCAM8jjM5T4b3wkp3TxL`: state `READY`, target `production`, commit `a96e32042869fc066ff8c4aedaca0f55cc79720f`, URL `https://repo-atlas-egxnj4dnv-chimdumebinebolisagmailcoms-projects.vercel.app`, inspector `https://vercel.com/chimdumebinebolisagmailcoms-projects/repo-atlas/6Uu9R1inRCAM8jjM5T4b3wkp3TxL`.
 
 Regression status: public GitHub URL analysis, caller-controlled `zipRef` rejection, exact-SHA-first download, streamed archive extraction, centralized limits, typed ingestion errors, cleanup, deterministic document discovery, duplicate handling, report API corrections, frontend source labels, and frontend timestamps were unchanged and remain covered by the current main regression suite/CI. Report schema v3 and the semantic graph from PR #28 were preserved.
