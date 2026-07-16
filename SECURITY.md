@@ -46,7 +46,12 @@ dependency migrations require separate compatibility evidence; `npm audit fix
 - **No caching of untrusted data.** Report, share, and export responses are
   served with `Cache-Control: no-store`; baseline security headers
   (`nosniff`, `SAMEORIGIN`, referrer/permissions policy, and HSTS in
-  production) are applied via `next.config.js`.
+  production) are applied via `next.config.js`. Production pages also send a
+  tested CSP from `securityHeaders.js`: same-origin scripts and connections,
+  no objects or frames, and only the `data:`/`blob:` image, font, and worker
+  capabilities required by the client-side report exports. The policy uses
+  `unsafe-inline` for Next's generated runtime and the UI's inline styles, but
+  does not grant `unsafe-eval` or third-party origins.
 
 ## Supported versions
 
