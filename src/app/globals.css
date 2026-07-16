@@ -592,8 +592,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
   border-bottom: 1px solid #cedcd5;
 }
 .interviewer-list article:first-child { padding-top: 0; }
-.interviewer-list article > span, .brief-contents span {
-  color: #779084;
+.interviewer-list article > span {
+  color: #5d7469;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.65rem;
+}
+.brief-contents span {
+  color: #86a697;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.65rem;
 }
@@ -663,6 +668,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
   color: var(--ink);
   border: 1px solid var(--line);
   background: white;
+}
+.brief-contents div:nth-child(3n + 2) span, .brief-contents div:nth-child(3n + 3) span {
+  color: #52675c;
 }
 .brief-contents strong { font-size: 0.88rem; }
 

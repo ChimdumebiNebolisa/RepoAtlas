@@ -262,3 +262,21 @@ Publication status: branch `agent/next16-upgrade`; commit `d56f518683a324079f552
 - Vercel production deployment `dpl_6Uu9R1inRCAM8jjM5T4b3wkp3TxL`: state `READY`, target `production`, commit `a96e32042869fc066ff8c4aedaca0f55cc79720f`, URL `https://repo-atlas-egxnj4dnv-chimdumebinebolisagmailcoms-projects.vercel.app`, inspector `https://vercel.com/chimdumebinebolisagmailcoms-projects/repo-atlas/6Uu9R1inRCAM8jjM5T4b3wkp3TxL`.
 
 Regression status: public GitHub URL analysis, caller-controlled `zipRef` rejection, exact-SHA-first download, streamed archive extraction, centralized limits, typed ingestion errors, cleanup, deterministic document discovery, duplicate handling, report API corrections, frontend source labels, and frontend timestamps were unchanged and remain covered by the current main regression suite/CI. Report schema v3 and the semantic graph from PR #28 were preserved.
+
+## Landing page accessibility hardening (2026-07-16)
+
+Selected work unit: audit and repair landing-page accessibility and responsive layout.
+
+Existing-state verification: `main` was clean at `fd5ca5a` before editing. The landing page already had responsive desktop/mobile layout and focused smoke coverage, but `e2e/accessibility.spec.ts` only scanned `#analyze`. A full-page axe audit exposed WCAG AA contrast failures in the small numbered markers used by the brief-contents cards; mobile overflow was not asserted.
+
+Blast radius: `src/app/globals.css` marker colors only, plus landing E2E accessibility coverage. No analyzer, ingestion, report schema, storage, export, API, or public GitHub behavior changed.
+
+Changes: split interviewer and brief-content marker styles, added explicit contrast-safe colors for the alternating light brief cards, widened axe coverage to the entire homepage, and added a 390px horizontal-overflow regression test.
+
+Verification: `npm run lint` exit 0; `npm run typecheck` exit 0; rebuilt production server `npx playwright test e2e/accessibility.spec.ts --project=chromium` exit 0 with 2/2 passed; the same suite on `--project=mobile` exit 0 with 2/2 passed; updated-build landing/sample/input interaction subset exit 0 with 4/4 passed; `git diff --check` exit 0. Rendered desktop full-page and 390x844 screenshots were reviewed after the fix. The Next 16 build emitted existing `caniuse-lite` and dynamic filesystem NFT tracing warnings; neither was introduced by this work.
+
+Performance and bundle measurements: no runtime or bundle-size change expected; no new measurement was required for this CSS/test-only unit.
+
+Publication/deployment: pending commit and push from `main`; no deployment-specific behavior was changed or verified in this local unit.
+
+Next incomplete work unit: Phase 3 adversarial ZIP boundary family; deferred items and unsupported analyzer cases remain unchanged.
