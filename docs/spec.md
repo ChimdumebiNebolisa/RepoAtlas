@@ -684,6 +684,7 @@ else {
 | Concern | Mitigation |
 |---------|------------|
 | Capability-link access | Report UUID is a read-only capability; public `DELETE` removed. See [adr/001-capability-access.md](./adr/001-capability-access.md). |
+| Browser content execution | Production responses use the tested CSP in `securityHeaders.js`: same-origin scripts/connections, `object-src 'none'`, `frame-src 'none'`, and no `unsafe-eval`; `data:`/`blob:` are limited to client export image/font/worker capabilities. |
 | Arbitrary server file read | Public API rejects JSON `zipRef`; only server-created temp paths and server-owned fixtures reach the zip ingest path. Report ids validated as UUID before storage access. |
 | Corrupt stored JSON | `parseAndValidateReport()` at read time; invalid payloads return not found. |
 | Path traversal (zip) | `src/lib/safeZipExtract.ts` — resolve paths; reject `..`; jail to extract root |

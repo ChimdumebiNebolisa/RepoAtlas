@@ -1,6 +1,6 @@
 # RepoAtlas Daily Product Hardening Progress
 
-Last updated: 2026-07-15 (America/Chicago)
+Last updated: 2026-07-16 (America/Chicago)
 
 This file is a persistent evidence record, not a substitute for checking the current default branch. Each run must compare it with source, tests, configuration, and recent history before selecting work.
 
@@ -10,8 +10,24 @@ This file is a persistent evidence record, not a substitute for checking the cur
 - Completed work unit: Phase 2 Next.js 16 framework and lint-toolchain upgrade (2026-07-14).
 - Current in-progress work unit: none.
 - Current source of truth after this run's merge: `main` at `4c1587750e354cda23081fa71ff486407e7f0028`.
-- Next incomplete work unit: Phase 2 CSP capability inventory and tested CSP.
+- Next incomplete work unit: Phase 3 adversarial ZIP boundary family.
 - Blockers: no product blocker. Local Windows TypeScript semantic-resolution tests fail on the current main baseline; the local E2E web-server window is too short for the Next 16 Windows build. Both are recorded below and require no change to this framework slice.
+
+### 2026-07-16 selected work-unit blast radius
+
+Selected work unit: Phase 2 CSP capability inventory and tested CSP.
+
+Existing-state verification: current `main` was clean at `1137582` and `next.config.js` applied only baseline headers. The app uses same-origin API requests, Next runtime chunks, inline React style props, and client-side `html2canvas`/`jsPDF` exports; Mermaid is emitted only in Markdown artifacts. No CSP, middleware nonce system, or security-header test existed.
+
+Blast radius before editing: `securityHeaders.js`, `next.config.js`, `package.json`, one unit test, one production-browser header test, `SECURITY.md`, `README.md`, `docs/spec.md`, and this progress record. No ingestion limits, archive extraction, analyzer semantics, report schema/storage, retention, export formatter, or API authorization behavior was in scope.
+
+Implementation: production responses now receive a centralized CSP with same-origin scripts/connections/forms, `object-src 'none'`, `frame-src 'none'`, `frame-ancestors 'self'`, no `unsafe-eval`, and narrowly documented `data:`/`blob:` support for client export images/fonts/workers. `unsafe-inline` remains only for Next's generated runtime and inline UI styles. Development keeps baseline headers without production CSP/HSTS so HMR remains supported. The helper is included in the explicit lint command. Unit and E2E assertions cover the policy contract and live production headers.
+
+Verification: `npx vitest run src/lib/securityHeaders.test.ts --coverage=false` passed 1 file/2 tests; `npm run lint` passed with zero errors after adding `securityHeaders.js` to the lint scope; `npm run typecheck` passed; `npm run build` passed on Next 16.2.10 with the existing Browserslist staleness warning and existing Turbopack NFT filesystem-tracing warning; `git diff --check` exited 0 with only repository-native CRLF normalization warnings. A production `next start` on port 3137 returned HTTP 200 and the expected CSP, HSTS, baseline headers, and no `unsafe-eval`. The prescribed Playwright CLI wrapper was unavailable because Windows has no `/bin/bash`; the configured Playwright runner was used instead. `PLAYWRIGHT_PORT=3137 npx playwright test e2e/accessibility.spec.ts e2e/security-headers.spec.ts --project=chromium` passed the header and homepage accessibility tests; the focused security suite then passed 2/2 tests, including the PDF export. An isolated `CI=1 PLAYWRIGHT_PORT=3100 npx playwright test e2e/candidate-brief.spec.ts --project=chromium` passed 6/6 report smoke tests. A reused-server report-flow run had 12 passes and 3 storage-path failures caused by the documented `reports/` versus `.playwright-reports/` mismatch; it was not used as release evidence. Broad `npm run test:coverage` remains red only on the recorded Windows TypeScript semantic-resolution baseline: 38 files passed, 216 tests passed, 12 existing analyzer tests failed; the new CSP test passed.
+
+Self-review: the policy is centralized, production-only, documented, and covered at config, HTTP, browser-rendering, and PDF-export levels. No third-party origins, `unsafe-eval`, object execution, or framing were added. No bundle-size or analyzer-performance measurement is applicable because runtime dependencies and report generation were not changed. No known CSP-slice deficiency remains.
+
+Publication: pending branch/commit/PR and deployment evidence for this run.
 
 ### 2026-07-15 selected work-unit blast radius
 
@@ -36,7 +52,7 @@ Publication: branch `agent/audit-policy` commit `044837b1df158639b49aaa5be0c9ee4
 - [x] Phase 2: development dependency remediation and audit release-gate evidence.
 - [x] Phase 2: Next.js upgrade implementation.
 - [x] Phase 2: production and development audit policies.
-- [ ] Phase 2: CSP capability inventory and tested CSP.
+- [x] Phase 2: CSP capability inventory and tested CSP.
 - [ ] Phase 3: adversarial ZIP families, one boundary family per unit.
 - [ ] Phase 4: end-to-end deadlines and request budgets.
 - [ ] Phase 5: distributed abuse-control interface.

@@ -281,7 +281,10 @@ Report `GET`, share, and Markdown export responses are served with
 `Cache-Control: no-store` so untrusted repository data is never cached by
 browsers or shared CDNs. A baseline set of security headers (`nosniff`,
 `SAMEORIGIN`, referrer and permissions policy, plus HSTS in production) is
-applied to all responses via `next.config.js`.
+applied to all responses via `next.config.js`. Production pages additionally
+send the tested CSP in `securityHeaders.js`: same-origin scripts/connections,
+no objects or frames, and only `data:`/`blob:` capabilities needed for report
+exports. It deliberately omits `unsafe-eval` and third-party origins.
 
 ### `GET /api/reports/:id`
 
