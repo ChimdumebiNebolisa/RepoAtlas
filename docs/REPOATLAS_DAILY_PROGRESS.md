@@ -277,6 +277,6 @@ Verification: `npm run lint` exit 0; `npm run typecheck` exit 0; rebuilt product
 
 Performance and bundle measurements: no runtime or bundle-size change expected; no new measurement was required for this CSS/test-only unit.
 
-Publication/deployment: pending commit and push from `main`; no deployment-specific behavior was changed or verified in this local unit.
+Publication/deployment: landing fix commit `9fc2886ca6bc865ab695a9ca610ba272d8c190a3` was pushed from `main`. Vercel linked Git deployment `dpl_733Tgu8mvhFppnTXxpeLNwkY7g7m` is `READY`, target `production`, for that commit; URL: `https://repo-atlas-ms566p151-chimdumebinebolisagmailcoms-projects.vercel.app`. No deployment-specific behavior was changed; the local production build and browser checks are the verification evidence for this CSS/test-only unit.
 
 Next incomplete work unit: Phase 3 adversarial ZIP boundary family; deferred items and unsupported analyzer cases remain unchanged.
