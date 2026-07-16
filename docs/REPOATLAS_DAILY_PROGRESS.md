@@ -9,7 +9,7 @@ This file is a persistent evidence record, not a substitute for checking the cur
 - Current phase: Phase 2 — dependency and platform security.
 - Completed work unit: Phase 2 Next.js 16 framework and lint-toolchain upgrade (2026-07-14).
 - Current in-progress work unit: none.
-- Current source of truth after this run's merge: `main` at `4c1587750e354cda23081fa71ff486407e7f0028`.
+- Current source of truth after this run's merge: `main` at `bf2511ee7e44a8c14e16d133ce29d330594ca74e`.
 - Next incomplete work unit: Phase 3 adversarial ZIP boundary family.
 - Blockers: no product blocker. Local Windows TypeScript semantic-resolution tests fail on the current main baseline; the local E2E web-server window is too short for the Next 16 Windows build. Both are recorded below and require no change to this framework slice.
 
@@ -27,7 +27,7 @@ Verification: `npx vitest run src/lib/securityHeaders.test.ts --coverage=false` 
 
 Self-review: the policy is centralized, production-only, documented, and covered at config, HTTP, browser-rendering, and PDF-export levels. No third-party origins, `unsafe-eval`, object execution, or framing were added. No bundle-size or analyzer-performance measurement is applicable because runtime dependencies and report generation were not changed. No known CSP-slice deficiency remains.
 
-Publication: pending branch/commit/PR and deployment evidence for this run.
+Publication: branch `codex/tested-production-csp` commit `2d32bd4f12f40946d8a421a3638b204c29cbf4d0` was pushed and opened as [PR #31](https://github.com/ChimdumebiNebolisa/RepoAtlas/pull/31), labeled `codex`, marked ready, and squash-merged as `bf2511ee7e44a8c14e16d133ce29d330594ca74e`. The `codex-automation` label was unavailable. PR checks passed: main CI test/e2e, production/full dependency audits, GitGuardian, Vercel, and Vercel Preview Comments. Post-merge main CI run `29507029628` passed `test` in 1m7s and `e2e` in 2m48s; post-merge Security audit run `29507029659` passed. Vercel production deployment `dpl_DAZw8w54aLLrTXShoyeUUoKKffUh` reached `READY` for the merged commit at [repo-atlas-mvmkphfne-chimdumebinebolisagmailcoms-projects.vercel.app](https://repo-atlas-mvmkphfne-chimdumebinebolisagmailcoms-projects.vercel.app). Deployment-specific Blob credentials, cron cleanup secret/schedule, and production observability remain unverified.
 
 ### 2026-07-15 selected work-unit blast radius
 
