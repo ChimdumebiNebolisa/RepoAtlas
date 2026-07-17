@@ -1,17 +1,33 @@
 # RepoAtlas Daily Product Hardening Progress
 
-Last updated: 2026-07-16 (America/Chicago)
+Last updated: 2026-07-17 (America/Chicago)
 
 This file is a persistent evidence record, not a substitute for checking the current default branch. Each run must compare it with source, tests, configuration, and recent history before selecting work.
 
 ## Current state
 
-- Current phase: Phase 2 — dependency and platform security.
-- Completed work unit: Phase 2 Next.js 16 framework and lint-toolchain upgrade (2026-07-14).
+- Current phase: Phase 3 — adversarial ZIP and untrusted-input resilience.
+- Completed work unit: Phase 3 normalized ZIP target-collision preflight (2026-07-17).
 - Current in-progress work unit: none.
-- Current source of truth after this run's merge: `main` at `bf2511ee7e44a8c14e16d133ce29d330594ca74e`.
-- Next incomplete work unit: Phase 3 adversarial ZIP boundary family.
+- Current source of truth before this run's merge: `main` at `40472859ea6466a659f35140d4fd93e8b1553830`.
+- Next incomplete work unit: Phase 3 Unicode normalization collision family.
 - Blockers: no product blocker. Local Windows TypeScript semantic-resolution tests fail on the current main baseline; the local E2E web-server window is too short for the Next 16 Windows build. Both are recorded below and require no change to this framework slice.
+
+### 2026-07-17 selected work-unit blast radius
+
+Selected work unit: Phase 3 normalized ZIP target-collision preflight.
+
+Existing-state verification: current `main` was clean and matched `origin/main` at `40472859`. `src/lib/safeZipExtract.ts` already rejected invalid magic bytes, traversal, absolute/drive-letter paths, entry-count overflow, single-file overflow, and cumulative expanded-size overflow, but it resolved and wrote entries one at a time without rejecting aliases that mapped to the same destination or file/child-path conflicts. Existing focused coverage was 4 tests and had no raw duplicate-entry fixture.
+
+Blast radius before editing: `src/lib/safeZipExtract.ts`, `src/lib/safeZipExtract.test.ts`, `docs/spec.md`, `SECURITY.md`, and this progress record. No GitHub acquisition, centralized limits, request deadlines, analyzer semantics, report schema/storage, exports, frontend behavior, or retention code was in scope.
+
+Implementation: extraction now resolves and plans every archive target before writing. It rejects duplicate normalized destinations, including dot-segment aliases and platform-specific case collisions, plus file/child-path conflicts, with typed `ZIP_INVALID` errors. The raw ZIP test fixture creates duplicate central-directory entries that `adm-zip.addFile()` would otherwise normalize away; assertions prove the extraction root has no partially written collision path. Security and specification documentation now state the preflight behavior.
+
+Verification: focused ZIP/ingest tests passed 3 files/19 tests; `npm run typecheck` passed; `npm run lint` passed with only the existing deprecated Vitest configuration warning; `npm run build` passed on Next 16.2.10. Full `npm test` exited 1 with 38 files passing and 218 tests passing; the 12 failures are the known Windows TypeScript semantic-resolution baseline in `src/analyzer/packs/tsjs.semantic.test.ts` and `src/analyzer/packs/tsjs.test.ts`, unrelated to ZIP extraction. Build emitted only the existing six-month Browserslist warning and Turbopack NFT filesystem-tracing warning. `git diff --check` exited 0 with repository-native CRLF normalization warnings. Coverage, browser, and deployment-specific Blob/cron behavior were not rerun because this slice has no frontend, coverage configuration, or deployment configuration changes; GitHub CI is required release evidence.
+
+Self-review: the first pass was extended to catch parent-file/child-path conflicts, and all collision checks run before the first archive file is written. The implementation preserves existing size accounting, path-jail checks, typed errors, and cleanup ownership. Unicode normalization collisions, confusable names, symlink metadata, permission metadata, cancellation, and malformed ZIP families remain separate unsupported work units; this change does not claim to solve them.
+
+Publication: pending branch/PR publication and post-merge CI/Vercel evidence.
 
 ### 2026-07-16 selected work-unit blast radius
 
@@ -53,7 +69,8 @@ Publication: branch `agent/audit-policy` commit `044837b1df158639b49aaa5be0c9ee4
 - [x] Phase 2: Next.js upgrade implementation.
 - [x] Phase 2: production and development audit policies.
 - [x] Phase 2: CSP capability inventory and tested CSP.
-- [ ] Phase 3: adversarial ZIP families, one boundary family per unit.
+- [x] Phase 3: normalized ZIP target-collision family (2026-07-17).
+- [ ] Phase 3: remaining adversarial ZIP families, one boundary family per unit.
 - [ ] Phase 4: end-to-end deadlines and request budgets.
 - [ ] Phase 5: distributed abuse-control interface.
 - [ ] Phases 6–7: deterministic analyzer fixtures and evidence-backed correctness fixes.
