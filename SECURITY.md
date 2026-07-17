@@ -42,7 +42,9 @@ dependency migrations require separate compatibility evidence; `npm audit fix
   so a guessable id cannot destroy stored data. Retention is enforced by a
   server-side TTL sweep.
 - **Hardened ZIP extraction.** Uploads are validated and extracted with
-  path-traversal rejection and entry/size limits.
+  path-traversal rejection, normalized-target collision preflight, and
+  entry/size limits. Duplicate destinations and file/child-path conflicts are
+  rejected before any archive entry is written.
 - **No caching of untrusted data.** Report, share, and export responses are
   served with `Cache-Control: no-store`; baseline security headers
   (`nosniff`, `SAMEORIGIN`, referrer/permissions policy, and HSTS in

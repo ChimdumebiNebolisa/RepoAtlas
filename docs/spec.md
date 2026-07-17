@@ -206,11 +206,12 @@ Rejected: non-HTTPS, non-`github.com` hosts, `tree`/`blob` subpaths, query strin
   - **Local dev:** `MAX_COMPRESSED_BYTES` = **100 MB**.
   - Selected by `maxCompressedBytesForZipUpload()` in `src/lib/ingestLimits.ts`.
 - **Validation**: Check magic bytes `50 4B 03 04` or `50 4B 05 06` (PK) for zip.
-- **Extraction**: `adm-zip` via `src/lib/safeZipExtract.ts` — path jail, entry count cap, uncompressed size cap.
+- **Extraction**: `adm-zip` via `src/lib/safeZipExtract.ts` — path jail, normalized-target collision preflight, entry count cap, uncompressed size cap.
 - **Path traversal**: For each entry, resolve path relative to extract root; reject if resolved path is outside root or contains `..`.
+- **Path collisions**: Reject duplicate normalized destinations (including dot-segment and platform separator aliases) and file/child-path conflicts before writing any entry.
 - **Size limit**: Max cumulative uncompressed **50 MB**; abort extraction if exceeded.
 
-**Acceptance criteria**: Valid zip extracts; zip with `../../../etc/passwd` entries rejected; oversized zip aborted. See `src/lib/safeZipExtract.test.ts`.
+**Acceptance criteria**: Valid zip extracts; zip with `../../../etc/passwd` entries, normalized duplicate destinations, or file/child-path conflicts is rejected; oversized zip is aborted. See `src/lib/safeZipExtract.test.ts`.
 
 ### Workspace Cleanup Rules
 

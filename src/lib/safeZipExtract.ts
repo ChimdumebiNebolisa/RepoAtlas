@@ -73,8 +73,26 @@ export function safeExtractZip(buffer: Buffer, extractRoot: string): void {
     });
   }
 
+  const plannedEntries: Array<{
+    entry: (typeof entries)[number];
+    targetPath: string;
+  }> = [];
+  const plannedPaths = new Map<string, boolean>();
+  const rootResolved = path.resolve(extractRoot);
   let totalUncompressed = 0;
   for (const entry of entries) {
+    const targetPath = resolveSafeZipEntryPath(extractRoot, entry.entryName);
+    const pathKey = process.platform === "win32" ? targetPath.toLowerCase() : targetPath;
+    if (plannedPaths.has(pathKey)) {
+      throw new AppError({
+        code: ERROR_CODES.ZIP_INVALID,
+        status: 400,
+        message: "Zip contains duplicate normalized paths.",
+      });
+    }
+    plannedPaths.set(pathKey, entry.isDirectory);
+    plannedEntries.push({ entry, targetPath });
+
     if (entry.isDirectory) continue;
     const size = entry.header.size;
     if (size > MAX_SINGLE_FILE_BYTES) {
@@ -94,9 +112,33 @@ export function safeExtractZip(buffer: Buffer, extractRoot: string): void {
     }
   }
 
+  for (const { entry, targetPath } of plannedEntries) {
+    if (entry.isDirectory) continue;
+    let parentPath = path.dirname(targetPath);
+    while (true) {
+      const relativeParent = path.relative(rootResolved, parentPath);
+      if (
+        relativeParent.length === 0 ||
+        relativeParent === ".." ||
+        relativeParent.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relativeParent)
+      ) {
+        break;
+      }
+      const parentKey = process.platform === "win32" ? parentPath.toLowerCase() : parentPath;
+      if (plannedPaths.get(parentKey) === false) {
+        throw new AppError({
+          code: ERROR_CODES.ZIP_INVALID,
+          status: 400,
+          message: "Zip contains conflicting normalized paths.",
+        });
+      }
+      parentPath = path.dirname(parentPath);
+    }
+  }
+
   let actualUncompressed = 0;
-  for (const entry of entries) {
-    const targetPath = resolveSafeZipEntryPath(extractRoot, entry.entryName);
+  for (const { entry, targetPath } of plannedEntries) {
     if (entry.isDirectory) {
       fs.mkdirSync(targetPath, { recursive: true });
       continue;
