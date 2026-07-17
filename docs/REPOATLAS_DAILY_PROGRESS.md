@@ -9,7 +9,7 @@ This file is a persistent evidence record, not a substitute for checking the cur
 - Current phase: Phase 3 — adversarial ZIP and untrusted-input resilience.
 - Completed work unit: Phase 3 normalized ZIP target-collision preflight (2026-07-17).
 - Current in-progress work unit: none.
-- Current source of truth before this run's merge: `main` at `40472859ea6466a659f35140d4fd93e8b1553830`.
+- Current source of truth after this run's merge: `main` at `36fce53f7de3eb0a498ca9fa0183a82da803ddcf`.
 - Next incomplete work unit: Phase 3 Unicode normalization collision family.
 - Blockers: no product blocker. Local Windows TypeScript semantic-resolution tests fail on the current main baseline; the local E2E web-server window is too short for the Next 16 Windows build. Both are recorded below and require no change to this framework slice.
 
@@ -27,7 +27,7 @@ Verification: focused ZIP/ingest tests passed 3 files/19 tests; `npm run typeche
 
 Self-review: the first pass was extended to catch parent-file/child-path conflicts, and all collision checks run before the first archive file is written. The implementation preserves existing size accounting, path-jail checks, typed errors, and cleanup ownership. Unicode normalization collisions, confusable names, symlink metadata, permission metadata, cancellation, and malformed ZIP families remain separate unsupported work units; this change does not claim to solve them.
 
-Publication: pending branch/PR publication and post-merge CI/Vercel evidence.
+Publication: branch `agent/zip-collision-preflight` commit `7c35283afeb1f93c217abf82cf89c4f4c2d6e278` was pushed and opened as [PR #32](https://github.com/ChimdumebiNebolisa/RepoAtlas/pull/32), labeled `codex` and `codex-automation`, marked ready, and squash-merged as `36fce53f7de3eb0a498ca9fa0183a82da803ddcf`. PR CI run `29579934374` passed `test` and `e2e`; PR Security audit run `29579934399` passed; PR Vercel status passed. Post-merge CI run `29580116252` passed `test` and `e2e`; post-merge Security audit run `29580116256` passed. Production Vercel deployment `dpl_7hUcGnk66snJJ93X1izjH8iw2KLf` reached `READY` for the merged commit at [repo-atlas-41qjr8xyv-chimdumebinebolisagmailcoms-projects.vercel.app](https://repo-atlas-41qjr8xyv-chimdumebinebolisagmailcoms-projects.vercel.app), with production aliases including `repo-atlas-phi.vercel.app`.
 
 ### 2026-07-16 selected work-unit blast radius
 
