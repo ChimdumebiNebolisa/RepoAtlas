@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 const footerLinks = [
+  ["Interview prep", "/interview-preparation"],
   ["Privacy", "/privacy"],
   ["Terms", "/terms"],
   ["Contact", "/contact"],
