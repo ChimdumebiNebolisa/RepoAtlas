@@ -65,6 +65,8 @@ describe("blob-backed storage", () => {
 
   afterEach(() => {
     delete process.env.BLOB_READ_WRITE_TOKEN;
+    delete process.env.VERCEL_OIDC_TOKEN;
+    delete process.env.BLOB_STORE_ID;
     delete process.env.REPORT_MAX_COUNT;
     delete process.env.REPORT_TTL_DAYS;
   });
@@ -77,6 +79,18 @@ describe("blob-backed storage", () => {
 
     expect(await deleteReport(id)).toBe(true);
     expect(await listReportIds()).not.toContain(id);
+  });
+
+  it("uses Vercel OIDC credentials when no static token is configured", async () => {
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    process.env.VERCEL_OIDC_TOKEN = "test-oidc-token";
+    process.env.BLOB_STORE_ID = "store_test";
+
+    const id = randomUUID();
+    await saveReport(id, minimalReport(new Date().toISOString()));
+
+    expect(await getReport(id)).not.toBeNull();
+    expect(await listReportIds()).toContain(id);
   });
 
   it("sweeps blob reports over the max count keeping newest", async () => {

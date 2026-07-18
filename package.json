@@ -18,7 +18,7 @@
     "capture:portfolio": "playwright test e2e/portfolio-capture.spec.ts && node scripts/build-demo-gif.mjs"
   },
   "dependencies": {
-    "@vercel/blob": "^2.3.1",
+    "@vercel/blob": "^2.6.1",
     "adm-zip": "^0.6.0",
     "elkjs": "^0.11.0",
     "html2canvas": "^1.4.1",

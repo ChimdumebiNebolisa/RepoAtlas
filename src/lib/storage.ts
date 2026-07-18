@@ -9,6 +9,11 @@ import { put, get, list, del } from "@vercel/blob";
 import { getReportMaxCount, getReportTtlMs } from "@/lib/reportTtl";
 import { parseAndValidateReport } from "@/lib/reportSchema";
 import { deleteSharesForReport } from "@/lib/sharing";
+import {
+  getStaticBlobToken,
+  hasBlobStorageCredentials,
+  isVercelRuntime,
+} from "@/lib/storageConfig";
 
 const REPORTS_BLOB_PREFIX = "reports/";
 const UUID_FILE_RE =
@@ -25,16 +30,8 @@ function getReportsDir(): string {
   return process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
 }
 
-function isVercel(): boolean {
-  return process.env.VERCEL === "1";
-}
-
 function shouldUseBlobStorage(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-}
-
-function getBlobToken(): string | undefined {
-  return process.env.BLOB_READ_WRITE_TOKEN;
+  return hasBlobStorageCredentials();
 }
 
 function ensureReportsDir() {
@@ -55,7 +52,7 @@ export async function saveReport(reportId: string, report: Report): Promise<void
   const body = JSON.stringify(report, null, 2);
 
   if (shouldUseBlobStorage()) {
-    const token = getBlobToken();
+    const token = getStaticBlobToken();
     await put(`${REPORTS_BLOB_PREFIX}${reportId}.json`, body, {
       access: "private",
       contentType: "application/json",
@@ -65,9 +62,9 @@ export async function saveReport(reportId: string, report: Report): Promise<void
     return;
   }
 
-  if (isVercel()) {
+  if (isVercelRuntime()) {
     throw new Error(
-      "BLOB_READ_WRITE_TOKEN is required on Vercel. Add it in Project Settings → Environment Variables (from your Blob store)."
+      "A connected Vercel Blob store is required. Configure OIDC credentials or BLOB_READ_WRITE_TOKEN."
     );
   }
 
@@ -83,7 +80,7 @@ export async function getReport(reportId: string): Promise<Report | null> {
 
   if (shouldUseBlobStorage()) {
     const pathname = `${REPORTS_BLOB_PREFIX}${reportId}.json`;
-    const token = getBlobToken();
+    const token = getStaticBlobToken();
     const result = await get(pathname, {
       access: "private",
       ...(token && { token }),
@@ -126,7 +123,7 @@ export async function deleteReport(reportId: string): Promise<boolean> {
   if (!isValidReportId(reportId)) return false;
 
   if (shouldUseBlobStorage()) {
-    const token = getBlobToken();
+    const token = getStaticBlobToken();
     try {
       await del(`${REPORTS_BLOB_PREFIX}${reportId}.json`, {
         ...(token && { token }),
@@ -155,7 +152,7 @@ interface StoredReportEntry {
 }
 
 async function listBlobReports(): Promise<StoredReportEntry[]> {
-  const token = getBlobToken();
+  const token = getStaticBlobToken();
   const entries: StoredReportEntry[] = [];
   let cursor: string | undefined;
   do {

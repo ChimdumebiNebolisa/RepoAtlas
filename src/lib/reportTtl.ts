@@ -2,6 +2,8 @@
  * Report retention policy helpers.
  */
 
+import { hasBlobStorageCredentials } from "@/lib/storageConfig";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function getReportTtlDays(): number {
@@ -10,7 +12,7 @@ export function getReportTtlDays(): number {
     const n = Number(raw);
     if (Number.isFinite(n) && n > 0) return n;
   }
-  return process.env.BLOB_READ_WRITE_TOKEN ? 7 : 30;
+  return hasBlobStorageCredentials() ? 7 : 30;
 }
 
 export function getReportMaxCount(): number {
