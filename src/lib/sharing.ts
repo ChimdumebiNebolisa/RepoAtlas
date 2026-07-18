@@ -14,7 +14,10 @@ const SHARES_BLOB_PREFIX = "shares/";
 const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getReportsDir(): string {
-  return process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
+  return (
+    process.env.REPORTS_DIR ??
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "reports")
+  );
 }
 
 function getSharesDir(): string {
@@ -33,8 +36,8 @@ function shouldUseBlobStorage(): boolean {
 
 function ensureSharesDir(): void {
   const sharesDir = getSharesDir();
-  if (!fs.existsSync(sharesDir)) {
-    fs.mkdirSync(sharesDir, { recursive: true });
+  if (!fs.existsSync(/* turbopackIgnore: true */ sharesDir)) {
+    fs.mkdirSync(/* turbopackIgnore: true */ sharesDir, { recursive: true });
   }
 }
 
@@ -59,8 +62,14 @@ async function saveShareRecord(token: string, record: ShareRecord): Promise<void
   ensureSharesDir();
   const target = path.join(getSharesDir(), `${token}.json`);
   const tmp = `${target}.${process.pid}.tmp`;
-  await fs.promises.writeFile(tmp, body, { encoding: "utf-8", mode: 0o600 });
-  await fs.promises.rename(tmp, target);
+  await fs.promises.writeFile(/* turbopackIgnore: true */ tmp, body, {
+    encoding: "utf-8",
+    mode: 0o600,
+  });
+  await fs.promises.rename(
+    /* turbopackIgnore: true */ tmp,
+    /* turbopackIgnore: true */ target
+  );
 }
 
 async function loadShareRecord(token: string): Promise<ShareRecord | null> {
@@ -95,7 +104,13 @@ async function loadShareRecord(token: string): Promise<ShareRecord | null> {
   }
 
   try {
-    const data = await fs.promises.readFile(path.join(getSharesDir(), `${token}.json`), "utf-8");
+    const data = await fs.promises.readFile(
+      /* turbopackIgnore: true */ path.join(
+        getSharesDir(),
+        `${token}.json`
+      ),
+      "utf-8"
+    );
     return JSON.parse(data) as ShareRecord;
   } catch {
     return null;
@@ -117,7 +132,9 @@ async function deleteShareRecord(token: string): Promise<void> {
     return;
   }
   try {
-    await fs.promises.unlink(path.join(getSharesDir(), `${token}.json`));
+    await fs.promises.unlink(
+      /* turbopackIgnore: true */ path.join(getSharesDir(), `${token}.json`)
+    );
   } catch {
     /* ignore */
   }
@@ -214,7 +231,9 @@ export async function listShareTokens(): Promise<string[]> {
   }
   ensureSharesDir();
   try {
-    const files = await fs.promises.readdir(getSharesDir());
+    const files = await fs.promises.readdir(
+      /* turbopackIgnore: true */ getSharesDir()
+    );
     return files.filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, ""));
   } catch {
     return [];
