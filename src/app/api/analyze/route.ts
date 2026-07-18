@@ -159,9 +159,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const persistenceAvailable =
+      !(process.env.VERCEL && !process.env.BLOB_READ_WRITE_TOKEN);
     const report = await analyzeRepository(analyzeInput, {
       deadlineMs: MAX_ANALYSIS_TIME_MS,
       signal: abortSignal,
+      persist: persistenceAvailable,
     });
 
     if (!report.reportId) {
@@ -171,7 +174,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ reportId: report.reportId });
+    return NextResponse.json(
+      persistenceAvailable
+        ? { reportId: report.reportId, persisted: true }
+        : { reportId: report.reportId, report: report.report, persisted: false }
+    );
   } catch (err) {
     logAnalyzeError(requestId, err);
     const { status, code, message } = toApiErrorPayload(err);

@@ -42,6 +42,8 @@ export interface AnalyzeOptions {
   deadlineMs?: number;
   /** Cooperative cancellation for the full request lifecycle. */
   signal?: AbortSignal;
+  /** Persist the generated report for later retrieval and sharing. */
+  persist?: boolean;
 }
 
 export interface AnalyzeResult {
@@ -218,8 +220,12 @@ function buildPartialReport(input: {
   };
 }
 
-async function persistReport(reportId: string, report: Report): Promise<AnalyzeResult> {
-  await saveReport(reportId, report);
+async function finishReport(
+  reportId: string,
+  report: Report,
+  persist: boolean
+): Promise<AnalyzeResult> {
+  if (persist) await saveReport(reportId, report);
   return { reportId, report };
 }
 
@@ -228,6 +234,7 @@ export async function analyzeRepository(
   options: AnalyzeOptions = {}
 ): Promise<AnalyzeResult> {
   const reportId = randomUUID();
+  const shouldPersist = options.persist !== false;
   const deadline = createDeadlineChecker(options.deadlineMs, options.signal);
   const workspace = await ingestRepo(input, { signal: options.signal });
   deadline.throwIfAborted();
@@ -250,7 +257,7 @@ export async function analyzeRepository(
         pipeline,
         documentInventory,
       });
-      return persistReport(reportId, report);
+      return finishReport(reportId, report, shouldPersist);
     }
 
     const filePaths = Array.from(pipeline.file_metadata.keys());
@@ -270,7 +277,7 @@ export async function analyzeRepository(
         architecture,
         extraWarnings: collectLanguageWarnings(packs),
       });
-      return persistReport(reportId, report);
+      return finishReport(reportId, report, shouldPersist);
     }
 
     const architecture = combineArchitecture(packs);
@@ -314,7 +321,7 @@ export async function analyzeRepository(
         dangerZones,
         extraWarnings: warnings.filter((w) => !pipeline.warnings.includes(w)),
       });
-      return persistReport(reportId, report);
+      return finishReport(reportId, report, shouldPersist);
     }
 
     const project_profile = detectProjectProfile(workspace.path, filePaths);
@@ -387,7 +394,7 @@ export async function analyzeRepository(
       warnings,
     };
 
-    return persistReport(reportId, report);
+    return finishReport(reportId, report, shouldPersist);
   } finally {
     await workspace.cleanup?.();
   }

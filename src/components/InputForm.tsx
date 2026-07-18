@@ -18,7 +18,7 @@ type InputMode = "zip" | "github";
 
 interface InputFormProps {
   onAnalyzeStart: () => void;
-  onAnalyzeComplete: (report: Report, reportId: string) => void;
+  onAnalyzeComplete: (report: Report, reportId: string | null) => void;
   onAnalyzeError: (message: string) => void;
   loading: boolean;
   sampleButtonRef?: RefObject<HTMLButtonElement | null>;
@@ -89,13 +89,23 @@ export function InputForm({
         onAnalyzeError(formatApiError(data, FALLBACK_ANALYSIS_MESSAGE));
         return;
       }
-      const { reportId } = data as { reportId?: unknown };
+      const { reportId, report: inlineReport, persisted } = data as {
+        reportId?: unknown;
+        report?: Report;
+        persisted?: boolean;
+      };
       if (!isValidReportId(reportId)) {
         captureAnalysisEvent("analysis_failed", inputType, {
           stage: "analysis_response",
           error_code: "INVALID_REPORT_ID",
         });
         onAnalyzeError("Invalid response: missing or malformed reportId.");
+        return;
+      }
+
+      if (persisted === false && inlineReport) {
+        captureAnalysisEvent("analysis_completed", inputType);
+        onAnalyzeComplete(inlineReport, null);
         return;
       }
 
