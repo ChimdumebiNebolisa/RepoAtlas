@@ -39,8 +39,8 @@ function shouldUseBlobStorage(): boolean {
 
 function ensureReportsDir() {
   const reportsDir = getReportsDir();
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
+  if (!fs.existsSync(/* turbopackIgnore: true */ reportsDir)) {
+    fs.mkdirSync(/* turbopackIgnore: true */ reportsDir, { recursive: true });
   }
 }
 
@@ -74,8 +74,14 @@ export async function saveReport(reportId: string, report: Report): Promise<void
   ensureReportsDir();
   const filePath = path.join(getReportsDir(), `${reportId}.json`);
   const tmpPath = `${filePath}.${process.pid}.tmp`;
-  await fs.promises.writeFile(tmpPath, body, { encoding: "utf-8", mode: 0o600 });
-  await fs.promises.rename(tmpPath, filePath);
+  await fs.promises.writeFile(/* turbopackIgnore: true */ tmpPath, body, {
+    encoding: "utf-8",
+    mode: 0o600,
+  });
+  await fs.promises.rename(
+    /* turbopackIgnore: true */ tmpPath,
+    /* turbopackIgnore: true */ filePath
+  );
 }
 
 export async function getReport(reportId: string): Promise<Report | null> {
@@ -113,7 +119,10 @@ export async function getReport(reportId: string): Promise<Report | null> {
 
   const filePath = path.join(getReportsDir(), `${reportId}.json`);
   try {
-    const data = await fs.promises.readFile(filePath, "utf-8");
+    const data = await fs.promises.readFile(
+      /* turbopackIgnore: true */ filePath,
+      "utf-8"
+    );
     const validated = parseAndValidateReport(data);
     if (!validated.ok) return null;
     return validated.report;
@@ -140,7 +149,7 @@ export async function deleteReport(reportId: string): Promise<boolean> {
 
   const filePath = path.join(getReportsDir(), `${reportId}.json`);
   try {
-    await fs.promises.unlink(filePath);
+    await fs.promises.unlink(/* turbopackIgnore: true */ filePath);
     await deleteSharesForReport(reportId);
     return true;
   } catch {
@@ -184,7 +193,9 @@ export async function listReportIds(): Promise<string[]> {
   }
 
   ensureReportsDir();
-  const files = await fs.promises.readdir(getReportsDir());
+  const files = await fs.promises.readdir(
+    /* turbopackIgnore: true */ getReportsDir()
+  );
   return files
     .filter((f) => UUID_FILE_RE.test(f))
     .map((f) => f.replace(/\.json$/i, ""))
