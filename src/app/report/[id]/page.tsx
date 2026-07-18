@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ReportTabs } from "@/components/ReportTabs";
 import type { Report } from "@/types/report";
@@ -53,8 +54,19 @@ export default function SharedReportPage() {
 
         {loading && <p className="text-sm text-slate-600">Loading report…</p>}
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {error}
+          <div className="space-y-3">
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            >
+              {error}
+            </div>
+            <Link
+              href="/#analyze"
+              className="report-action report-action-primary report-action-compact inline-flex"
+            >
+              Start a new analysis
+            </Link>
           </div>
         )}
         {report && <ReportTabs report={report} reportId={reportId} variant="live" />}
