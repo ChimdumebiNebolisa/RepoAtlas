@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ReportTabs } from "@/components/ReportTabs";
 import type { Report } from "@/types/report";
+import {
+  openPortableShare,
+  PORTABLE_SHARE_TOKEN,
+  PortableShareError,
+} from "@/lib/portableSharing";
 
 export default function TokenSharePage() {
   const params = useParams<{ token: string }>();
@@ -16,6 +21,7 @@ export default function TokenSharePage() {
   );
   const [loading, setLoading] = useState(Boolean(token));
   const [retryCount, setRetryCount] = useState(0);
+  const portable = token === PORTABLE_SHARE_TOKEN;
 
   const loadReport = useCallback(async (signal: AbortSignal) => {
     if (!token) return;
@@ -27,6 +33,14 @@ export default function TokenSharePage() {
     setReport(null);
 
     try {
+      if (portable) {
+        const shared = await openPortableShare(window.location.hash);
+        if (signal.aborted) return;
+        setReport(shared.report);
+        setExpiresAt(shared.expiresAt);
+        return;
+      }
+
       const res = await fetch(`/api/share/${token}`, { signal });
       const data = await res.json().catch(() => ({}));
       if (signal.aborted) return;
@@ -39,11 +53,15 @@ export default function TokenSharePage() {
     } catch (err) {
       if (signal.aborted) return;
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError("Failed to load shared report.");
+      setError(
+        err instanceof PortableShareError
+          ? err.message
+          : "Failed to load shared report."
+      );
     } finally {
       if (!signal.aborted) setLoading(false);
     }
-  }, [token]);
+  }, [portable, token]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -67,7 +85,9 @@ export default function TokenSharePage() {
             </Link>
           </div>
           <p className="text-sm text-slate-600">
-            Shared Candidate Brief — read-only, token-gated view (report JSON only)
+            {portable
+              ? "Shared Candidate Brief — read-only, private link decrypted in this browser"
+              : "Shared Candidate Brief — read-only, token-gated view (report JSON only)"}
           </p>
           {expiresAt && (
             <p className="text-xs text-slate-500">
