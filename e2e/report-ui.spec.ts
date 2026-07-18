@@ -11,6 +11,8 @@ import {
   writeReport,
   zipFixture,
 } from "./helpers";
+import { buildSampleReport } from "../src/lib/buildSampleReport";
+import { PORTABLE_SHARE_MAX_URL_LENGTH } from "../src/lib/portableSharing";
 
 test.describe("Report UI flows", () => {
   test("all report tabs render after sample analyze", async ({ page }) => {
@@ -40,14 +42,13 @@ test.describe("Report UI flows", () => {
     await expect(page.getByText("Export Report").last()).toBeVisible();
   });
 
-  test("Overview tab shows share link creation and opens shared view", async ({ page }) => {
+  test("completed brief shares a stored private link and opens the recipient view", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
 
-    await page.getByRole("tab", { name: "Overview", exact: true }).last().click();
-    await expect(page.getByText(/Share read-only Candidate Brief/i)).toBeVisible();
-    await page.getByRole("button", { name: /Create share link/i }).click();
+    await expect(page.getByText(/Share this Candidate Brief privately/i)).toBeVisible();
+    await page.getByRole("button", { name: /Share Candidate Brief/i }).click();
 
-    const shareLink = page.locator('a[href*="/share/"]').last();
+    const shareLink = page.getByRole("link", { name: /Open shared copy/i });
     await expect(shareLink).toBeVisible({ timeout: 15_000 });
     const href = await shareLink.getAttribute("href");
     expect(href).toMatch(/\/share\//);
@@ -57,6 +58,60 @@ test.describe("Report UI flows", () => {
     await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible({
       timeout: 30_000,
     });
+  });
+
+  test("inline report shares a bounded portable link without a storage or token request", async ({ page }) => {
+    const report = buildSampleReport();
+    let portableApiRequested = false;
+
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, "share", {
+        configurable: true,
+        value: undefined,
+      });
+      Object.defineProperty(Navigator.prototype, "clipboard", {
+        configurable: true,
+        get() {
+          return {
+            writeText: async (value: string) => {
+              window.sessionStorage.setItem("repoatlas-e2e-share-url", value);
+            },
+          };
+        },
+      });
+    });
+    await page.route("**/api/analyze", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          reportId: "550e8400-e29b-41d4-a716-446655440000",
+          report,
+          persisted: false,
+        }),
+      });
+    });
+    page.on("request", (request) => {
+      if (request.url().includes("/api/share/portable")) portableApiRequested = true;
+    });
+
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: /Share Candidate Brief/i })).toHaveCount(0);
+    await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+    await page.getByRole("button", { name: /View report/i }).click();
+    await page.getByRole("button", { name: /Share Candidate Brief/i }).click();
+
+    await expect(page.getByText(/Private link copied/i)).toBeVisible();
+    const href = await page.evaluate(() =>
+      window.sessionStorage.getItem("repoatlas-e2e-share-url")
+    );
+    expect(href).toMatch(/\/share\/portable#v1\./);
+    expect(href!.length).toBeLessThan(PORTABLE_SHARE_MAX_URL_LENGTH);
+
+    await page.goto(href!);
+    await expect(page.getByText(/decrypted in this browser/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible();
+    expect(portableApiRequested).toBe(false);
   });
 
   test("partial report shows status badge on Overview", async ({ page }) => {

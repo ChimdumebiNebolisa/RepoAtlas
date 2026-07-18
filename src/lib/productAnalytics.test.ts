@@ -10,6 +10,7 @@ vi.mock("posthog-js", () => ({ default: posthog }));
 import {
   analysisEntrySource,
   captureAnalysisEvent,
+  captureReportShared,
   initializeProductAnalytics,
   stableRouteName,
 } from "./productAnalytics";
@@ -41,6 +42,20 @@ describe("captureAnalysisEvent", () => {
     vi.stubGlobal("window", {});
     initializeProductAnalytics();
 
+    expect(posthog.init).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        disable_capture_url_hashes: true,
+        property_denylist: expect.arrayContaining([
+          "$current_url",
+          "$pathname",
+          "$initial_current_url",
+          "$session_entry_url",
+        ]),
+        save_referrer: false,
+      })
+    );
+
     captureAnalysisEvent("analysis_started", "github", "planned_change");
     captureAnalysisEvent("analysis_completed", "sample", "bug");
 
@@ -51,6 +66,17 @@ describe("captureAnalysisEvent", () => {
     expect(posthog.capture).toHaveBeenNthCalledWith(2, "analysis_completed", {
       input_type: "sample",
       analysis_intent: "bug",
+    });
+  });
+});
+
+describe("captureReportShared", () => {
+  it("records only bounded delivery and link types", () => {
+    captureReportShared("clipboard", "portable_link");
+
+    expect(posthog.capture).toHaveBeenLastCalledWith("report_shared", {
+      share_method: "clipboard",
+      share_type: "portable_link",
     });
   });
 });

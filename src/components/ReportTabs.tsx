@@ -14,7 +14,13 @@ import { DocumentsPanel } from "./DocumentsPanel";
 import { ERROR_CODES } from "@/lib/errors";
 import { buildExportFilename } from "@/lib/exportNames";
 import { isHttpUrl, repoSourceLabel, formatTimestamp } from "@/lib/format";
-import { captureProductEvent } from "@/lib/productAnalytics";
+import {
+  captureProductEvent,
+  captureReportShared,
+  type ReportShareMethod,
+  type ReportShareType,
+} from "@/lib/productAnalytics";
+import { createPortableShareLink } from "@/lib/portableSharing";
 
 const TABS = [
   "Candidate Brief",
@@ -79,6 +85,8 @@ export function ReportTabs({
   const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [shareCounted, setShareCounted] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "png" | "md" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportMountActive, setExportMountActive] = useState(false);
@@ -280,25 +288,91 @@ export function ReportTabs({
     }
   };
 
-  const handleCreateShareLink = async () => {
-    if (!reportId || shareLoading) return;
+  const copyShareLink = async (url: string): Promise<boolean> => {
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return copied;
+    }
+  };
+
+  const deliverShareLink = async (
+    url: string
+  ): Promise<ReportShareMethod | "cancelled" | null> => {
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "RepoAtlas Candidate Brief",
+          text: "A read-only Candidate Brief from RepoAtlas.",
+          url,
+        });
+        return "native";
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return "cancelled";
+        return null;
+      }
+    }
+    return (await copyShareLink(url)) ? "clipboard" : null;
+  };
+
+  const handleShareCandidateBrief = async () => {
+    if (shareLoading || variant !== "live") return;
     setShareLoading(true);
     setShareError(null);
+    setShareMessage(null);
     try {
-      const res = await fetch(`/api/reports/${reportId}/share`, { method: "POST" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setShareError(data.message ?? "Failed to create share link.");
-        return;
+      let url: string;
+      let expiresAt: string;
+      let shareType: ReportShareType;
+
+      if (reportId) {
+        const res = await fetch(`/api/reports/${reportId}/share`, { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message ?? "Failed to create a private link.");
+        const path = data.sharePath as string;
+        url = `${window.location.origin}${path}`;
+        expiresAt = data.expiresAt as string;
+        shareType = "stored_link";
+      } else {
+        const portable = await createPortableShareLink(report, window.location.origin);
+        url = portable.url;
+        expiresAt = portable.expiresAt;
+        shareType = "portable_link";
       }
-      const path = data.sharePath as string;
-      const url =
-        typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+
+      const method = await deliverShareLink(url);
+      if (method === "cancelled") return;
+      if (!method) {
+        throw new Error("Could not share or copy the private link. Export PDF to share it instead.");
+      }
+
       setShareUrl(url);
-      setShareExpiresAt(data.expiresAt ?? null);
-      captureProductEvent("report_shared", { report_variant: variant });
-    } catch {
-      setShareError("Failed to create share link.");
+      setShareExpiresAt(expiresAt);
+      setShareMessage(
+        method === "native"
+          ? "Shared successfully. The private link expires in 7 days."
+          : "Private link copied. It expires in 7 days."
+      );
+      if (!shareCounted) {
+        captureReportShared(method, shareType);
+        setShareCounted(true);
+      }
+    } catch (error) {
+      setShareError(
+        error instanceof Error
+          ? error.message
+          : "Could not create a private link. Export PDF to share this brief."
+      );
     } finally {
       setShareLoading(false);
     }
@@ -373,7 +447,47 @@ export function ReportTabs({
         className="py-4"
       >
         {activeTab === "Candidate Brief" && (
-          <CandidateBriefPanel candidateBrief={report.candidate_brief} demoMode={demoMode} />
+          <div className="space-y-6">
+            <CandidateBriefPanel candidateBrief={report.candidate_brief} demoMode={demoMode} />
+            {variant === "live" && report.candidate_brief && (
+              <aside className="report-share-prompt" aria-labelledby={`${tabsId}-share-heading`}>
+                <div>
+                  <p className="report-share-eyebrow">Ready for a second set of eyes?</p>
+                  <h2 id={`${tabsId}-share-heading`}>Share this Candidate Brief privately.</h2>
+                  <p>
+                    Copy or send a read-only link after you have checked the brief. It expires
+                    in 7 days and never includes the uploaded zip.
+                  </p>
+                </div>
+                <div className="report-share-action">
+                  <button
+                    type="button"
+                    onClick={handleShareCandidateBrief}
+                    disabled={shareLoading}
+                    className="report-action report-action-primary"
+                  >
+                    {shareLoading ? "Preparing private link…" : "Share Candidate Brief"}
+                  </button>
+                  {shareMessage && (
+                    <p role="status" className="report-share-success">
+                      {shareMessage}{" "}
+                      {shareUrl && (
+                        <a href={shareUrl} target="_blank" rel="noopener noreferrer">
+                          Open shared copy
+                        </a>
+                      )}
+                    </p>
+                  )}
+                  {shareError && <p role="alert" className="report-share-error">{shareError}</p>}
+                  {shareExpiresAt && (
+                    <p className="report-share-expiry">
+                      Expires {new Date(shareExpiresAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </aside>
+            )}
+          </div>
         )}
 
         {activeTab === "Overview" && (
@@ -417,36 +531,6 @@ export function ReportTabs({
                 </>
               )}
             </dl>
-            {reportId && variant === "live" && (
-              <div className="mt-4 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-                <p className="font-medium text-slate-900">Share read-only Candidate Brief</p>
-                <p className="text-xs text-slate-600">
-                  Creates a token-gated link (7-day expiry). Shares report JSON only — never your
-                  uploaded zip.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleCreateShareLink}
-                  disabled={shareLoading}
-                  className="report-action report-action-secondary report-action-compact"
-                >
-                  {shareLoading ? "Creating link…" : "Create share link"}
-                </button>
-                {shareError && <p className="text-xs text-red-700">{shareError}</p>}
-                {shareUrl && (
-                  <p className="break-all text-xs text-slate-700">
-                    <a href={shareUrl} className="font-medium text-emerald-700 hover:underline">
-                      {shareUrl}
-                    </a>
-                    {shareExpiresAt && (
-                      <span className="mt-1 block text-slate-500">
-                        Expires {new Date(shareExpiresAt).toLocaleString()}
-                      </span>
-                    )}
-                  </p>
-                )}
-              </div>
-            )}
             {report.document_inventory && (
               <div className="mt-6">
                 <h3 className="mb-3 text-lg font-semibold text-slate-900">Documentation inventory</h3>
