@@ -5,6 +5,10 @@ import type { Report } from "@/types/report";
 import { ERROR_CODES } from "@/lib/errors";
 import { parseGithubRepoUrl, isValidGitRef } from "@/lib/github";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
+import {
+  captureProductEvent,
+  type AnalysisInputMethod,
+} from "@/lib/productAnalytics";
 
 const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
 
@@ -71,16 +75,28 @@ export function InputForm({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Runs the analyze request and validates the reportId in every flow.
-  const runAnalysis = async (init: RequestInit) => {
+  const runAnalysis = async (init: RequestInit, inputMethod: AnalysisInputMethod) => {
+    captureProductEvent("analysis_started", { input_method: inputMethod });
     try {
       const res = await fetch("/api/analyze", init);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        captureProductEvent("analysis_failed", {
+          input_method: inputMethod,
+          stage: "analysis",
+          status_code: res.status,
+          error_code: data.code ?? ERROR_CODES.ANALYSIS_FAILED,
+        });
         onAnalyzeError(formatApiError(data, FALLBACK_ANALYSIS_MESSAGE));
         return;
       }
       const { reportId } = data as { reportId?: unknown };
       if (!isValidReportId(reportId)) {
+        captureProductEvent("analysis_failed", {
+          input_method: inputMethod,
+          stage: "analysis_response",
+          error_code: "INVALID_REPORT_ID",
+        });
         onAnalyzeError("Invalid response: missing or malformed reportId.");
         return;
       }
@@ -88,6 +104,12 @@ export function InputForm({
       const reportRes = await fetch(`/api/reports/${reportId}`);
       const reportPayload = await reportRes.json().catch(() => ({}));
       if (!reportRes.ok) {
+        captureProductEvent("analysis_failed", {
+          input_method: inputMethod,
+          stage: "report_load",
+          status_code: reportRes.status,
+          error_code: reportPayload.code ?? ERROR_CODES.ANALYSIS_FAILED,
+        });
         console.error("Failed to fetch analyzed report", {
           reportId,
           status: reportRes.status,
@@ -97,8 +119,14 @@ export function InputForm({
         onAnalyzeError(formatReportFetchError(reportPayload, reportRes.status, reportId));
         return;
       }
+      captureProductEvent("analysis_completed", { input_method: inputMethod });
       onAnalyzeComplete(reportPayload as Report, reportId);
     } catch (error) {
+      captureProductEvent("analysis_failed", {
+        input_method: inputMethod,
+        stage: "network",
+        error_code: "NETWORK_ERROR",
+      });
       console.error("Unexpected error during analysis submission", error);
       onAnalyzeError("Network error. Please try again.");
     }
@@ -121,7 +149,7 @@ export function InputForm({
       const formData = new FormData();
       formData.append("file", file);
       onAnalyzeStart();
-      await runAnalysis({ method: "POST", body: formData });
+      await runAnalysis({ method: "POST", body: formData }, "zip");
       return;
     }
 
@@ -131,14 +159,17 @@ export function InputForm({
       return;
     }
     onAnalyzeStart();
-    await runAnalysis({
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        githubUrl: githubUrl.trim(),
-        ...(githubRef.trim() ? { ref: githubRef.trim() } : {}),
-      }),
-    });
+    await runAnalysis(
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          githubUrl: githubUrl.trim(),
+          ...(githubRef.trim() ? { ref: githubRef.trim() } : {}),
+        }),
+      },
+      "github"
+    );
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,11 +198,14 @@ export function InputForm({
     if (loading) return;
     setFieldError(null);
     onAnalyzeStart();
-    await runAnalysis({
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sample: true }),
-    });
+    await runAnalysis(
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sample: true }),
+      },
+      "sample"
+    );
   };
 
   const switchMode = (next: InputMode) => {
