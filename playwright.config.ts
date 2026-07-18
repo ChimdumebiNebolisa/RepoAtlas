@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = process.env.PLAYWRIGHT_PORT ?? process.env.PORT ?? "3000";
-const baseURL = `http://127.0.0.1:${PORT}`;
+const externalBaseURL = process.env.PLAYWRIGHT_EXTERNAL_URL;
+const baseURL = externalBaseURL ?? `http://127.0.0.1:${PORT}`;
 
 const capturePortfolio =
   process.env.CAPTURE_PORTFOLIO === "1" ||
@@ -35,10 +36,12 @@ export default defineConfig({
       use: { ...devices["iPhone 13"] },
     },
   ],
-  webServer: {
-    command: "npm run build && npm run start",
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
-  },
+  webServer: externalBaseURL
+    ? undefined
+    : {
+        command: "npm run build && npm run start",
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 180_000,
+      },
 });
