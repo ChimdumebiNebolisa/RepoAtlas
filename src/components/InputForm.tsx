@@ -6,6 +6,7 @@ import { ERROR_CODES } from "@/lib/errors";
 import { parseGithubRepoUrl, isValidGitRef } from "@/lib/github";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 import {
+  analysisEntrySource,
   captureAnalysisEvent,
   type AnalysisInputType,
 } from "@/lib/productAnalytics";
@@ -104,12 +105,15 @@ export function InputForm({
 
   // Runs the analyze request and validates the reportId in every flow.
   const runAnalysis = async (init: RequestInit, inputType: AnalysisInputType) => {
-    captureAnalysisEvent("analysis_started", inputType, analysisIntent);
+    const entrySource = analysisEntrySource(window.location.search);
+    const entryProperties = entrySource ? { entry_source: entrySource } : {};
+    captureAnalysisEvent("analysis_started", inputType, analysisIntent, entryProperties);
     try {
       const res = await fetch("/api/analyze", init);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
+          ...entryProperties,
           stage: "analysis",
           status_code: res.status,
           error_code: data.code ?? ERROR_CODES.ANALYSIS_FAILED,
@@ -124,6 +128,7 @@ export function InputForm({
       };
       if (!isValidReportId(reportId)) {
         captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
+          ...entryProperties,
           stage: "analysis_response",
           error_code: "INVALID_REPORT_ID",
         });
@@ -132,7 +137,7 @@ export function InputForm({
       }
 
       if (persisted === false && inlineReport) {
-        captureAnalysisEvent("analysis_completed", inputType, analysisIntent);
+        captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
         onAnalyzeComplete(inlineReport, null);
         return;
       }
@@ -141,6 +146,7 @@ export function InputForm({
       const reportPayload = await reportRes.json().catch(() => ({}));
       if (!reportRes.ok) {
         captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
+          ...entryProperties,
           stage: "report_load",
           status_code: reportRes.status,
           error_code: reportPayload.code ?? ERROR_CODES.ANALYSIS_FAILED,
@@ -154,10 +160,11 @@ export function InputForm({
         onAnalyzeError(formatReportFetchError(reportPayload, reportRes.status, reportId));
         return;
       }
-      captureAnalysisEvent("analysis_completed", inputType, analysisIntent);
+      captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
       onAnalyzeComplete(reportPayload as Report, reportId);
     } catch (error) {
       captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
+        ...entryProperties,
         stage: "network",
         error_code: "NETWORK_ERROR",
       });

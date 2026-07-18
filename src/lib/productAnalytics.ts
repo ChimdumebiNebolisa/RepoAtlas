@@ -8,6 +8,7 @@ export type AnalysisInputType = "zip" | "github" | "sample";
 
 type ProductEvent =
   | "route_viewed"
+  | "analysis_cta_clicked"
   | "analysis_started"
   | "analysis_completed"
   | "analysis_failed"
@@ -39,10 +40,16 @@ export function initializeProductAnalytics() {
 
 export function stableRouteName(pathname: string): string {
   if (pathname === "/") return "home";
+  if (pathname === "/interview-preparation") return "interview_preparation";
   if (pathname === "/pricing") return "pricing";
   if (pathname.startsWith("/report/")) return "report";
   if (pathname.startsWith("/share/")) return "shared_report";
   return "other";
+}
+
+export function analysisEntrySource(search: string): "interview_preparation" | undefined {
+  const source = new URLSearchParams(search).get("source");
+  return source === "interview_preparation" ? source : undefined;
 }
 
 export function captureProductEvent(

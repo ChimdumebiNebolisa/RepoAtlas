@@ -8,6 +8,7 @@ const posthog = vi.hoisted(() => ({
 vi.mock("posthog-js", () => ({ default: posthog }));
 
 import {
+  analysisEntrySource,
   captureAnalysisEvent,
   initializeProductAnalytics,
   stableRouteName,
@@ -21,8 +22,17 @@ describe("stableRouteName", () => {
 
   it("names known static routes without recording arbitrary paths", () => {
     expect(stableRouteName("/")).toBe("home");
+    expect(stableRouteName("/interview-preparation")).toBe("interview_preparation");
     expect(stableRouteName("/pricing")).toBe("pricing");
     expect(stableRouteName("/unexpected/private-value")).toBe("other");
+  });
+});
+
+describe("analysisEntrySource", () => {
+  it("keeps only the bounded interview-preparation source", () => {
+    expect(analysisEntrySource("?source=interview_preparation")).toBe("interview_preparation");
+    expect(analysisEntrySource("?source=private-repository-name")).toBeUndefined();
+    expect(analysisEntrySource("")).toBeUndefined();
   });
 });
 
