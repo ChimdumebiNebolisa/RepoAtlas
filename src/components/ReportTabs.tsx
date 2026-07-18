@@ -14,6 +14,7 @@ import { DocumentsPanel } from "./DocumentsPanel";
 import { ERROR_CODES } from "@/lib/errors";
 import { buildExportFilename } from "@/lib/exportNames";
 import { isHttpUrl, repoSourceLabel, formatTimestamp } from "@/lib/format";
+import { captureProductEvent } from "@/lib/productAnalytics";
 
 const TABS = [
   "Candidate Brief",
@@ -185,6 +186,7 @@ export function ReportTabs({
       );
       if (!blob) throw new Error("Could not generate PNG image.");
       downloadBlob(blob, `${exportBasename}.png`);
+      captureProductEvent("report_exported", { format: "png", report_variant: variant });
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "PNG export failed.");
     } finally {
@@ -220,6 +222,7 @@ export function ReportTabs({
       }
 
       pdf.save(`${exportBasename}.pdf`);
+      captureProductEvent("report_exported", { format: "pdf", report_variant: variant });
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "PDF export failed.");
     } finally {
@@ -267,6 +270,7 @@ export function ReportTabs({
           ext: "md",
         });
       downloadBlob(blob, filename);
+      captureProductEvent("report_exported", { format: "markdown", report_variant: variant });
       setMarkdownSupport("available");
       setMarkdownNote(null);
     } catch (error) {
@@ -292,6 +296,7 @@ export function ReportTabs({
         typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
       setShareUrl(url);
       setShareExpiresAt(data.expiresAt ?? null);
+      captureProductEvent("report_shared", { report_variant: variant });
     } catch {
       setShareError("Failed to create share link.");
     } finally {
