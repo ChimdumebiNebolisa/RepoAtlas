@@ -154,8 +154,9 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
 
       <section id="analyze" className="action-section page-container">
         <article className="analyze-card">
-          <h2>Upload a zip or paste a public GitHub URL.</h2>
-          <p>Analyze a repository archive or a canonical public GitHub URL with deterministic static analysis across supported project types.</p>
+          <p className="section-kicker">Your first Candidate Brief</p>
+          <h2>Start with the sample or a public GitHub repository.</h2>
+          <p>Generate a complete bundled brief with one click, or paste a public GitHub URL to analyze your own codebase.</p>
           <InputForm
             onAnalyzeStart={() => {
               setLoading(true);

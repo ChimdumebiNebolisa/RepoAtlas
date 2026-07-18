@@ -33,20 +33,33 @@ describe("InputForm", () => {
     const { form } = renderForm();
     expect(within(form).getByRole("tab", { name: /upload zip/i })).toBeInTheDocument();
     expect(within(form).getByRole("tab", { name: /public github url/i })).toBeInTheDocument();
+    expect(within(form).getByRole("tab", { name: /public github url/i })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
   });
 
   it("shows validation error when submitting empty ZIP", async () => {
     const user = userEvent.setup();
     const { form } = renderForm();
-    await user.click(within(form).getByRole("button", { name: /analyze repository/i }));
+    await user.click(within(form).getByRole("tab", { name: /upload zip/i }));
+    await user.click(within(form).getByRole("button", { name: /analyze uploaded zip/i }));
     expect(await within(form).findByRole("alert")).toHaveTextContent(/zip/i);
   });
 
-  it("switches to GitHub tab and validates URL", async () => {
+  it("shows GitHub first and validates the public URL", async () => {
     const user = userEvent.setup();
     const { form } = renderForm();
-    await user.click(within(form).getByRole("tab", { name: /public github url/i }));
-    await user.click(within(form).getByRole("button", { name: /analyze repository/i }));
+    await user.click(
+      within(form).getByRole("button", { name: /analyze public github repository/i })
+    );
     expect(await within(form).findByRole("alert")).toHaveTextContent(/github/i);
+  });
+
+  it("names the Candidate Brief created by the bundled sample", () => {
+    const { form } = renderForm();
+    expect(
+      within(form).getByRole("button", { name: /generate sample candidate brief/i })
+    ).toBeInTheDocument();
   });
 });

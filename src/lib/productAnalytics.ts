@@ -3,7 +3,7 @@ import posthog from "posthog-js";
 const POSTHOG_PUBLIC_KEY = "phc_z45a8nUZgzk86z9CLN73ogyFSeGbXuaH2jsRn8Dg5ShV";
 const POSTHOG_INGEST_HOST = "https://us.i.posthog.com";
 
-export type AnalysisInputMethod = "zip" | "github" | "sample";
+export type AnalysisInputType = "zip" | "github" | "sample";
 
 type ProductEvent =
   | "route_viewed"
@@ -50,4 +50,13 @@ export function captureProductEvent(
 ) {
   if (!initialized) return;
   posthog.capture(event, properties);
+}
+
+export function captureAnalysisEvent(
+  event: Extract<ProductEvent, "analysis_started" | "analysis_completed" | "analysis_failed">,
+  inputType: AnalysisInputType,
+  properties: ProductEventProperties = {}
+) {
+  if (!initialized) return;
+  posthog.capture(event, { ...properties, input_type: inputType });
 }

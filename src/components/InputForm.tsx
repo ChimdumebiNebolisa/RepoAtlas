@@ -6,8 +6,8 @@ import { ERROR_CODES } from "@/lib/errors";
 import { parseGithubRepoUrl, isValidGitRef } from "@/lib/github";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 import {
-  captureProductEvent,
-  type AnalysisInputMethod,
+  captureAnalysisEvent,
+  type AnalysisInputType,
 } from "@/lib/productAnalytics";
 
 const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
@@ -67,7 +67,7 @@ export function InputForm({
   loading,
   sampleButtonRef,
 }: InputFormProps) {
-  const [mode, setMode] = useState<InputMode>("zip");
+  const [mode, setMode] = useState<InputMode>("github");
   const [file, setFile] = useState<File | null>(null);
   const [githubUrl, setGithubUrl] = useState("");
   const [githubRef, setGithubRef] = useState("");
@@ -75,14 +75,13 @@ export function InputForm({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Runs the analyze request and validates the reportId in every flow.
-  const runAnalysis = async (init: RequestInit, inputMethod: AnalysisInputMethod) => {
-    captureProductEvent("analysis_started", { input_method: inputMethod });
+  const runAnalysis = async (init: RequestInit, inputType: AnalysisInputType) => {
+    captureAnalysisEvent("analysis_started", inputType);
     try {
       const res = await fetch("/api/analyze", init);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        captureProductEvent("analysis_failed", {
-          input_method: inputMethod,
+        captureAnalysisEvent("analysis_failed", inputType, {
           stage: "analysis",
           status_code: res.status,
           error_code: data.code ?? ERROR_CODES.ANALYSIS_FAILED,
@@ -92,8 +91,7 @@ export function InputForm({
       }
       const { reportId } = data as { reportId?: unknown };
       if (!isValidReportId(reportId)) {
-        captureProductEvent("analysis_failed", {
-          input_method: inputMethod,
+        captureAnalysisEvent("analysis_failed", inputType, {
           stage: "analysis_response",
           error_code: "INVALID_REPORT_ID",
         });
@@ -104,8 +102,7 @@ export function InputForm({
       const reportRes = await fetch(`/api/reports/${reportId}`);
       const reportPayload = await reportRes.json().catch(() => ({}));
       if (!reportRes.ok) {
-        captureProductEvent("analysis_failed", {
-          input_method: inputMethod,
+        captureAnalysisEvent("analysis_failed", inputType, {
           stage: "report_load",
           status_code: reportRes.status,
           error_code: reportPayload.code ?? ERROR_CODES.ANALYSIS_FAILED,
@@ -119,11 +116,10 @@ export function InputForm({
         onAnalyzeError(formatReportFetchError(reportPayload, reportRes.status, reportId));
         return;
       }
-      captureProductEvent("analysis_completed", { input_method: inputMethod });
+      captureAnalysisEvent("analysis_completed", inputType);
       onAnalyzeComplete(reportPayload as Report, reportId);
     } catch (error) {
-      captureProductEvent("analysis_failed", {
-        input_method: inputMethod,
+      captureAnalysisEvent("analysis_failed", inputType, {
         stage: "network",
         error_code: "NETWORK_ERROR",
       });
@@ -218,23 +214,31 @@ export function InputForm({
 
   return (
     <form onSubmit={handleSubmit} className="input-form" aria-busy={loading}>
+      <div className="quick-start">
+        <div className="quick-start-copy">
+          <strong>See a complete brief first</strong>
+          <span>Use the bundled repository. No upload or URL needed.</span>
+        </div>
+        <button
+          ref={sampleButtonRef}
+          type="button"
+          disabled={loading}
+          onClick={handleSample}
+          className="btn btn-primary"
+        >
+          <span aria-live="polite">
+            {loading ? "Generating…" : "Generate sample Candidate Brief"}
+          </span>
+        </button>
+      </div>
+
+      <div className="input-divider"><span>or analyze your repository</span></div>
+
       <div
         role="tablist"
         aria-label="Repository input method"
         className="input-mode-toggle"
       >
-        <button
-          type="button"
-          role="tab"
-          id="input-mode-zip"
-          aria-selected={mode === "zip"}
-          aria-controls="input-panel-zip"
-          className={mode === "zip" ? "input-mode-tab is-active" : "input-mode-tab"}
-          onClick={() => switchMode("zip")}
-          disabled={loading}
-        >
-          Upload ZIP
-        </button>
         <button
           type="button"
           role="tab"
@@ -246,6 +250,18 @@ export function InputForm({
           disabled={loading}
         >
           Public GitHub URL
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="input-mode-zip"
+          aria-selected={mode === "zip"}
+          aria-controls="input-panel-zip"
+          className={mode === "zip" ? "input-mode-tab is-active" : "input-mode-tab"}
+          onClick={() => switchMode("zip")}
+          disabled={loading}
+        >
+          Upload ZIP
         </button>
       </div>
 
@@ -326,21 +342,14 @@ export function InputForm({
         <button
           type="submit"
           disabled={loading}
-          className="btn btn-primary"
-        >
-          <span aria-live="polite">
-            {loading ? "Analyzing… (up to 2 min)" : "Analyze Repository"}
-          </span>
-        </button>
-        <button
-          ref={sampleButtonRef}
-          type="button"
-          disabled={loading}
-          onClick={handleSample}
           className="btn btn-secondary"
         >
           <span aria-live="polite">
-            {loading ? "Analyzing…" : "Run bundled sample"}
+            {loading
+              ? "Analyzing… (up to 2 min)"
+              : mode === "github"
+                ? "Analyze public GitHub repository"
+                : "Analyze uploaded ZIP"}
           </span>
         </button>
       </div>
