@@ -76,7 +76,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     });
   };
 
-  const handleAnalyzeComplete = (reportData: Report, id: string) => {
+  const handleAnalyzeComplete = (reportData: Report, id: string | null) => {
     setReport(reportData);
     setReportId(id);
     setLoading(false);
@@ -368,11 +368,15 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         </div>
       </section>
 
-      {report && reportId && (
+      {report && (
         <section ref={reportSectionRef} className="generated-report page-container">
           <div className="section-heading compact">
             <h2>Your Candidate Brief</h2>
-            <p>The generated report is ready to inspect, export, or share with a read-only link.</p>
+            <p>
+              {reportId
+                ? "The generated report is ready to inspect, export, or share with a read-only link."
+                : "The generated report is ready to inspect and export as PDF or PNG."}
+            </p>
           </div>
           <ReportTabs report={report} reportId={reportId} />
         </section>

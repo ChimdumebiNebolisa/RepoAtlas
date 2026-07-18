@@ -56,4 +56,17 @@ describe("analyzeRepository cleanup", () => {
     expect(result.reportId).toBeDefined();
     expect(cleanupSpy).toHaveBeenCalledTimes(1);
   }, 30000);
+
+  it("returns an inline report without calling storage when persistence is disabled", async () => {
+    saveReportMock.mockRejectedValue(new Error("storage unavailable"));
+
+    const result = await analyzeRepository(
+      { zipRef: workspaceDir },
+      { persist: false }
+    );
+
+    expect(result.report.repo_metadata.name).toBe("demo");
+    expect(saveReportMock).not.toHaveBeenCalled();
+    expect(cleanupSpy).toHaveBeenCalledTimes(1);
+  }, 30000);
 });

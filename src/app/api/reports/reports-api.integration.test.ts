@@ -124,6 +124,37 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(payload.reportId).toBeTruthy();
   }, 30000);
 
+  it("returns the completed report inline when Vercel persistence is unavailable", async () => {
+    const previousVercel = process.env.VERCEL;
+    const previousBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    process.env.VERCEL = "1";
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+
+    try {
+      const analyzeRoute = await import("@/app/api/analyze/route");
+      const request = new Request("http://localhost/api/analyze", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sample: true }),
+      });
+      const response = await analyzeRoute.POST(request as never);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        reportId?: string;
+        report?: { repo_metadata?: { name?: string } };
+        persisted?: boolean;
+      };
+      expect(payload.reportId).toBeTruthy();
+      expect(payload.persisted).toBe(false);
+      expect(payload.report?.repo_metadata?.name).toContain("repo-ts");
+    } finally {
+      if (previousVercel === undefined) delete process.env.VERCEL;
+      else process.env.VERCEL = previousVercel;
+      if (previousBlobToken === undefined) delete process.env.BLOB_READ_WRITE_TOKEN;
+      else process.env.BLOB_READ_WRITE_TOKEN = previousBlobToken;
+    }
+  }, 30000);
+
   it("creates a report from a public GitHub URL (mocked API + archive)", async () => {
     const sha = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0";
     const AdmZipMod = (await import("adm-zip")).default;
