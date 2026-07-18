@@ -88,7 +88,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
       <div className="site-grid" aria-hidden="true" />
 
       <header className="site-header page-container">
-        <a href="#top" className="brand" aria-label="RepoAtlas home">
+        <a href="#top" className="brand">
           <span className="brand-mark" aria-hidden="true">R</span>
           <span>
             <strong>RepoAtlas</strong>
