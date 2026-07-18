@@ -88,7 +88,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
       <div className="site-grid" aria-hidden="true" />
 
       <header className="site-header page-container">
-        <a href="#top" className="brand" aria-label="RepoAtlas home">
+        <a href="#top" className="brand">
           <span className="brand-mark" aria-hidden="true">R</span>
           <span>
             <strong>RepoAtlas</strong>
@@ -367,6 +367,10 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
       <footer className="site-footer page-container">
         <span>RepoAtlas</span>
         <span>Deterministic repository analysis. No code execution. No AI calls.</span>
+        <a className="tin-credit" href="https://tin.computer">
+          <span className="tin-mark" aria-hidden="true" />
+          Growth by Tin
+        </a>
       </footer>
     </main>
   );

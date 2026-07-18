@@ -7,6 +7,7 @@ const securityHeaders = getSecurityHeaders();
 
 const nextConfig = {
   serverExternalPackages: [],
+  productionBrowserSourceMaps: true,
   async headers() {
     return [
       {

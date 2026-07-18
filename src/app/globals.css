@@ -765,6 +765,14 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-size: 0.7rem;
 }
 .site-footer span:first-child { color: var(--ink); font-weight: 800; }
+.tin-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: inherit;
+  text-decoration: none;
+}
+.tin-mark { width: 1em; height: 1em; background: #66dc9d; }
 
 @media (max-width: 960px) {
   .hero {
