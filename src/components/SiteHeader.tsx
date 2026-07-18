@@ -7,7 +7,7 @@ function Badge({ children }: { children: React.ReactNode }) {
 export function SiteHeader() {
   return (
     <header className="site-header page-container">
-      <Link href="/" className="brand" aria-label="RepoAtlas home">
+      <Link href="/" className="brand">
         <span className="brand-mark" aria-hidden="true">R</span>
         <span>
           <strong>RepoAtlas</strong>

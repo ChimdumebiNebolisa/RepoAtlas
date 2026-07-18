@@ -22,9 +22,13 @@ describe("production security headers", () => {
 
     expect(csp).toBe(securityHeaders.CONTENT_SECURITY_POLICY);
     expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).toContain(
+      "script-src 'self' 'unsafe-inline' https://us-assets.i.posthog.com"
+    );
     expect(csp).toContain("style-src 'self' 'unsafe-inline'");
-    expect(csp).toContain("connect-src 'self'");
+    expect(csp).toContain(
+      "connect-src 'self' https://us.i.posthog.com https://us-assets.i.posthog.com"
+    );
     expect(csp).toContain("img-src 'self' data: blob:");
     expect(csp).toContain("font-src 'self' data:");
     expect(csp).toContain("worker-src 'self' blob:");
