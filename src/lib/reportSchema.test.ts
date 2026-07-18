@@ -36,6 +36,13 @@ describe("reportSchema", () => {
     expect(result).toEqual({ ok: false, reason: "incompatible" });
   });
 
+  it("accepts only bounded analysis intents", () => {
+    expect(validateReport({ ...minimalReport, analysis_intent: "bug" }).ok).toBe(true);
+    expect(
+      validateReport({ ...minimalReport, analysis_intent: "free-form issue text" })
+    ).toEqual({ ok: false, reason: "corrupt" });
+  });
+
   it("parses valid JSON text", () => {
     const result = parseAndValidateReport(JSON.stringify(minimalReport));
     expect(result.ok).toBe(true);

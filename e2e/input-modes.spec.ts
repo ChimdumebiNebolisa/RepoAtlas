@@ -11,6 +11,10 @@ test.describe("Repository input modes", () => {
     await expect(githubTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByLabel("Public GitHub repository URL")).toBeVisible();
     await expect(page.getByLabel(/Branch or tag/i)).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Interview walkthrough/i })).toBeChecked();
+    await expect(page.getByRole("radio", { name: /Investigate a bug/i })).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Plan a change/i })).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Discuss a pull request/i })).toBeVisible();
   });
 
   test("shows a client-side validation error for a non-canonical GitHub URL", async ({ page }) => {

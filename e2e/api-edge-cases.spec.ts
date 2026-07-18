@@ -33,6 +33,30 @@ test.describe("API edge cases", () => {
     expect(body.code).toBe("INVALID_INPUT");
   });
 
+  test("POST /api/analyze rejects an unsupported analysis intent", async ({ request }) => {
+    const res = await request.post("/api/analyze", {
+      data: { sample: true, analysisIntent: "free-form-issue-text" },
+    });
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("INVALID_INPUT");
+  });
+
+  test("POST /api/analyze carries a bounded issue focus into the report", async ({ request }) => {
+    const res = await request.post("/api/analyze", {
+      data: { sample: true, analysisIntent: "bug" },
+    });
+    expect(res.ok()).toBe(true);
+    const payload = await res.json();
+    const report = payload.persisted
+      ? await (await request.get(`/api/reports/${payload.reportId}`)).json()
+      : payload.report;
+
+    expect(report.analysis_intent).toBe("bug");
+    expect(report.candidate_brief.analysis_focus.intent).toBe("bug");
+    expect(report.candidate_brief.analysis_focus.review_steps).toHaveLength(3);
+  });
+
   test("POST /api/analyze rejects corrupt zip upload", async ({ request }) => {
     const res = await request.post("/api/analyze", {
       multipart: {

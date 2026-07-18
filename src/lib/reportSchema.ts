@@ -3,7 +3,7 @@
  */
 
 import type { Report } from "@/types/report";
-import { REPORT_VERSION } from "@/types/report";
+import { ANALYSIS_INTENTS, REPORT_VERSION } from "@/types/report";
 
 export type ReportLoadResult =
   | { ok: true; report: Report }
@@ -43,6 +43,12 @@ export function validateReport(data: unknown): ReportLoadResult {
   const version = data.report_version;
   if (version != null && typeof version === "number" && version > REPORT_VERSION) {
     return { ok: false, reason: "incompatible" };
+  }
+  if (
+    data.analysis_intent != null &&
+    !ANALYSIS_INTENTS.some((intent) => intent === data.analysis_intent)
+  ) {
+    return { ok: false, reason: "corrupt" };
   }
 
   if (!isRepoMetadata(data.repo_metadata)) return { ok: false, reason: "corrupt" };

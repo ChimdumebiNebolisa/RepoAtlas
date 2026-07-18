@@ -14,6 +14,9 @@ export function buildEvidenceUsedByIndex(
   }
 
   add("Repo Summary", brief.repo_summary.primary_evidence);
+  for (const step of brief.analysis_focus?.review_steps ?? []) {
+    add(`Issue Focus: ${step.title}`, step.evidence_refs);
+  }
   for (const item of brief.reading_path) {
     add(`Reading Path: ${item.path}`, item.evidence_refs);
   }

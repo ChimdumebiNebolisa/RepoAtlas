@@ -60,6 +60,7 @@ function collectReferencedIds(brief: CandidateBrief): string[] {
     ...brief.first_pr_plan.flatMap((idea) => idea.evidence_refs),
     ...brief.resume_bullets.flatMap((bullet) => bullet.evidence_refs),
     ...brief.warnings.flatMap((warning) => warning.evidence_refs ?? []),
+    ...(brief.analysis_focus?.review_steps.flatMap((step) => step.evidence_refs) ?? []),
   ];
 }
 
@@ -161,5 +162,33 @@ describe("buildCandidateBrief", () => {
     expect(serialized).not.toContain("production ready");
     expect(serialized).not.toContain("has bugs");
     expect(serialized).not.toContain("business purpose");
+  });
+
+  it.each([
+    ["bug", "Bug investigation"],
+    ["planned_change", "Planned change"],
+    ["pull_request", "Pull-request discussion"],
+  ] as const)("builds an evidence-linked %s focus", (analysisIntent, expectedLabel) => {
+    const brief = buildCandidateBrief({ ...baseInput, analysisIntent });
+    const focus = brief.analysis_focus;
+    const knownIds = new Set(brief.evidence_refs.map((ref) => ref.id));
+
+    expect(focus?.intent).toBe(analysisIntent);
+    expect(focus?.label).toBe(expectedLabel);
+    expect(focus?.review_steps).toHaveLength(3);
+    expect(focus?.discussion_questions).toHaveLength(3);
+    for (const step of focus?.review_steps ?? []) {
+      expect(step.evidence_refs.length).toBeGreaterThan(0);
+      expect(step.evidence_refs.every((id) => knownIds.has(id))).toBe(true);
+    }
+    const validationStep = focus?.review_steps[2];
+    expect(
+      brief.evidence_refs.find((ref) => ref.id === validationStep?.evidence_refs[0])?.kind
+    ).toBe("command");
+  });
+
+  it("keeps the default interview brief free of issue-focus framing", () => {
+    const brief = buildCandidateBrief(baseInput);
+    expect(brief.analysis_focus).toBeUndefined();
   });
 });

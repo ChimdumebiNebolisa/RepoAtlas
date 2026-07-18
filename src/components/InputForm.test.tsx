@@ -64,6 +64,31 @@ describe("InputForm", () => {
     ).toBeInTheDocument();
   });
 
+  it("sends the selected bounded intent with the sample analysis", async () => {
+    const user = userEvent.setup();
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    renderForm();
+    await user.click(screen.getByRole("radio", { name: /investigate a bug/i }));
+    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+
+    const request = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(String(request?.body))).toEqual({
+      sample: true,
+      analysisIntent: "bug",
+    });
+  });
+
   it("completes from an inline report when persistence is unavailable", async () => {
     const user = userEvent.setup();
     const onAnalyzeComplete = vi.fn();

@@ -151,6 +151,30 @@ describe("exportReportToMarkdown", () => {
     expect(markdown).toContain("src/analyzer/scoring.ts");
   });
 
+  it("includes an issue-focused review path when selected", () => {
+    const report = sampleReport();
+    report.candidate_brief!.analysis_focus = {
+      intent: "bug",
+      label: "Bug investigation",
+      summary: "Trace the reported behavior without claiming a defect.",
+      review_steps: [
+        {
+          title: "Orient at README.md",
+          detail: "Start with the highest-ranked reading candidate.",
+          evidence_refs: ["start-1"],
+        },
+      ],
+      discussion_questions: ["Which entry point is closest to the behavior?"],
+    };
+
+    const markdown = exportReportToMarkdown(report);
+
+    expect(markdown).toContain("### Issue Focus: Bug investigation");
+    expect(markdown).toContain("#### Evidence-backed review path");
+    expect(markdown).toContain("Which entry point is closest to the behavior?");
+    expect(markdown).toContain("Evidence: `start-1`");
+  });
+
   it("does not crash when candidate_brief is missing", () => {
     const report = sampleReport();
     delete report.candidate_brief;

@@ -5,7 +5,7 @@
 
 import path from "path";
 import fs from "fs";
-import type { DocumentInventory, Report } from "@/types/report";
+import type { AnalysisIntent, DocumentInventory, Report } from "@/types/report";
 import { REPORT_VERSION } from "@/types/report";
 import { ingestRepo } from "@/lib/ingest";
 import { runIndexingPipeline, type IndexingPipelineResult } from "./pipeline";
@@ -38,6 +38,8 @@ function githubUrlOf(input: AnalyzeInput): string | undefined {
 }
 
 export interface AnalyzeOptions {
+  /** Bounded job the generated Candidate Brief should be adapted for. */
+  analysisIntent?: AnalysisIntent;
   /** Wall-clock budget for analysis. When exceeded after folder map, a partial report is saved. */
   deadlineMs?: number;
   /** Cooperative cancellation for the full request lifecycle. */
@@ -174,6 +176,7 @@ function buildPartialReport(input: {
   startHere?: Report["start_here"];
   dangerZones?: Report["danger_zones"];
   extraWarnings?: string[];
+  analysisIntent?: AnalysisIntent;
 }): Report {
   const architecture = input.architecture ?? { nodes: [], edges: [] };
   const startHere = input.startHere ?? [];
@@ -186,6 +189,7 @@ function buildPartialReport(input: {
 
   const candidate_brief = buildCandidateBrief({
     repoName: input.workspaceName,
+    analysisIntent: input.analysisIntent,
     startHere,
     dangerZones,
     runCommands: input.pipeline.run_commands,
@@ -204,6 +208,7 @@ function buildPartialReport(input: {
   return {
     report_version: REPORT_VERSION,
     partial: true,
+    analysis_intent: input.analysisIntent ?? "interview",
     repo_metadata: {
       name: input.workspaceName,
       url: input.workspaceUrl ?? githubUrlOf(input.analyzeInput) ?? "zip",
@@ -268,6 +273,7 @@ export async function analyzeRepository(
         workspaceCloneHash: workspace.cloneHash,
         pipeline,
         documentInventory,
+        analysisIntent: options.analysisIntent,
       });
       return finishReport(reportId, report, shouldPersist, allowInlineFallback);
     }
@@ -287,6 +293,7 @@ export async function analyzeRepository(
         pipeline,
         documentInventory,
         architecture,
+        analysisIntent: options.analysisIntent,
         extraWarnings: collectLanguageWarnings(packs),
       });
       return finishReport(reportId, report, shouldPersist, allowInlineFallback);
@@ -332,6 +339,7 @@ export async function analyzeRepository(
         startHere,
         dangerZones,
         extraWarnings: warnings.filter((w) => !pipeline.warnings.includes(w)),
+        analysisIntent: options.analysisIntent,
       });
       return finishReport(reportId, report, shouldPersist, allowInlineFallback);
     }
@@ -359,6 +367,7 @@ export async function analyzeRepository(
 
     const candidate_brief = buildCandidateBrief({
       repoName: workspace.name,
+      analysisIntent: options.analysisIntent,
       startHere,
       dangerZones,
       runCommands: pipeline.run_commands,
@@ -380,6 +389,7 @@ export async function analyzeRepository(
 
     const report: Report = {
       report_version: REPORT_VERSION,
+      analysis_intent: options.analysisIntent ?? "interview",
       repo_metadata: {
         name: workspace.name,
         url: workspace.url ?? githubUrlOf(input) ?? "zip",
