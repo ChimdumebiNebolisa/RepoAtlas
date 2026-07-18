@@ -150,7 +150,7 @@ export function ReportTabs({
       });
     });
 
-  const renderExportCanvas = async () => {
+  const renderExportCanvas = async (scale = 1.5) => {
     setExportMountActive(true);
     await waitForExportMount();
     if (!exportRef.current) {
@@ -163,7 +163,7 @@ export function ReportTabs({
     try {
       return await html2canvas(exportRef.current, {
         backgroundColor: "#ffffff",
-        scale: 2,
+        scale,
         useCORS: true,
         windowWidth: 1200,
       });
@@ -209,30 +209,75 @@ export function ReportTabs({
     try {
       setExportError(null);
       setExporting("pdf");
-      const canvas = await renderExportCanvas();
-      const imageData = canvas.toDataURL("image/png");
+      // PDF pages use a print-friendly raster scale that keeps long reports
+      // readable without exhausting the browser's memory.
+      const canvas = await renderExportCanvas(1);
       const { default: jsPDF } = await import("jspdf");
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+      pdf.setProperties({
+        title: `Repo Analysis: ${report.repo_metadata.name}`,
+        subject: "RepoAtlas Candidate Brief",
+        creator: "RepoAtlas",
+      });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 24;
       const renderWidth = pageWidth - margin * 2;
-      const renderHeight = (canvas.height * renderWidth) / canvas.width;
+      const renderHeight = pageHeight - margin * 2;
+      const sourcePageHeight = Math.max(
+        1,
+        Math.floor((renderHeight * canvas.width) / renderWidth)
+      );
 
-      let heightLeft = renderHeight;
-      let position = margin;
-      pdf.addImage(imageData, "PNG", margin, position, renderWidth, renderHeight);
-      heightLeft -= pageHeight - margin * 2;
+      for (let sourceY = 0, pageIndex = 0; sourceY < canvas.height; pageIndex += 1) {
+        const sliceHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
+        const slice = document.createElement("canvas");
+        slice.width = canvas.width;
+        slice.height = sliceHeight;
+        const context = slice.getContext("2d");
+        if (!context) throw new Error("Could not prepare a PDF page.");
 
-      while (heightLeft > 0) {
-        position = heightLeft - renderHeight + margin;
-        pdf.addPage();
-        pdf.addImage(imageData, "PNG", margin, position, renderWidth, renderHeight);
-        heightLeft -= pageHeight - margin * 2;
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, slice.width, slice.height);
+        context.drawImage(
+          canvas,
+          0,
+          sourceY,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          canvas.width,
+          sliceHeight
+        );
+
+        const blob = await new Promise<Blob | null>((resolve) =>
+          slice.toBlob(resolve, "image/png", 1)
+        );
+        if (!blob) throw new Error("Could not generate a PDF page image.");
+        const imageBytes = new Uint8Array(await blob.arrayBuffer());
+        const pageRenderHeight = (sliceHeight * renderWidth) / canvas.width;
+
+        if (pageIndex > 0) pdf.addPage();
+        pdf.addImage(
+          imageBytes,
+          "PNG",
+          margin,
+          margin,
+          renderWidth,
+          pageRenderHeight,
+          undefined,
+          "FAST"
+        );
+
+        // Release the page buffer before preparing the next slice.
+        slice.width = 1;
+        slice.height = 1;
+        sourceY += sliceHeight;
       }
 
-      pdf.save(`${exportBasename}.pdf`);
+      downloadBlob(pdf.output("blob"), `${exportBasename}.pdf`);
       captureProductEvent("report_exported", { format: "pdf", report_variant: variant });
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "PDF export failed.");
