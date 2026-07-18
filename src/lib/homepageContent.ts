@@ -1,5 +1,11 @@
 import { CLIENT_MAX_ZIP_MB_VERCEL } from "@/lib/ingestLimitsClient";
 
+export const homepageMetadata = {
+  title: "Candidate Briefs for Code Interview Preparation | RepoAtlas",
+  description:
+    "Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief for interview preparation, without running the code.",
+} as const;
+
 export const siteIdentity = {
   name: "RepoAtlas",
   description:

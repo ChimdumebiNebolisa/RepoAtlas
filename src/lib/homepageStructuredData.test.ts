@@ -1,11 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { homepageFaqItems, siteIdentity } from "@/lib/homepageContent";
+import {
+  homepageFaqItems,
+  homepageMetadata,
+  siteIdentity,
+} from "@/lib/homepageContent";
 import {
   homepageStructuredData,
   serializeJsonLd,
 } from "@/lib/homepageStructuredData";
 
 describe("homepage structured data", () => {
+  it("keeps candidate-focused search metadata within standard result lengths", () => {
+    expect(homepageMetadata.title).toBe(
+      "Candidate Briefs for Code Interview Preparation | RepoAtlas",
+    );
+    expect(homepageMetadata.title.length).toBeLessThanOrEqual(60);
+    expect(homepageMetadata.description).toBe(
+      "Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief for interview preparation, without running the code.",
+    );
+    expect(homepageMetadata.description.length).toBeGreaterThanOrEqual(120);
+    expect(homepageMetadata.description.length).toBeLessThanOrEqual(160);
+  });
+
   it("describes RepoAtlas without commercial or unsupported claims", () => {
     const product = homepageStructuredData["@graph"][0];
 
