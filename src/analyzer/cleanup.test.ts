@@ -66,7 +66,22 @@ describe("analyzeRepository cleanup", () => {
     );
 
     expect(result.report.repo_metadata.name).toBe("demo");
+    expect(result.persisted).toBe(false);
     expect(saveReportMock).not.toHaveBeenCalled();
+    expect(cleanupSpy).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it("returns an inline report when best-effort persistence fails", async () => {
+    saveReportMock.mockRejectedValue(new Error("storage unavailable"));
+
+    const result = await analyzeRepository(
+      { zipRef: workspaceDir },
+      { allowInlineFallback: true }
+    );
+
+    expect(result.report.repo_metadata.name).toBe("demo");
+    expect(result.persisted).toBe(false);
+    expect(saveReportMock).toHaveBeenCalledTimes(1);
     expect(cleanupSpy).toHaveBeenCalledTimes(1);
   }, 30000);
 });
