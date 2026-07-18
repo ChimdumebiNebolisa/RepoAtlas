@@ -406,7 +406,13 @@ async function ingestFromGithub(
     });
   }
 
-  if (signal?.aborted) throw new Error("Analysis aborted");
+  if (signal?.aborted) {
+    throw new AppError({
+      code: ERROR_CODES.TIMEOUT,
+      status: 504,
+      message: "Analysis timed out.",
+    });
+  }
 
   const { owner, repo } = parsed;
   const name = `${owner}/${repo}`;
@@ -476,7 +482,13 @@ async function ingestFromZip(
   zipName?: string,
   signal?: AbortSignal
 ): Promise<IngestResult> {
-  if (signal?.aborted) throw new Error("Analysis aborted");
+  if (signal?.aborted) {
+    throw new AppError({
+      code: ERROR_CODES.TIMEOUT,
+      status: 504,
+      message: "Analysis timed out.",
+    });
+  }
   const fullPath = path.resolve(zipRef);
   if (!fs.existsSync(fullPath)) {
     throw new AppError({

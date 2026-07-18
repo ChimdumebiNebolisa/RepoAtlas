@@ -24,6 +24,7 @@ import { analyzeArchitectureBoundaries } from "./boundaries";
 import { analyzeCommitInsights } from "./gitHistory";
 import { saveReport } from "@/lib/storage";
 import { randomUUID } from "crypto";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const TSJS_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const PYTHON_EXTENSIONS = new Set([".py"]);
@@ -85,7 +86,11 @@ function createDeadlineChecker(deadlineMs?: number, signal?: AbortSignal) {
     },
     throwIfAborted(): void {
       if (signal?.aborted) {
-        throw new Error("Analysis aborted");
+        throw new AppError({
+          code: ERROR_CODES.TIMEOUT,
+          status: 504,
+          message: "Analysis timed out.",
+        });
       }
     },
   };
