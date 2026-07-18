@@ -1,4 +1,5 @@
 import posthog from "posthog-js";
+import type { AnalysisIntent } from "@/types/report";
 
 const POSTHOG_PUBLIC_KEY = "phc_z45a8nUZgzk86z9CLN73ogyFSeGbXuaH2jsRn8Dg5ShV";
 const POSTHOG_INGEST_HOST = "https://us.i.posthog.com";
@@ -55,8 +56,13 @@ export function captureProductEvent(
 export function captureAnalysisEvent(
   event: Extract<ProductEvent, "analysis_started" | "analysis_completed" | "analysis_failed">,
   inputType: AnalysisInputType,
+  analysisIntent: AnalysisIntent,
   properties: ProductEventProperties = {}
 ) {
   if (!initialized) return;
-  posthog.capture(event, { ...properties, input_type: inputType });
+  posthog.capture(event, {
+    ...properties,
+    input_type: inputType,
+    analysis_intent: analysisIntent,
+  });
 }

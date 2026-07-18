@@ -8,6 +8,27 @@ import type { SemanticGraph } from "./semanticGraph";
 export type { SemanticGraph } from "./semanticGraph";
 export const REPORT_VERSION = 3;
 
+export const ANALYSIS_INTENTS = [
+  "interview",
+  "bug",
+  "planned_change",
+  "pull_request",
+] as const;
+
+export type AnalysisIntent = (typeof ANALYSIS_INTENTS)[number];
+
+export interface AnalysisFocus {
+  intent: Exclude<AnalysisIntent, "interview">;
+  label: string;
+  summary: string;
+  review_steps: Array<{
+    title: string;
+    detail: string;
+    evidence_refs: string[];
+  }>;
+  discussion_questions: string[];
+}
+
 export interface RepoMetadata {
   name: string;
   url: string;
@@ -219,6 +240,8 @@ export interface CommitInsights {
 }
 
 export interface CandidateBrief {
+  analysis_focus?: AnalysisFocus;
+
   repo_summary: {
     headline: string;
     plain_english: string;
@@ -271,6 +294,7 @@ export interface CandidateBrief {
 export interface Report {
   report_version?: number;
   partial?: boolean;
+  analysis_intent?: AnalysisIntent;
   repo_metadata: RepoMetadata;
   folder_map: FolderMapNode;
   architecture: Architecture;

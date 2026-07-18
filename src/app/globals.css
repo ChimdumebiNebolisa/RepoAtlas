@@ -409,6 +409,60 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .input-form { display: grid; gap: 1rem; }
+.analysis-intent-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.analysis-intent-fieldset legend {
+  color: #28483a;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.analysis-intent-fieldset > p {
+  margin: 0.3rem 0 0.75rem;
+  color: #66786f;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+.analysis-intent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+.analysis-intent-option {
+  display: flex;
+  min-height: 4.4rem;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem;
+  border: 1px solid #c9d9d1;
+  border-radius: var(--radius-control);
+  background: #fbfdfc;
+  cursor: pointer;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out, box-shadow 160ms ease-out;
+}
+.analysis-intent-option:hover { border-color: #83b79f; }
+.analysis-intent-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent, #2f8f5b);
+  outline-offset: 1px;
+}
+.analysis-intent-option.is-selected {
+  border-color: #2f8f5b;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.12);
+}
+.analysis-intent-option input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.12rem 0 0;
+  accent-color: #2f8f5b;
+}
+.analysis-intent-option span { display: grid; gap: 0.2rem; min-width: 0; }
+.analysis-intent-option strong { color: #193a2b; font-size: 0.76rem; line-height: 1.35; }
+.analysis-intent-option small { color: #50635a; font-size: 0.68rem; line-height: 1.4; }
+.analysis-intent-fieldset:disabled .analysis-intent-option { cursor: not-allowed; opacity: 0.62; }
 .quick-start {
   display: flex;
   align-items: center;
@@ -1011,6 +1065,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .hero-actions .btn, .hero-actions .text-action, .form-actions .btn, .closing-actions .btn { width: 100%; }
   .quick-start { align-items: stretch; flex-direction: column; }
   .quick-start .btn { width: 100%; }
+  .analysis-intent-grid { grid-template-columns: 1fr; }
   .hero-visual { min-height: 24rem; }
   .brief-sheet { inset: 0 0.5rem 2.5rem 0; }
   .brief-sheet-footer { display: none; }

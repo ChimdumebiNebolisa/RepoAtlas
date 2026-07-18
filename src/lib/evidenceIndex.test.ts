@@ -4,6 +4,15 @@ import { buildEvidenceUsedByIndex, groupEvidenceByKind } from "./evidenceIndex";
 
 function makeBrief(): CandidateBrief {
   return {
+    analysis_focus: {
+      intent: "bug",
+      label: "Bug investigation",
+      summary: "Trace the issue.",
+      review_steps: [
+        { title: "Trace entry", detail: "Start here", evidence_refs: ["focus"] },
+      ],
+      discussion_questions: ["What changed?"],
+    },
     repo_summary: {
       headline: "Repo",
       plain_english: "A repository.",
@@ -36,6 +45,7 @@ describe("evidence indexes", () => {
     const index = buildEvidenceUsedByIndex(makeBrief());
 
     expect(index.get("summary")).toEqual(["Repo Summary", "Resume: resume"]);
+    expect(index.get("focus")).toEqual(["Issue Focus: Trace entry"]);
     expect(index.get("readme")).toEqual(["Reading Path: README.md"]);
     expect(index.get("walk")).toEqual(["Walk me through"]);
     expect(index.get("risk")).toEqual(["Riskiest areas"]);

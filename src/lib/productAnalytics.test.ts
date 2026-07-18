@@ -31,14 +31,16 @@ describe("captureAnalysisEvent", () => {
     vi.stubGlobal("window", {});
     initializeProductAnalytics();
 
-    captureAnalysisEvent("analysis_started", "github");
-    captureAnalysisEvent("analysis_completed", "sample");
+    captureAnalysisEvent("analysis_started", "github", "planned_change");
+    captureAnalysisEvent("analysis_completed", "sample", "bug");
 
     expect(posthog.capture).toHaveBeenNthCalledWith(1, "analysis_started", {
       input_type: "github",
+      analysis_intent: "planned_change",
     });
     expect(posthog.capture).toHaveBeenNthCalledWith(2, "analysis_completed", {
       input_type: "sample",
+      analysis_intent: "bug",
     });
   });
 });

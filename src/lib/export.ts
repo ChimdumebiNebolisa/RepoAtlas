@@ -93,6 +93,20 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
   if (!brief) return "";
 
   let md = "## Candidate Brief\n\n";
+  if (brief.analysis_focus) {
+    md += `### Issue Focus: ${escapeMarkdownInline(brief.analysis_focus.label)}\n\n`;
+    md += `${escapeMarkdownInline(brief.analysis_focus.summary)}\n\n`;
+    md += "#### Evidence-backed review path\n\n";
+    for (const [index, step] of brief.analysis_focus.review_steps.entries()) {
+      md += `${index + 1}. **${escapeMarkdownInline(step.title)}**: ${escapeMarkdownInline(step.detail)}${evidenceList(step.evidence_refs)}\n`;
+    }
+    md += "\n#### Questions to bring\n\n";
+    for (const question of brief.analysis_focus.discussion_questions) {
+      md += `- ${escapeMarkdownInline(question)}\n`;
+    }
+    md += "\n";
+  }
+
   md += "### Repo Summary\n\n";
   md += `${escapeMarkdownInline(brief.repo_summary.headline)}\n\n`;
   md += `${escapeMarkdownInline(brief.repo_summary.plain_english)}\n\n`;

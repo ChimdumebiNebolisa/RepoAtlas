@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, type RefObject } from "react";
-import type { Report } from "@/types/report";
+import type { AnalysisIntent, Report } from "@/types/report";
 import { ERROR_CODES } from "@/lib/errors";
 import { parseGithubRepoUrl, isValidGitRef } from "@/lib/github";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
@@ -15,6 +15,33 @@ const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
 const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type InputMode = "zip" | "github";
+
+const ANALYSIS_INTENT_OPTIONS: Array<{
+  value: AnalysisIntent;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "interview",
+    label: "Interview walkthrough",
+    description: "Explain the whole repository clearly.",
+  },
+  {
+    value: "bug",
+    label: "Investigate a bug",
+    description: "Trace likely entry points and risk signals.",
+  },
+  {
+    value: "planned_change",
+    label: "Plan a change",
+    description: "Map boundaries, impact, and validation.",
+  },
+  {
+    value: "pull_request",
+    label: "Discuss a pull request",
+    description: "Prepare a file-backed review path.",
+  },
+];
 
 interface InputFormProps {
   onAnalyzeStart: () => void;
@@ -71,17 +98,18 @@ export function InputForm({
   const [file, setFile] = useState<File | null>(null);
   const [githubUrl, setGithubUrl] = useState("");
   const [githubRef, setGithubRef] = useState("");
+  const [analysisIntent, setAnalysisIntent] = useState<AnalysisIntent>("interview");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Runs the analyze request and validates the reportId in every flow.
   const runAnalysis = async (init: RequestInit, inputType: AnalysisInputType) => {
-    captureAnalysisEvent("analysis_started", inputType);
+    captureAnalysisEvent("analysis_started", inputType, analysisIntent);
     try {
       const res = await fetch("/api/analyze", init);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        captureAnalysisEvent("analysis_failed", inputType, {
+        captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
           stage: "analysis",
           status_code: res.status,
           error_code: data.code ?? ERROR_CODES.ANALYSIS_FAILED,
@@ -95,7 +123,7 @@ export function InputForm({
         persisted?: boolean;
       };
       if (!isValidReportId(reportId)) {
-        captureAnalysisEvent("analysis_failed", inputType, {
+        captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
           stage: "analysis_response",
           error_code: "INVALID_REPORT_ID",
         });
@@ -104,7 +132,7 @@ export function InputForm({
       }
 
       if (persisted === false && inlineReport) {
-        captureAnalysisEvent("analysis_completed", inputType);
+        captureAnalysisEvent("analysis_completed", inputType, analysisIntent);
         onAnalyzeComplete(inlineReport, null);
         return;
       }
@@ -112,7 +140,7 @@ export function InputForm({
       const reportRes = await fetch(`/api/reports/${reportId}`);
       const reportPayload = await reportRes.json().catch(() => ({}));
       if (!reportRes.ok) {
-        captureAnalysisEvent("analysis_failed", inputType, {
+        captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
           stage: "report_load",
           status_code: reportRes.status,
           error_code: reportPayload.code ?? ERROR_CODES.ANALYSIS_FAILED,
@@ -126,10 +154,10 @@ export function InputForm({
         onAnalyzeError(formatReportFetchError(reportPayload, reportRes.status, reportId));
         return;
       }
-      captureAnalysisEvent("analysis_completed", inputType);
+      captureAnalysisEvent("analysis_completed", inputType, analysisIntent);
       onAnalyzeComplete(reportPayload as Report, reportId);
     } catch (error) {
-      captureAnalysisEvent("analysis_failed", inputType, {
+      captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
         stage: "network",
         error_code: "NETWORK_ERROR",
       });
@@ -154,6 +182,7 @@ export function InputForm({
       }
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("analysisIntent", analysisIntent);
       onAnalyzeStart();
       await runAnalysis({ method: "POST", body: formData }, "zip");
       return;
@@ -171,6 +200,7 @@ export function InputForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           githubUrl: githubUrl.trim(),
+          analysisIntent,
           ...(githubRef.trim() ? { ref: githubRef.trim() } : {}),
         }),
       },
@@ -208,7 +238,7 @@ export function InputForm({
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sample: true }),
+        body: JSON.stringify({ sample: true, analysisIntent }),
       },
       "sample"
     );
@@ -224,6 +254,31 @@ export function InputForm({
 
   return (
     <form onSubmit={handleSubmit} className="input-form" aria-busy={loading}>
+      <fieldset className="analysis-intent-fieldset" disabled={loading}>
+        <legend>Focus this Candidate Brief</legend>
+        <p>Choose the conversation you need to prepare for.</p>
+        <div className="analysis-intent-grid">
+          {ANALYSIS_INTENT_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className={`analysis-intent-option ${analysisIntent === option.value ? "is-selected" : ""}`}
+            >
+              <input
+                type="radio"
+                name="analysis-intent"
+                value={option.value}
+                checked={analysisIntent === option.value}
+                onChange={() => setAnalysisIntent(option.value)}
+              />
+              <span>
+                <strong>{option.label}</strong>
+                <small>{option.description}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="quick-start">
         <div className="quick-start-copy">
           <strong>See a complete brief first</strong>

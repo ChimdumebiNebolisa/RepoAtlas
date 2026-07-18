@@ -180,9 +180,64 @@ export function CandidateBriefPanel({ candidateBrief, demoMode }: CandidateBrief
 
   const evidenceById = new Map(candidateBrief.evidence_refs.map((ref) => [ref.id, ref]));
   const talkingPoints = candidateBrief.interview_talking_points;
+  const analysisFocus = candidateBrief.analysis_focus;
 
   return (
     <div className={`space-y-4 ${demoMode ? "text-[15px]" : ""}`}>
+      {analysisFocus && (
+        <section className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50">
+          <div className="border-b border-emerald-200 bg-white/70 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Issue-focused Candidate Brief
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-900">
+              {analysisFocus.label}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
+              {analysisFocus.summary}
+            </p>
+          </div>
+          <div className="grid gap-4 p-4 lg:grid-cols-[1.35fr_0.65fr]">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Evidence-backed review path</h3>
+              <ol className="mt-3 space-y-2">
+                {analysisFocus.review_steps.map((step, index) => (
+                  <li key={step.title} className="rounded-lg border border-emerald-100 bg-white p-3">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-xs font-semibold text-white">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">{step.title}</h4>
+                        <p className="mt-1 text-sm leading-6 text-slate-700">{step.detail}</p>
+                        {!demoMode && (
+                          <EvidenceList
+                            ids={step.evidence_refs}
+                            evidenceById={evidenceById}
+                            onNavigate={scrollToEvidence}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div className="rounded-lg border border-emerald-100 bg-white p-3">
+              <h3 className="text-sm font-semibold text-slate-900">Questions to bring</h3>
+              <ul className="mt-3 space-y-3 text-sm leading-6 text-slate-700">
+                {analysisFocus.discussion_questions.map((question) => (
+                  <li key={question} className="flex gap-2">
+                    <span aria-hidden="true" className="text-emerald-700">→</span>
+                    <span>{question}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
+
       <Section title="Repo Summary" help={SECTION_HELP["Repo Summary"]}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

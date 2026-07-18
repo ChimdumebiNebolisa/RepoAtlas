@@ -371,11 +371,17 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
       {report && (
         <section ref={reportSectionRef} className="generated-report page-container">
           <div className="section-heading compact">
-            <h2>Your Candidate Brief</h2>
+            <h2>
+              {report.candidate_brief?.analysis_focus
+                ? `Your ${report.candidate_brief.analysis_focus.label} Brief`
+                : "Your Candidate Brief"}
+            </h2>
             <p>
-              {reportId
-                ? "The generated report is ready to inspect, export, or share with a read-only link."
-                : "The generated report is ready to inspect and export as PDF or PNG."}
+              {report.candidate_brief?.analysis_focus
+                ? "The completed brief is adapted to your selected issue focus and tied to repository evidence."
+                : reportId
+                  ? "The generated report is ready to inspect, export, or share with a read-only link."
+                  : "The generated report is ready to inspect and export as PDF or PNG."}
             </p>
           </div>
           <ReportTabs report={report} reportId={reportId} />

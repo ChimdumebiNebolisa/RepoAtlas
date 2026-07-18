@@ -16,6 +16,7 @@ import {
   getRateLimiter,
   tryAcquireAnalysisSlot,
 } from "@/lib/rateLimit";
+import { ANALYSIS_INTENTS, type AnalysisIntent } from "@/types/report";
 
 // Discriminated input model:
 //   - multipart upload  -> { kind: "zip" }   (server-created temp path)
@@ -47,6 +48,11 @@ function logAnalyzeError(requestId: string, err: unknown): void {
 
 function badRequest(code: string, message: string, status = 400, requestId?: string) {
   return NextResponse.json({ code, message, ...(requestId ? { requestId } : {}) }, { status });
+}
+
+function parseAnalysisIntent(value: unknown): AnalysisIntent | null {
+  if (typeof value !== "string") return null;
+  return ANALYSIS_INTENTS.find((intent) => intent === value) ?? null;
 }
 
 export async function POST(request: NextRequest) {
@@ -97,9 +103,18 @@ export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") ?? "";
     let analyzeInput: AnalyzeInput | null = null;
+    let analysisIntent: AnalysisIntent = "interview";
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
+      const requestedIntent = formData.get("analysisIntent");
+      if (requestedIntent != null) {
+        const parsedIntent = parseAnalysisIntent(requestedIntent);
+        if (!parsedIntent) {
+          return badRequest(ERROR_CODES.INVALID_INPUT, "Choose a supported analysis intent.");
+        }
+        analysisIntent = parsedIntent;
+      }
       const file = formData.get("file") ?? formData.get("zip");
       if (!file || typeof file === "string") {
         return badRequest(ERROR_CODES.INVALID_INPUT, "Upload a single zip file.");
@@ -127,6 +142,14 @@ export async function POST(request: NextRequest) {
       }
       if (body == null || typeof body !== "object") {
         return badRequest(ERROR_CODES.INVALID_INPUT, "Provide a JSON object.");
+      }
+
+      if (body.analysisIntent != null) {
+        const parsedIntent = parseAnalysisIntent(body.analysisIntent);
+        if (!parsedIntent) {
+          return badRequest(ERROR_CODES.INVALID_INPUT, "Choose a supported analysis intent.");
+        }
+        analysisIntent = parsedIntent;
       }
 
       if (body.sample === true) {
@@ -166,6 +189,7 @@ export async function POST(request: NextRequest) {
       signal: abortSignal,
       persist: persistenceAvailable,
       allowInlineFallback: true,
+      analysisIntent,
     });
 
     if (!report.reportId) {
