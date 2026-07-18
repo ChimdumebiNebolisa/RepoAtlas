@@ -133,6 +133,108 @@ describe("InputForm", () => {
     );
   });
 
+  it("preserves an accepted Cycle 3 source through completion", async () => {
+    const user = userEvent.setup();
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    window.history.replaceState({}, "", "/?source=c3p1#analyze");
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    renderForm();
+    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      1,
+      "analysis_started",
+      "sample",
+      "interview",
+      { entry_source: "c3p1" }
+    );
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      2,
+      "analysis_completed",
+      "sample",
+      "interview",
+      { entry_source: "c3p1" }
+    );
+  });
+
+  it("preserves an accepted Cycle 3 source through failure", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, "", "/?source=c3p2#analyze");
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: "ANALYSIS_FAILED", message: "Try again." }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      })
+    );
+
+    renderForm();
+    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      1,
+      "analysis_started",
+      "sample",
+      "interview",
+      { entry_source: "c3p2" }
+    );
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      2,
+      "analysis_failed",
+      "sample",
+      "interview",
+      {
+        entry_source: "c3p2",
+        stage: "analysis",
+        status_code: 500,
+        error_code: "ANALYSIS_FAILED",
+      }
+    );
+  });
+
+  it("drops an unknown source before analysis events are captured", async () => {
+    const user = userEvent.setup();
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    window.history.replaceState({}, "", "/?source=private-repository-name#analyze");
+    vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    renderForm();
+    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      1,
+      "analysis_started",
+      "sample",
+      "interview",
+      {}
+    );
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      2,
+      "analysis_completed",
+      "sample",
+      "interview",
+      {}
+    );
+  });
+
   it("completes from an inline report when persistence is unavailable", async () => {
     const user = userEvent.setup();
     const onAnalyzeComplete = vi.fn();
