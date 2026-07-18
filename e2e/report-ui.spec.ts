@@ -99,6 +99,15 @@ test.describe("Report UI flows", () => {
     await expect(page.getByRole("button", { name: /Share Candidate Brief/i })).toHaveCount(0);
     await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
     await page.getByRole("button", { name: /View report/i }).click();
+
+    const exportSummary = page.getByText(
+      /Generated report ready for PDF and PNG export\. Markdown needs saved report storage, which is currently unavailable\./i
+    );
+    await expect(exportSummary).toBeVisible();
+    const markdownButton = page.getByRole("button", { name: /Export Markdown/i }).first();
+    await expect(markdownButton).toBeDisabled();
+    await expect(markdownButton).toHaveAttribute("title", /saved report storage/i);
+
     await page.getByRole("button", { name: /Share Candidate Brief/i }).click();
 
     await expect(page.getByText(/Private link copied/i)).toBeVisible();
