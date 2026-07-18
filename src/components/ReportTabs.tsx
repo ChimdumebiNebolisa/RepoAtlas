@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import dynamic from "next/dynamic";
 import type { Report } from "@/types/report";
 import { FolderMapTree } from "./FolderMapTree";
-import { ElkArchitectureGraph } from "./ElkArchitectureGraph";
 import { StartHereTable } from "./StartHereTable";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
@@ -21,6 +21,18 @@ import {
   type ReportShareType,
 } from "@/lib/productAnalytics";
 import { createPortableShareLink } from "@/lib/portableSharing";
+
+const ElkArchitectureGraph = dynamic(
+  () => import("./ElkArchitectureGraph").then((module) => module.ElkArchitectureGraph),
+  {
+    ssr: false,
+    loading: () => (
+      <p data-architecture-state="loading" className="text-gray-500">
+        Loading architecture map...
+      </p>
+    ),
+  }
+);
 
 const TABS = [
   "Candidate Brief",
@@ -175,6 +187,16 @@ export function ReportTabs({
       });
     });
 
+  const waitForExportContent = async () => {
+    const deadline = Date.now() + 10_000;
+    while (exportRef.current?.querySelector('[data-architecture-state="loading"]')) {
+      if (Date.now() > deadline) {
+        throw new Error("The architecture map did not finish loading for export.");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  };
+
   const renderExportCanvas = async (scale = 1.5) => {
     setExportMountActive(true);
     await waitForExportMount();
@@ -182,8 +204,7 @@ export function ReportTabs({
       setExportMountActive(false);
       throw new Error("Report snapshot is not ready yet.");
     }
-    // Mermaid graphs render asynchronously; brief wait improves capture consistency.
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await waitForExportContent();
     const { default: html2canvas } = await import("html2canvas");
     try {
       return await html2canvas(exportRef.current, {

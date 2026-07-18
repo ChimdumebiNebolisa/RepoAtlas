@@ -1,13 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { Report } from "@/types/report";
 import { FolderMapTree } from "./FolderMapTree";
-import { ElkArchitectureGraph } from "./ElkArchitectureGraph";
 import { StartHereTable } from "./StartHereTable";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { RunContributeSection } from "./RunContributeSection";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
 import { repoSourceLabel, formatTimestamp } from "@/lib/format";
+
+const ElkArchitectureGraph = dynamic(
+  () => import("./ElkArchitectureGraph").then((module) => module.ElkArchitectureGraph),
+  {
+    ssr: false,
+    loading: () => (
+      <p data-architecture-state="loading" className="text-gray-500">
+        Loading architecture map...
+      </p>
+    ),
+  }
+);
 
 interface ReportDocumentProps {
   report: Report;
