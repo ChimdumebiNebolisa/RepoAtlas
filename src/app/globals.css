@@ -461,7 +461,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 .analysis-intent-option span { display: grid; gap: 0.2rem; min-width: 0; }
 .analysis-intent-option strong { color: #193a2b; font-size: 0.76rem; line-height: 1.35; }
-.analysis-intent-option small { color: #60746a; font-size: 0.68rem; line-height: 1.4; }
+.analysis-intent-option small { color: #50635a; font-size: 0.68rem; line-height: 1.4; }
 .analysis-intent-fieldset:disabled .analysis-intent-option { cursor: not-allowed; opacity: 0.62; }
 .quick-start {
   display: flex;
