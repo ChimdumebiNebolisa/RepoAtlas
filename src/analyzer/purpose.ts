@@ -14,13 +14,18 @@ function firstReadme(
   keyDocs: string[],
   canonicalReadme?: string
 ): string | null {
-  if (canonicalReadme && fs.existsSync(path.join(workspacePath, canonicalReadme))) {
+  if (
+    canonicalReadme &&
+    fs.existsSync(
+      /* turbopackIgnore: true */ path.join(workspacePath, canonicalReadme)
+    )
+  ) {
     return canonicalReadme;
   }
   const readme = keyDocs.find((d) => /(^|\/)readme(\.[^./]+)?$/i.test(d));
   if (!readme) return null;
-  const full = path.join(workspacePath, readme);
-  return fs.existsSync(full) ? readme : null;
+  const full = path.join(/* turbopackIgnore: true */ workspacePath, readme);
+  return fs.existsSync(/* turbopackIgnore: true */ full) ? readme : null;
 }
 
 /** Loose normalization for comparing a heading against the repo name. */
@@ -54,7 +59,10 @@ export function extractProjectPurpose(
 ): ProjectPurpose | undefined {
   const readmeRel = firstReadme(workspacePath, keyDocs, options.canonicalReadme);
   if (readmeRel) {
-    const content = fs.readFileSync(path.join(workspacePath, readmeRel), "utf-8");
+    const content = fs.readFileSync(
+      /* turbopackIgnore: true */ path.join(workspacePath, readmeRel),
+      "utf-8"
+    );
     const heading = content.match(/^#\s+(.+)$/m);
     const headingText = heading?.[1]?.trim();
 
@@ -93,10 +101,15 @@ export function extractProjectPurpose(
     }
   }
 
-  const pkgPath = path.join(workspacePath, "package.json");
-  if (fs.existsSync(pkgPath)) {
+  const pkgPath = path.join(
+    /* turbopackIgnore: true */ workspacePath,
+    "package.json"
+  );
+  if (fs.existsSync(/* turbopackIgnore: true */ pkgPath)) {
     try {
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+      const pkg = JSON.parse(
+        fs.readFileSync(/* turbopackIgnore: true */ pkgPath, "utf-8")
+      );
       if (typeof pkg.description === "string" && pkg.description.trim()) {
         return {
           text: pkg.description.trim().slice(0, 500),
@@ -111,9 +124,15 @@ export function extractProjectPurpose(
     }
   }
 
-  const pyproject = path.join(workspacePath, "pyproject.toml");
-  if (fs.existsSync(pyproject)) {
-    const content = fs.readFileSync(pyproject, "utf-8");
+  const pyproject = path.join(
+    /* turbopackIgnore: true */ workspacePath,
+    "pyproject.toml"
+  );
+  if (fs.existsSync(/* turbopackIgnore: true */ pyproject)) {
+    const content = fs.readFileSync(
+      /* turbopackIgnore: true */ pyproject,
+      "utf-8"
+    );
     const desc = content.match(/description\s*=\s*"([^"]+)"/);
     if (desc?.[1]) {
       return {
