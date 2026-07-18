@@ -8,7 +8,12 @@
 export function hasBlobStorageCredentials(): boolean {
   if (process.env.BLOB_READ_WRITE_TOKEN) return true;
 
-  return Boolean(process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID);
+  if (!process.env.BLOB_STORE_ID) return false;
+
+  // In deployed functions, @vercel/oidc can read the short-lived token from
+  // the request context even when VERCEL_OIDC_TOKEN is not exposed as an env
+  // variable. The store id remains the stable signal that Blob is connected.
+  return Boolean(process.env.VERCEL_OIDC_TOKEN || isVercelRuntime());
 }
 
 export function getStaticBlobToken(): string | undefined {

@@ -28,6 +28,16 @@ describe("report storage capability", () => {
     expect(hasBlobStorageCredentials()).toBe(true);
   });
 
+  it("recognizes request-scoped OIDC when a Blob store is connected on Vercel", () => {
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    delete process.env.VERCEL_OIDC_TOKEN;
+    process.env.VERCEL = "1";
+    process.env.BLOB_STORE_ID = "store_test";
+
+    expect(hasBlobStorageCredentials()).toBe(true);
+    expect(canPersistReports()).toBe(true);
+  });
+
   it("rejects incomplete OIDC configuration on Vercel", () => {
     delete process.env.BLOB_READ_WRITE_TOKEN;
     process.env.VERCEL = "1";
