@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
 
@@ -50,7 +52,18 @@ export default function InterviewPreparationPage() {
             When the conversation turns to your repository, use a Candidate Brief to find the
             reading path, architecture, risk signals, and talking points the code can support.
           </p>
-          <TrackedAnalysisLink>Prepare my Candidate Brief</TrackedAnalysisLink>
+          <Suspense
+            fallback={
+              <Link
+                className="btn btn-primary interview-primary-action"
+                href="/?source=interview_preparation#analyze"
+              >
+                Prepare my Candidate Brief <span aria-hidden="true">→</span>
+              </Link>
+            }
+          >
+            <TrackedAnalysisLink>Prepare my Candidate Brief</TrackedAnalysisLink>
+          </Suspense>
           <p className="interview-hero-note">
             Start with the bundled sample, a public GitHub URL, or a ZIP. RepoAtlas reads files
             without executing code or calling AI.

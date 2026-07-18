@@ -30,9 +30,12 @@ describe("stableRouteName", () => {
 });
 
 describe("analysisEntrySource", () => {
-  it("keeps only the bounded interview-preparation source", () => {
+  it("keeps only the bounded interview-preparation and Cycle 3 sources", () => {
     expect(analysisEntrySource("?source=interview_preparation")).toBe("interview_preparation");
+    expect(analysisEntrySource("?source=c3p1")).toBe("c3p1");
+    expect(analysisEntrySource("?source=c3p2")).toBe("c3p2");
     expect(analysisEntrySource("?source=private-repository-name")).toBeUndefined();
+    expect(analysisEntrySource("?source=c3p3")).toBeUndefined();
     expect(analysisEntrySource("")).toBeUndefined();
   });
 });

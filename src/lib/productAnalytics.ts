@@ -1,5 +1,6 @@
 import posthog from "posthog-js";
 import type { AnalysisIntent } from "@/types/report";
+export { analysisEntrySource } from "@/lib/analysisAttribution";
 
 const POSTHOG_PUBLIC_KEY = "phc_z45a8nUZgzk86z9CLN73ogyFSeGbXuaH2jsRn8Dg5ShV";
 const POSTHOG_INGEST_HOST = "https://us.i.posthog.com";
@@ -57,11 +58,6 @@ export function stableRouteName(pathname: string): string {
   if (pathname.startsWith("/report/")) return "report";
   if (pathname.startsWith("/share/")) return "shared_report";
   return "other";
-}
-
-export function analysisEntrySource(search: string): "interview_preparation" | undefined {
-  const source = new URLSearchParams(search).get("source");
-  return source === "interview_preparation" ? source : undefined;
 }
 
 export function captureProductEvent(
