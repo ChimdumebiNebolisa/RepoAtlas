@@ -8,6 +8,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { del, get, list, put } from "@vercel/blob";
 import { getReport } from "@/lib/storage";
+import { getStaticBlobToken, hasBlobStorageCredentials } from "@/lib/storageConfig";
 
 const SHARES_BLOB_PREFIX = "shares/";
 const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -27,11 +28,7 @@ export interface ShareRecord {
 }
 
 function shouldUseBlobStorage(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-}
-
-function getBlobToken(): string | undefined {
-  return process.env.BLOB_READ_WRITE_TOKEN;
+  return hasBlobStorageCredentials();
 }
 
 function ensureSharesDir(): void {
@@ -49,7 +46,7 @@ async function saveShareRecord(token: string, record: ShareRecord): Promise<void
   const body = JSON.stringify(record);
 
   if (shouldUseBlobStorage()) {
-    const blobToken = getBlobToken();
+    const blobToken = getStaticBlobToken();
     await put(`${SHARES_BLOB_PREFIX}${token}.json`, body, {
       access: "private",
       contentType: "application/json",
@@ -70,7 +67,7 @@ async function loadShareRecord(token: string): Promise<ShareRecord | null> {
   if (!isValidShareToken(token)) return null;
 
   if (shouldUseBlobStorage()) {
-    const blobToken = getBlobToken();
+    const blobToken = getStaticBlobToken();
     const result = await get(`${SHARES_BLOB_PREFIX}${token}.json`, {
       access: "private",
       ...(blobToken && { token: blobToken }),
@@ -109,7 +106,7 @@ async function deleteShareRecord(token: string): Promise<void> {
   if (!isValidShareToken(token)) return;
 
   if (shouldUseBlobStorage()) {
-    const blobToken = getBlobToken();
+    const blobToken = getStaticBlobToken();
     try {
       await del(`${SHARES_BLOB_PREFIX}${token}.json`, {
         ...(blobToken && { token: blobToken }),
@@ -196,7 +193,7 @@ export async function resolveShareToken(token: string): Promise<ShareRecord | nu
 
 export async function listShareTokens(): Promise<string[]> {
   if (shouldUseBlobStorage()) {
-    const blobToken = getBlobToken();
+    const blobToken = getStaticBlobToken();
     const tokens: string[] = [];
     let cursor: string | undefined;
     do {

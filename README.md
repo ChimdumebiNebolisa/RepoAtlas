@@ -56,7 +56,7 @@ RepoAtlas extracts or downloads the archive, analyzes the repository, stores the
 - Portable exports:
   - Client-side full report export to PDF and PNG
   - Server-side Markdown export via `GET /api/reports/:id/export/md`
-- Report persistence: report JSON on disk (`reports/`) or Vercel Blob when deployed with `BLOB_READ_WRITE_TOKEN`
+- Report persistence: report JSON on disk (`reports/`) or a connected Vercel Blob store using OIDC or `BLOB_READ_WRITE_TOKEN`
 - Read-only sharing: `/share/:token` (7-day opt-in links; report JSON only — never your uploaded zip)
 - Legacy direct view: `/report/:id` (prefer token sharing for recipients)
 
@@ -99,7 +99,7 @@ See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANG
 - Share page: `/share/:token` (read-only UI)
 - Legacy report page: `/report/:id`
 - Analyzer: in-process TypeScript module
-- Storage: report JSON on filesystem (`reports/`) or Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
+- Storage: report JSON on filesystem (`reports/`) or a connected Vercel Blob store using OIDC or `BLOB_READ_WRITE_TOKEN`
 - Temp workspace: OS temp directory per analysis run
 
 ---
@@ -341,9 +341,9 @@ Runs TTL sweeps for expired reports (filesystem and Blob) and share tokens. In p
 
 See [`.env.example`](.env.example) for the full list and [SECURITY.md](SECURITY.md) for the security model. Highlights:
 
-- Vercel production: set `BLOB_READ_WRITE_TOKEN`
+- Vercel production: connect a private Blob store; current connections inject short-lived OIDC credentials automatically
 - Local development: `REPORTS_DIR` is optional when not using Blob storage and defaults to `<project-root>/reports`
-- Local Blob testing: `BLOB_READ_WRITE_TOKEN` can also be set locally if you want to exercise Blob storage
+- Local Blob testing: set `BLOB_READ_WRITE_TOKEN` if you want to exercise Blob storage outside Vercel
 - Report retention (filesystem): `REPORT_TTL_DAYS` (default 30; 7 when Blob token is set), `REPORT_MAX_COUNT` (default 100)
 - Cron cleanup auth: optional `CRON_SECRET` for `POST /api/cron/cleanup`
 - Rate limiting: optional `ANALYZE_RATE_LIMIT_PER_MIN`, `MAX_CONCURRENT_ANALYSES`

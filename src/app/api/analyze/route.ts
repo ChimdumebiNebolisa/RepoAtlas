@@ -10,6 +10,7 @@ import {
   toAppError,
 } from "@/lib/errors";
 import { MAX_ANALYSIS_TIME_MS, maxCompressedBytesForZipUpload, maxZipUploadMb } from "@/lib/ingestLimits";
+import { canPersistReports } from "@/lib/storageConfig";
 import {
   clientKeyFromHeaders,
   getMaxConcurrentAnalyses,
@@ -182,8 +183,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const persistenceAvailable =
-      !(process.env.VERCEL && !process.env.BLOB_READ_WRITE_TOKEN);
+    const persistenceAvailable = canPersistReports();
     const report = await analyzeRepository(analyzeInput, {
       deadlineMs: MAX_ANALYSIS_TIME_MS,
       signal: abortSignal,
