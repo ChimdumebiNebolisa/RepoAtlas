@@ -49,6 +49,9 @@ interface ApiErrorLike {
 
 type MarkdownSupportState = "unknown" | "available" | "unavailable";
 
+const INLINE_MARKDOWN_UNAVAILABLE =
+  "Markdown export needs saved report storage, which is currently unavailable. You can still export PDF or PNG.";
+
 export function formatApiError(payload: ApiErrorLike | null | undefined, fallback: string) {
   if (!payload) return fallback;
   if (payload.code && payload.message) return `${payload.code}: ${payload.message}`;
@@ -94,7 +97,7 @@ export function ReportTabs({
     reportId ? "unknown" : "unavailable"
   );
   const [markdownNote, setMarkdownNote] = useState<string | null>(
-    reportId ? "Checking Markdown export availability..." : "Markdown export is available after analyzing a repository."
+    reportId ? "Checking Markdown export availability..." : INLINE_MARKDOWN_UNAVAILABLE
   );
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -104,7 +107,7 @@ export function ReportTabs({
     const preflightMarkdown = async () => {
       if (!reportId) {
         setMarkdownSupport("unavailable");
-        setMarkdownNote("Markdown export is available after analyzing a repository.");
+        setMarkdownNote(INLINE_MARKDOWN_UNAVAILABLE);
         return;
       }
 
@@ -240,7 +243,7 @@ export function ReportTabs({
 
   const handleExportMarkdown = async () => {
     if (!reportId) {
-      setExportError("Markdown export is available after analyzing a repository.");
+      setExportError(INLINE_MARKDOWN_UNAVAILABLE);
       return;
     }
 
@@ -386,7 +389,13 @@ export function ReportTabs({
             ? "Read-only sample. PDF and PNG are available here; analyze a repository to export Markdown."
             : variant === "shared"
               ? "Shared read-only Candidate Brief. PDF and PNG export are available; Markdown requires the original analysis session."
-              : "Generated report ready for PDF, PNG, and Markdown export."}
+              : !reportId
+                ? "Generated report ready for PDF and PNG export. Markdown needs saved report storage, which is currently unavailable."
+                : markdownSupport === "available"
+                  ? "Generated report ready for PDF, PNG, and Markdown export."
+                  : markdownNote?.startsWith("Checking")
+                    ? "Generated report ready for PDF and PNG export. Checking Markdown export availability."
+                    : `Generated report ready for PDF and PNG export. ${markdownNote ?? "Markdown export availability could not be verified."}`}
         </p>
         <div className="report-toolbar-actions">
           <button
