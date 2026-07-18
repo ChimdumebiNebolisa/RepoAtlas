@@ -34,16 +34,26 @@ export function ElkArchitectureGraph({
 
   if (!architecture.nodes.length) {
     return (
-      <p className="text-gray-500">No architecture data available for this repository.</p>
+      <p data-architecture-state="empty" className="text-gray-500">
+        No architecture data available for this repository.
+      </p>
     );
   }
 
   if (error) {
-    return <pre className="text-red-600">Layout error: {error}</pre>;
+    return (
+      <pre data-architecture-state="error" className="text-red-600">
+        Layout error: {error}
+      </pre>
+    );
   }
 
   if (!layout) {
-    return <p className="text-gray-500">Computing layout...</p>;
+    return (
+      <p data-architecture-state="loading" className="text-gray-500">
+        Computing layout...
+      </p>
+    );
   }
 
   const padding = 20;
@@ -57,7 +67,7 @@ export function ElkArchitectureGraph({
       .slice(0, 8) ?? [];
 
   return (
-    <div className="rounded bg-gray-50 p-4 min-h-[400px]">
+    <div data-architecture-state="ready" className="rounded bg-gray-50 p-4 min-h-[400px]">
       {semanticGraph && (
         <div className="mb-3 space-y-2 text-sm text-slate-700">
           <p>
