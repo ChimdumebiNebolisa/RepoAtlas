@@ -99,7 +99,10 @@ export default function TokenSharePage() {
         {loading && <p className="text-sm text-slate-600">Loading report…</p>}
         {error && (
           <div className="space-y-3">
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            >
               {error}
             </div>
             <button

@@ -18,11 +18,58 @@ test.describe("Report UI flows", () => {
   test("all report tabs render after sample analyze", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
 
-    for (const tab of REPORT_TABS) {
-      const tabControl = page.getByRole("tab", { name: tab, exact: true }).last();
-      await tabControl.click();
-      await expect(tabControl).toHaveAttribute("aria-selected", "true");
+    const reportTabs = page
+      .getByRole("tablist", { name: "Report sections" })
+      .last()
+      .getByRole("tab");
+    const reportPanel = page.locator(".report-tabs").last().getByRole("tabpanel");
+    const panelEvidence: Record<(typeof REPORT_TABS)[number], RegExp> = {
+      "Candidate Brief": /Repo Summary/i,
+      Overview: /Repository/i,
+      "Folder Map": /bootstrap\.ts/i,
+      "Architecture Map": /Semantic graph:/i,
+      "Start Here": /Suggested reading order for interview prep/i,
+      "Danger Zones": /Files that may need extra attention/i,
+      "Run & Contribute": /Run commands/i,
+      Export: /Export Report/i,
+    };
+
+    await expect(reportTabs).toHaveCount(REPORT_TABS.length);
+    await expect(
+      page.getByRole("tablist", { name: "Report sections" }).last()
+    ).toHaveAttribute("aria-orientation", "horizontal");
+    await expect(reportTabs.first()).toHaveAttribute("tabindex", "0");
+    for (let index = 1; index < REPORT_TABS.length; index += 1) {
+      await expect(reportTabs.nth(index)).toHaveAttribute("tabindex", "-1");
     }
+
+    await reportTabs.first().focus();
+    for (let index = 1; index < REPORT_TABS.length; index += 1) {
+      await page.keyboard.press("ArrowRight");
+      const tabControl = reportTabs.nth(index);
+      await expect(tabControl).toBeFocused();
+      await expect(tabControl).toHaveAttribute("aria-selected", "true");
+      await expect(tabControl).toHaveAttribute("tabindex", "0");
+      await expect(reportPanel).toContainText(panelEvidence[REPORT_TABS[index]]);
+      const tabId = await tabControl.getAttribute("id");
+      expect(tabId).toBeTruthy();
+      await expect(reportPanel).toHaveAttribute(
+        "aria-labelledby",
+        tabId as string
+      );
+    }
+
+    await page.keyboard.press("Home");
+    await expect(reportTabs.first()).toBeFocused();
+    await expect(reportTabs.first()).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("End");
+    await expect(reportTabs.last()).toBeFocused();
+    await expect(reportTabs.last()).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("ArrowRight");
+    await expect(reportTabs.first()).toBeFocused();
+    await page.keyboard.press("ArrowLeft");
+    await expect(reportTabs.last()).toBeFocused();
+    await expect(reportPanel).toHaveAttribute("tabindex", "0");
 
     await page.getByRole("tab", { name: "Candidate Brief", exact: true }).last().click();
     await expect(page.getByRole("heading", { name: "Repo Summary" }).last()).toBeVisible();
@@ -180,14 +227,26 @@ test.describe("Report UI flows", () => {
     await page.goto("/");
     await page.getByRole("tab", { name: "Upload ZIP" }).click();
     await page.locator('input[type="file"]').setInputFiles(txtPath);
-    await expect(page.getByText(/Please select a \.zip file/i)).toBeVisible();
+    const uploadError = page.getByRole("alert").filter({ hasText: /Please select a \.zip file/i });
+    await expect(uploadError).toHaveText(/Please select a \.zip file/i);
+    await expect(page.locator('input[type="file"]')).toHaveAttribute("aria-invalid", "true");
+    await expect(page.locator('input[type="file"]')).toHaveAttribute(
+      "aria-describedby",
+      "input-form-error"
+    );
     await page.getByRole("button", { name: /Analyze uploaded ZIP/i }).first().click();
-    await expect(page.locator("#input-form-error")).toContainText(/zip/i);
+    await expect(page.getByRole("alert").filter({ hasText: /Choose a \.zip file/i })).toBeVisible();
   });
 
   test("missing report id on /report/:id shows error", async ({ page }) => {
     await page.goto(`/report/${randomUUID()}`);
-    await expect(page.getByText(/not found|Report not found/i)).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: /not found/i })).toHaveText(
+      /Report not found/i
+    );
+    const recovery = page.getByRole("link", { name: /Start a new analysis/i });
+    await expect(recovery).toHaveAttribute("href", "/#analyze");
+    await recovery.focus();
+    await expect(recovery).toBeFocused();
   });
 
   test("demo mode toggle is development-only (hidden in production builds)", async ({ page }) => {
@@ -210,6 +269,10 @@ test.describe("Share UI edge cases", () => {
     fs.writeFileSync(recordPath, JSON.stringify(record));
 
     await page.goto(`/share/${share.token}`);
-    await expect(page.getByText(/expired|not found/i)).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: /expired|not found/i })).toHaveText(
+      /expired|not found/i
+    );
+    await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Back to home/i })).toHaveAttribute("href", "/");
   });
 });

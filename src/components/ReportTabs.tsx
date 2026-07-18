@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { Report } from "@/types/report";
 import { FolderMapTree } from "./FolderMapTree";
 import { ElkArchitectureGraph } from "./ElkArchitectureGraph";
@@ -100,6 +100,31 @@ export function ReportTabs({
     reportId ? "Checking Markdown export availability..." : INLINE_MARKDOWN_UNAVAILABLE
   );
   const exportRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const activateTab = (index: number) => {
+    const nextTab = TABS[index];
+    const nextControl = tabRefs.current[index];
+    setActiveTab(nextTab);
+    nextControl?.focus();
+    nextControl?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  };
+
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number
+  ) => {
+    let nextIndex: number | null = null;
+
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % TABS.length;
+    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = TABS.length - 1;
+
+    if (nextIndex === null) return;
+    event.preventDefault();
+    activateTab(nextIndex);
+  };
 
   useEffect(() => {
     let alive = true;
@@ -473,8 +498,13 @@ export function ReportTabs({
       </div>
 
       <div className="report-tab-rail">
-        <nav className="report-tab-list" aria-label="Report sections" role="tablist">
-          {TABS.map((tab) => {
+        <nav
+          className="report-tab-list"
+          aria-label="Report sections"
+          aria-orientation="horizontal"
+          role="tablist"
+        >
+          {TABS.map((tab, index) => {
             const tabKey = tab.toLowerCase().replace(/[^a-z0-9]+/g, "-");
             return (
             <button
@@ -484,7 +514,12 @@ export function ReportTabs({
               role="tab"
               aria-selected={activeTab === tab}
               aria-controls={`${tabsId}-panel-${tabKey}`}
+              tabIndex={activeTab === tab ? 0 : -1}
+              ref={(element) => {
+                tabRefs.current[index] = element;
+              }}
               onClick={() => setActiveTab(tab)}
+              onKeyDown={(event) => handleTabKeyDown(event, index)}
               className="report-tab"
             >
               {tab}
@@ -498,6 +533,7 @@ export function ReportTabs({
         id={`${tabsId}-panel-${activeTab.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
         role="tabpanel"
         aria-labelledby={`${tabsId}-tab-${activeTab.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+        tabIndex={0}
         className="py-4"
       >
         {activeTab === "Candidate Brief" && (
