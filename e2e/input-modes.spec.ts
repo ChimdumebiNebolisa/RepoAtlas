@@ -8,9 +8,6 @@ test.describe("Repository input modes", () => {
     const githubTab = page.getByRole("tab", { name: "Public GitHub URL" });
     await expect(zipTab).toBeVisible();
     await expect(githubTab).toBeVisible();
-    await expect(zipTab).toHaveAttribute("aria-selected", "true");
-
-    await githubTab.click();
     await expect(githubTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByLabel("Public GitHub repository URL")).toBeVisible();
     await expect(page.getByLabel(/Branch or tag/i)).toBeVisible();
@@ -20,7 +17,7 @@ test.describe("Repository input modes", () => {
     await page.goto("/");
     await page.getByRole("tab", { name: "Public GitHub URL" }).click();
     await page.getByLabel("Public GitHub repository URL").fill("https://gitlab.com/foo/bar");
-    await page.getByRole("button", { name: /Analyze Repository/i }).click();
+    await page.getByRole("button", { name: /Analyze public GitHub repository/i }).click();
     await expect(page.locator("p.form-error")).toContainText(/canonical URL/i);
   });
 
@@ -60,7 +57,7 @@ test.describe("Repository input modes", () => {
     await page.goto("/");
     await page.getByRole("tab", { name: "Public GitHub URL" }).click();
     await page.getByLabel("Public GitHub repository URL").fill("https://github.com/octocat/demo");
-    await page.getByRole("button", { name: /Analyze Repository/i }).click();
+    await page.getByRole("button", { name: /Analyze public GitHub repository/i }).click();
 
     await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
       timeout: 30_000,

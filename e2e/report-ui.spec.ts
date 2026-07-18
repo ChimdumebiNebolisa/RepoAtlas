@@ -96,8 +96,9 @@ test.describe("Report UI flows", () => {
     fs.writeFileSync(zipPath, zipFixture("repo-ts"));
 
     await page.goto("/");
+    await page.getByRole("tab", { name: "Upload ZIP" }).click();
     await page.locator('input[type="file"]').setInputFiles(zipPath);
-    await page.getByRole("button", { name: /Analyze Repository/i }).first().click();
+    await page.getByRole("button", { name: /Analyze uploaded ZIP/i }).first().click();
 
     await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
       timeout: 90_000,
@@ -113,9 +114,10 @@ test.describe("Report UI flows", () => {
     fs.writeFileSync(txtPath, "hello");
 
     await page.goto("/");
+    await page.getByRole("tab", { name: "Upload ZIP" }).click();
     await page.locator('input[type="file"]').setInputFiles(txtPath);
     await expect(page.getByText(/Please select a \.zip file/i)).toBeVisible();
-    await page.getByRole("button", { name: /Analyze Repository/i }).first().click();
+    await page.getByRole("button", { name: /Analyze uploaded ZIP/i }).first().click();
     await expect(page.locator("#input-form-error")).toContainText(/zip/i);
   });
 
