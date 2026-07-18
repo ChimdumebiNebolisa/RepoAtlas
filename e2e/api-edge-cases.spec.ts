@@ -252,4 +252,73 @@ test.describe("API edge cases", () => {
     expect(report.candidate_brief).toBeDefined();
     expect(report.candidate_brief.first_pr_plan).toHaveLength(3);
   });
+
+  for (const languageCase of [
+    {
+      name: "Python",
+      fixture: "repo-python",
+      expectedEntrypoint: "main.py",
+      expectedCommand: "myapp",
+      unsupportedWarning: "Deep Python analysis unavailable",
+    },
+    {
+      name: "Java",
+      fixture: "repo-java-maven",
+      expectedEntrypoint: "src/main/java/com/example/App.java",
+      expectedCommand: "mvn test",
+      unsupportedWarning: "Deep Java analysis unavailable",
+    },
+  ]) {
+    test(`multipart zip upload produces a language-aware ${languageCase.name} brief`, async ({
+      request,
+    }) => {
+      const res = await request.post("/api/analyze", {
+        multipart: {
+          file: {
+            name: `${languageCase.fixture}.zip`,
+            mimeType: "application/zip",
+            buffer: zipFixture(languageCase.fixture),
+          },
+        },
+      });
+      expect(res.ok()).toBe(true);
+      const payload = await res.json();
+      const report = payload.persisted
+        ? await (await request.get(`/api/reports/${payload.reportId}`)).json()
+        : payload.report;
+
+      expect(report.candidate_brief).toBeDefined();
+      expect(report.architecture.nodes.length).toBeGreaterThan(0);
+      expect(report.architecture.edges.length).toBeGreaterThan(0);
+      expect(
+        report.start_here.some(
+          (item: { path: string; explanation: string }) =>
+            item.path === languageCase.expectedEntrypoint &&
+            item.explanation.includes("detected entrypoint")
+        )
+      ).toBe(true);
+      expect(report.danger_zones.length).toBeGreaterThan(0);
+      expect(
+        report.run_commands.some(
+          (command: { command: string }) => command.command === languageCase.expectedCommand
+        )
+      ).toBe(true);
+      expect(report.candidate_brief.confidence_assessment.level).toBe("high");
+      expect(
+        report.warnings.some((warning: string) => warning.includes(languageCase.unsupportedWarning))
+      ).toBe(false);
+
+      if (languageCase.name === "Java") {
+        expect(
+          report.start_here.some(
+            (item: { path: string; explanation: string }) =>
+              item.path.includes("src/test/") && item.explanation.includes("entrypoint")
+          )
+        ).toBe(false);
+        expect(
+          report.warnings.some((warning: string) => warning.includes("Multiple main() entrypoints"))
+        ).toBe(false);
+      }
+    });
+  }
 });
