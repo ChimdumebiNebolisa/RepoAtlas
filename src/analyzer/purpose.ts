@@ -17,7 +17,10 @@ function firstReadme(
   if (
     canonicalReadme &&
     fs.existsSync(
-      /* turbopackIgnore: true */ path.join(workspacePath, canonicalReadme)
+      /* turbopackIgnore: true */ path.join(
+        /* turbopackIgnore: true */ workspacePath,
+        canonicalReadme
+      )
     )
   ) {
     return canonicalReadme;
@@ -60,7 +63,10 @@ export function extractProjectPurpose(
   const readmeRel = firstReadme(workspacePath, keyDocs, options.canonicalReadme);
   if (readmeRel) {
     const content = fs.readFileSync(
-      /* turbopackIgnore: true */ path.join(workspacePath, readmeRel),
+      /* turbopackIgnore: true */ path.join(
+        /* turbopackIgnore: true */ workspacePath,
+        readmeRel
+      ),
       "utf-8"
     );
     const heading = content.match(/^#\s+(.+)$/m);
