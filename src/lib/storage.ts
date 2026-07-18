@@ -27,7 +27,10 @@ export function isValidReportId(reportId: string): boolean {
 }
 
 function getReportsDir(): string {
-  return process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
+  return (
+    process.env.REPORTS_DIR ??
+    path.join(/* turbopackIgnore: true */ process.cwd(), "reports")
+  );
 }
 
 function shouldUseBlobStorage(): boolean {

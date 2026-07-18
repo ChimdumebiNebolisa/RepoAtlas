@@ -14,7 +14,10 @@ const SHARES_BLOB_PREFIX = "shares/";
 const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getReportsDir(): string {
-  return process.env.REPORTS_DIR ?? path.join(process.cwd(), "reports");
+  return (
+    process.env.REPORTS_DIR ??
+    path.join(/* turbopackIgnore: true */ process.cwd(), "reports")
+  );
 }
 
 function getSharesDir(): string {
