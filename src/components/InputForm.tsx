@@ -57,10 +57,24 @@ interface ApiErrorLike {
   message?: string;
 }
 
-export function formatApiError(payload: ApiErrorLike | null | undefined, fallback: string) {
+export function formatApiError(
+  payload: ApiErrorLike | null | undefined,
+  fallback: string,
+  retryAfter?: string | null
+) {
   if (!payload) return fallback;
-  if (payload.code && payload.message) return `${payload.code}: ${payload.message}`;
-  return payload.message || payload.code || fallback;
+  const base = payload.code && payload.message
+    ? `${payload.code}: ${payload.message}`
+    : payload.message || payload.code || fallback;
+  if (
+    (payload.code === ERROR_CODES.RATE_LIMITED ||
+      payload.code === ERROR_CODES.RATE_LIMIT_EXCEEDED) &&
+    retryAfter &&
+    /^\d+$/.test(retryAfter)
+  ) {
+    return `${base} Retry in ${retryAfter} seconds.`;
+  }
+  return base;
 }
 
 export function formatReportFetchError(
@@ -118,7 +132,9 @@ export function InputForm({
           status_code: res.status,
           error_code: data.code ?? ERROR_CODES.ANALYSIS_FAILED,
         });
-        onAnalyzeError(formatApiError(data, FALLBACK_ANALYSIS_MESSAGE));
+        onAnalyzeError(
+          formatApiError(data, FALLBACK_ANALYSIS_MESSAGE, res.headers.get("retry-after"))
+        );
         return;
       }
       const { reportId, report: inlineReport, persisted } = data as {

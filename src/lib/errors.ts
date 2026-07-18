@@ -87,7 +87,7 @@ const USER_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.REPO_NOT_PUBLIC]:
     "Repository is private or not found. RepoAtlas only analyzes public GitHub repos.",
   [ERROR_CODES.REPO_NOT_FOUND]:
-    "Repository not found. Check the owner and repository name.",
+    "Repository not found or private. Check the owner and repository name, or upload a permitted ZIP instead.",
   [ERROR_CODES.REPO_PRIVATE]:
     "This repository is private. RepoAtlas only analyzes public GitHub repositories.",
   [ERROR_CODES.RATE_LIMITED]:

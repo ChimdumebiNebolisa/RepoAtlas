@@ -134,6 +134,17 @@ describe("toApiErrorPayload", () => {
     expect(payload.message).toContain("timed out");
   });
 
+  it("gives a private-or-missing repository a usable recovery path", () => {
+    const err = new AppError({
+      code: ERROR_CODES.REPO_NOT_FOUND,
+      status: 404,
+      message: "Not found",
+    });
+    const payload = toApiErrorPayload(err);
+    expect(payload.message).toContain("not found or private");
+    expect(payload.message).toContain("upload a permitted ZIP");
+  });
+
   it("returns CLONE_TIMEOUT with 504 and specific message", () => {
     const err = new AppError({
       code: ERROR_CODES.CLONE_TIMEOUT,

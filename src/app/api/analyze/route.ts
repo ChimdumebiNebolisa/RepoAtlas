@@ -7,8 +7,8 @@ import { analyzeRepository, type AnalyzeInput } from "@/analyzer";
 import {
   ERROR_CODES,
   toApiErrorPayload,
-  toAppError,
 } from "@/lib/errors";
+import { analyzeErrorLogPayload } from "@/lib/analyzeErrorLog";
 import { MAX_ANALYSIS_TIME_MS, maxCompressedBytesForZipUpload, maxZipUploadMb } from "@/lib/ingestLimits";
 import { canPersistReports } from "@/lib/storageConfig";
 import {
@@ -30,21 +30,7 @@ import { ANALYSIS_INTENTS, type AnalysisIntent } from "@/types/report";
 // directly for the zipRef path.
 
 function logAnalyzeError(requestId: string, err: unknown): void {
-  const appErr = toAppError(err);
-  const payload: Record<string, unknown> = {
-    requestId,
-    code: appErr.code,
-    status: appErr.status,
-    message: appErr.message,
-  };
-  if (appErr.meta) payload.meta = appErr.meta;
-  if (appErr.cause != null) {
-    payload.cause =
-      appErr.cause instanceof Error
-        ? { name: appErr.cause.name, message: appErr.cause.message }
-        : String(appErr.cause);
-  }
-  console.error(JSON.stringify({ level: "error", ...payload }));
+  console.error(JSON.stringify(analyzeErrorLogPayload(requestId, err)));
 }
 
 function badRequest(code: string, message: string, status = 400, requestId?: string) {
@@ -207,7 +193,11 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     logAnalyzeError(requestId, err);
     const { status, code, message } = toApiErrorPayload(err);
-    return NextResponse.json({ code, message, requestId }, { status });
+    const headers =
+      code === ERROR_CODES.RATE_LIMITED || code === ERROR_CODES.RATE_LIMIT_EXCEEDED
+        ? { "Retry-After": "60" }
+        : undefined;
+    return NextResponse.json({ code, message, requestId }, { status, headers });
   } finally {
     clearTimeout(deadlineTimer);
     slot.release();
