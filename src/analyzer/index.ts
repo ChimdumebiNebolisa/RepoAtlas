@@ -44,11 +44,14 @@ export interface AnalyzeOptions {
   signal?: AbortSignal;
   /** Persist the generated report for later retrieval and sharing. */
   persist?: boolean;
+  /** Return the completed report inline when persistence fails. */
+  allowInlineFallback?: boolean;
 }
 
 export interface AnalyzeResult {
   reportId: string;
   report: Report;
+  persisted: boolean;
 }
 
 interface PackResults {
@@ -223,10 +226,18 @@ function buildPartialReport(input: {
 async function finishReport(
   reportId: string,
   report: Report,
-  persist: boolean
+  persist: boolean,
+  allowInlineFallback: boolean
 ): Promise<AnalyzeResult> {
-  if (persist) await saveReport(reportId, report);
-  return { reportId, report };
+  if (!persist) return { reportId, report, persisted: false };
+  try {
+    await saveReport(reportId, report);
+    return { reportId, report, persisted: true };
+  } catch (error) {
+    if (!allowInlineFallback) throw error;
+    console.warn("Report persistence unavailable; returning completed report inline.");
+    return { reportId, report, persisted: false };
+  }
 }
 
 export async function analyzeRepository(
@@ -235,6 +246,7 @@ export async function analyzeRepository(
 ): Promise<AnalyzeResult> {
   const reportId = randomUUID();
   const shouldPersist = options.persist !== false;
+  const allowInlineFallback = options.allowInlineFallback === true;
   const deadline = createDeadlineChecker(options.deadlineMs, options.signal);
   const workspace = await ingestRepo(input, { signal: options.signal });
   deadline.throwIfAborted();
@@ -257,7 +269,7 @@ export async function analyzeRepository(
         pipeline,
         documentInventory,
       });
-      return finishReport(reportId, report, shouldPersist);
+      return finishReport(reportId, report, shouldPersist, allowInlineFallback);
     }
 
     const filePaths = Array.from(pipeline.file_metadata.keys());
@@ -277,7 +289,7 @@ export async function analyzeRepository(
         architecture,
         extraWarnings: collectLanguageWarnings(packs),
       });
-      return finishReport(reportId, report, shouldPersist);
+      return finishReport(reportId, report, shouldPersist, allowInlineFallback);
     }
 
     const architecture = combineArchitecture(packs);
@@ -321,7 +333,7 @@ export async function analyzeRepository(
         dangerZones,
         extraWarnings: warnings.filter((w) => !pipeline.warnings.includes(w)),
       });
-      return finishReport(reportId, report, shouldPersist);
+      return finishReport(reportId, report, shouldPersist, allowInlineFallback);
     }
 
     const project_profile = detectProjectProfile(workspace.path, filePaths);
@@ -394,7 +406,7 @@ export async function analyzeRepository(
       warnings,
     };
 
-    return finishReport(reportId, report, shouldPersist);
+    return finishReport(reportId, report, shouldPersist, allowInlineFallback);
   } finally {
     await workspace.cleanup?.();
   }

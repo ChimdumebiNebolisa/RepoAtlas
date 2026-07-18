@@ -165,6 +165,7 @@ export async function POST(request: NextRequest) {
       deadlineMs: MAX_ANALYSIS_TIME_MS,
       signal: abortSignal,
       persist: persistenceAvailable,
+      allowInlineFallback: true,
     });
 
     if (!report.reportId) {
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      persistenceAvailable
+      report.persisted
         ? { reportId: report.reportId, persisted: true }
         : { reportId: report.reportId, report: report.report, persisted: false }
     );
