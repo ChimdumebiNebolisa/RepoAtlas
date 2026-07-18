@@ -127,6 +127,14 @@ describe("analyzeRepository integration (acceptance)", () => {
     expect(
       result.report.warnings.some((w) => w.includes("Deep Java analysis unavailable"))
     ).toBe(false);
+    expect(
+      result.report.warnings.some((w) => w.includes("Multiple main() entrypoints"))
+    ).toBe(false);
+    expect(
+      result.report.start_here.some(
+        (item) => item.path.includes("src/test/") && item.explanation.includes("entrypoint")
+      )
+    ).toBe(false);
   }, 30000);
 
   it("FastAPI fixture: produces Python architecture and candidate brief", async () => {

@@ -168,6 +168,34 @@ public class Util { }
     }
   });
 
+  it("does not treat test main() methods as application entrypoints", () => {
+    const workspace = writeWorkspace({
+      [relKey("src", "main", "java", "com", "example", "App.java")]: `package com.example;
+public class App {
+  public static void main(String[] args) { }
+}
+`,
+      [relKey("src", "test", "java", "com", "example", "AppTest.java")]: `package com.example;
+public class AppTest {
+  public static void main(String[] args) { }
+}
+`,
+    });
+    const appFile = relKey("src", "main", "java", "com", "example", "App.java");
+    const testFile = relKey("src", "test", "java", "com", "example", "AppTest.java");
+    const pipeline = buildPipeline([appFile, testFile]);
+
+    try {
+      const result = runJavaPack(workspace, pipeline);
+      expect(result.entrypoints).toEqual(new Set([appFile]));
+      expect(result.warnings?.some((warning) => warning.includes("Multiple main()")) ?? false).toBe(
+        false
+      );
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("detects @SpringBootApplication classes", () => {
     const workspace = writeWorkspace({
       [relKey("src", "main", "java", "com", "example", "App.java")]: `package com.example;

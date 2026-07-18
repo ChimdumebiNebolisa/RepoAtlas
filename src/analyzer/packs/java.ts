@@ -484,7 +484,7 @@ export function runJavaPack(
   }
 
   const { entrypoints: eps, warnings: epWarnings } = detectEntrypoints(
-    files,
+    files.filter((file) => !testFiles.has(file)),
     workspacePath
   );
   for (const ep of eps) entrypoints.add(ep);
