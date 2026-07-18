@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { InputForm } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
+import { SiteHeader } from "@/components/SiteHeader";
 import { clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 import type { Report } from "@/types/report";
 
@@ -44,10 +45,6 @@ const guardrails = [
   "Danger Zones are structural risk signals, not bug counts",
 ];
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="badge">{children}</span>;
-}
-
 function Arrow() {
   return <span aria-hidden="true">→</span>;
 }
@@ -87,20 +84,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     <main className="site-shell">
       <div className="site-grid" aria-hidden="true" />
 
-      <header className="site-header page-container">
-        <a href="#top" className="brand" aria-label="RepoAtlas home">
-          <span className="brand-mark" aria-hidden="true">R</span>
-          <span>
-            <strong>RepoAtlas</strong>
-            <small>Candidate Brief Generator</small>
-          </span>
-        </a>
-        <div className="header-badges" aria-label="Product capabilities">
-          <Badge>No AI required</Badge>
-          <Badge>TS/JS + Python + Java</Badge>
-          <Badge>Export Markdown/PDF/PNG</Badge>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section id="top" className="hero page-container">
         <div className="hero-copy">
@@ -367,6 +351,10 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
       <footer className="site-footer page-container">
         <span>RepoAtlas</span>
         <span>Deterministic repository analysis. No code execution. No AI calls.</span>
+        <a className="tin-credit" href="https://tin.computer">
+          <span className="tin-mark" aria-hidden="true" />
+          Growth by Tin
+        </a>
       </footer>
     </main>
   );
