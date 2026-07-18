@@ -16,7 +16,7 @@ const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 function getReportsDir(): string {
   return (
     process.env.REPORTS_DIR ??
-    path.join(/* turbopackIgnore: true */ process.cwd(), "reports")
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "reports")
   );
 }
 
