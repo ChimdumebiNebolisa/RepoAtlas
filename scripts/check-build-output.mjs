@@ -7,7 +7,10 @@ const broadTraceMarkers = [
 ];
 let buildOutput = "";
 
-const child = spawn(nextBin, ["build"], {
+// RepoAtlas deliberately walks repository files supplied at request time. The
+// current Turbopack tracer follows those dynamic paths back to the project root;
+// Webpack's supported production builder keeps that runtime boundary intact.
+const child = spawn(nextBin, ["build", "--webpack"], {
   env: process.env,
   shell: false,
   stdio: ["inherit", "pipe", "pipe"],
@@ -30,7 +33,7 @@ child.on("error", (error) => {
 child.on("close", (code, signal) => {
   if (broadTraceMarkers.some((marker) => buildOutput.includes(marker))) {
     console.error(
-      "Build failed because broad server-file tracing returned. Scope filesystem access or mark the intentional runtime path with turbopackIgnore."
+      "Build failed because broad server-file tracing returned. Keep repository filesystem access outside the build-time trace."
     );
     process.exitCode = 1;
     return;
