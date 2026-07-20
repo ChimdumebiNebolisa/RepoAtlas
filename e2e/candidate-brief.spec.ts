@@ -26,7 +26,7 @@ test.describe("Candidate Brief smoke", () => {
       "#analyze"
     );
 
-    await hero.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+    await hero.getByRole("button", { name: /Try bundled sample/i }).click();
     await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
       timeout: 90_000,
     });

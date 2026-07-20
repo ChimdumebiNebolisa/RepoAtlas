@@ -123,7 +123,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           </p>
           <div className="hero-actions">
             <button className="btn btn-primary" type="button" onClick={generateSampleBrief}>
-              Generate sample Candidate Brief <Arrow />
+              Try bundled sample <Arrow />
             </button>
             <a className="text-action" href="#analyze">Use your own repository <Arrow /></a>
           </div>
