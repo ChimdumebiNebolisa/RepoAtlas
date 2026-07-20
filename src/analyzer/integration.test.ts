@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import fs from "fs";
 import path from "path";
 import { analyzeRepository } from "./index";
 
@@ -11,6 +12,24 @@ describe("analyzeRepository integration (acceptance)", () => {
   const fastapiFixturePath = path.resolve(__dirname, "../../fixtures/repo-fastapi");
   const nodeApiFixturePath = path.resolve(__dirname, "../../fixtures/repo-node-api");
   const monorepoFixturePath = path.resolve(__dirname, "../../fixtures/repo-monorepo");
+
+  function expectDecisionEvidenceToResolve(
+    result: Awaited<ReturnType<typeof analyzeRepository>>,
+    fixturePath: string
+  ) {
+    const evidence = new Map(
+      (result.report.candidate_brief?.evidence_refs ?? []).map((ref) => [ref.id, ref])
+    );
+    for (const decision of result.report.technical_decisions ?? []) {
+      expect(decision.evidence_refs.length).toBeGreaterThan(0);
+      for (const id of decision.evidence_refs) {
+        const ref = evidence.get(id);
+        expect(ref?.kind).toBe("decision");
+        expect(ref?.path).toBeTruthy();
+        expect(fs.existsSync(path.join(fixturePath, ref?.path ?? "missing"))).toBe(true);
+      }
+    }
+  }
 
   it("produces report for local fixture (zipRef)", async () => {
     const result = await analyzeRepository({
@@ -28,6 +47,11 @@ describe("analyzeRepository integration (acceptance)", () => {
     expect(result.report.candidate_brief).toBeDefined();
     expect(result.report.candidate_brief?.repo_summary).toBeDefined();
     expect(result.report.candidate_brief?.first_pr_plan).toHaveLength(3);
+    expect(result.report.technical_decisions?.map((decision) => decision.decision)).toEqual([
+      "Next.js",
+      "Vitest",
+    ]);
+    expectDecisionEvidenceToResolve(result, fixturePath);
   }, 30000);
 
   it("Folder Map tab: renders non-empty tree", async () => {
@@ -135,6 +159,12 @@ describe("analyzeRepository integration (acceptance)", () => {
         (item) => item.path.includes("src/test/") && item.explanation.includes("entrypoint")
       )
     ).toBe(false);
+    expect(result.report.technical_decisions).toEqual([]);
+    expect(
+      result.report.candidate_brief?.behavioral_hooks?.find((hook) =>
+        hook.prompt.startsWith("Tradeoff")
+      )?.sufficient_evidence
+    ).toBe(false);
   }, 30000);
 
   it("FastAPI fixture: produces Python architecture and candidate brief", async () => {
@@ -184,6 +214,15 @@ describe("analyzeRepository integration (acceptance)", () => {
     expect(firstDanger.metrics?.fan_in).toBeDefined();
     expect(
       result.report.warnings.some((w) => w.includes("Deep Python analysis unavailable"))
+    ).toBe(false);
+    expect(result.report.technical_decisions?.map((decision) => decision.decision)).toEqual([
+      "pytest",
+    ]);
+    expectDecisionEvidenceToResolve(result, pythonFixturePath);
+    expect(
+      result.report.candidate_brief?.behavioral_hooks?.find((hook) =>
+        hook.prompt.startsWith("Tradeoff")
+      )?.sufficient_evidence
     ).toBe(false);
   }, 30000);
 });

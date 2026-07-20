@@ -25,6 +25,10 @@ export function buildEvidenceUsedByIndex(
   add("Riskiest areas", tp.riskiest_areas.evidence_refs);
   add("Improve first", tp.improve_first.evidence_refs);
   add("First week", tp.first_week_contribution.evidence_refs);
+  add("Walkthrough Script", brief.walkthrough_script?.evidence_refs);
+  for (const hook of brief.behavioral_hooks ?? []) {
+    add(`Behavioral Hook: ${hook.prompt}`, hook.evidence_refs);
+  }
   for (const idea of brief.first_pr_plan) {
     add(`First PR: ${idea.title}`, idea.evidence_refs);
   }

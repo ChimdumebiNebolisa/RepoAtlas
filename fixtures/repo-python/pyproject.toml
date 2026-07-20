@@ -4,3 +4,6 @@ version = "0.1.0"
 
 [project.scripts]
 myapp = "myapp.cli:main"
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]

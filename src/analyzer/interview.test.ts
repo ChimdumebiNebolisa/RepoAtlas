@@ -60,6 +60,8 @@ function collectReferencedIds(brief: CandidateBrief): string[] {
     ...brief.first_pr_plan.flatMap((idea) => idea.evidence_refs),
     ...brief.resume_bullets.flatMap((bullet) => bullet.evidence_refs),
     ...brief.warnings.flatMap((warning) => warning.evidence_refs ?? []),
+    ...(brief.walkthrough_script?.evidence_refs ?? []),
+    ...(brief.behavioral_hooks?.flatMap((hook) => hook.evidence_refs) ?? []),
     ...(brief.analysis_focus?.review_steps.flatMap((step) => step.evidence_refs) ?? []),
   ];
 }
@@ -151,6 +153,51 @@ describe("buildCandidateBrief", () => {
     for (const id of collectReferencedIds(brief)) {
       expect(knownIds.has(id)).toBe(true);
     }
+  });
+
+  it("requires direct decision evidence before presenting a tradeoff hook", () => {
+    const brief = buildCandidateBrief({
+      ...baseInput,
+      technicalDecisions: [
+        { category: "framework" as const, decision: "React", signals: ["react"], evidence_refs: [] },
+        { category: "testing" as const, decision: "Vitest", signals: ["vitest"], evidence_refs: [] },
+      ],
+    });
+
+    const tradeoff = brief.behavioral_hooks?.find((hook) => hook.prompt.startsWith("Tradeoff"));
+    expect(tradeoff).toEqual({
+      prompt: "Tradeoff (STAR template)",
+      answer_starter: "Not enough evidence — use a different example or skip this prompt.",
+      evidence_refs: [],
+      sufficient_evidence: false,
+    });
+    expect(brief.walkthrough_script?.tradeoffs_to_mention).toEqual([]);
+  });
+
+  it("links every displayed technical decision to direct repository evidence", () => {
+    const technicalDecisionEvidence = [
+      { id: "decision-1", kind: "decision" as const, label: "Package manifest", path: "package.json" },
+      { id: "decision-2", kind: "decision" as const, label: "Test config", path: "vitest.config.ts" },
+    ];
+    const brief = buildCandidateBrief({
+      ...baseInput,
+      technicalDecisions: [
+        { category: "framework" as const, decision: "React", signals: ["react"], evidence_refs: ["decision-1"] },
+        { category: "testing" as const, decision: "Vitest", signals: ["vitest"], evidence_refs: ["decision-2"] },
+      ],
+      technicalDecisionEvidence,
+    });
+
+    const tradeoff = brief.behavioral_hooks?.find((hook) => hook.prompt.startsWith("Tradeoff"));
+    expect(tradeoff?.sufficient_evidence).toBe(true);
+    expect(tradeoff?.evidence_refs).toEqual(["decision-1", "decision-2"]);
+    expect(brief.walkthrough_script?.tradeoffs_to_mention).toEqual(["React", "Vitest"]);
+    expect(brief.walkthrough_script?.evidence_refs).toEqual(
+      expect.arrayContaining(["decision-1", "decision-2"])
+    );
+    expect(brief.evidence_refs.filter((ref) => ref.kind === "decision")).toEqual(
+      expect.arrayContaining(technicalDecisionEvidence)
+    );
   });
 
   it("does not claim bugs, vulnerabilities, production readiness, or business purpose", () => {

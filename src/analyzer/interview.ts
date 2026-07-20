@@ -43,6 +43,7 @@ export interface BuildCandidateBriefInput {
   projectProfile?: ProjectProfile;
   projectPurpose?: ProjectPurpose;
   technicalDecisions?: TechnicalDecision[];
+  technicalDecisionEvidence?: EvidenceRef[];
   testInventory?: TestInventory;
   commitInsights?: CommitInsights;
   architectureInsights?: ArchitectureInsights;
@@ -228,6 +229,15 @@ function buildEvidenceIndex(input: BuildCandidateBriefInput): EvidenceIndex {
     1
   );
 
+  for (const decisionRef of input.technicalDecisionEvidence ?? []) {
+    if (refs.some((ref) => ref.id === decisionRef.id)) continue;
+    const snippet =
+      decisionRef.path && input.workspacePath
+        ? readFileHeaderSnippet(input.workspacePath, decisionRef.path)
+        : undefined;
+    refs.push({ ...decisionRef, ...snippet });
+  }
+
   if (input.semanticGraph) {
     const stats = input.semanticGraph.stats;
     addEvidence(
@@ -386,6 +396,20 @@ function buildEvidenceIndex(input: BuildCandidateBriefInput): EvidenceIndex {
 function refValues(map: Map<string, string>, limit?: number): string[] {
   const values = Array.from(map.values());
   return typeof limit === "number" ? values.slice(0, limit) : values;
+}
+
+function decisionsWithDirectEvidence(
+  input: BuildCandidateBriefInput,
+  evidence: EvidenceIndex
+): TechnicalDecision[] {
+  const decisionEvidenceIds = new Set(
+    evidence.refs.filter((ref) => ref.kind === "decision").map((ref) => ref.id)
+  );
+  return (input.technicalDecisions ?? []).filter(
+    (decision) =>
+      decision.evidence_refs.length > 0 &&
+      decision.evidence_refs.every((id) => decisionEvidenceIds.has(id))
+  );
 }
 
 function firstAvailableRef(index: EvidenceIndex): string {
@@ -773,7 +797,8 @@ function buildWalkthroughScript(
     `${two_minute}` +
     (symbolNames.length ? ` Key surfaces include ${symbolNames.join(", ")}.` : "");
 
-  const tradeoffs = (input.technicalDecisions ?? []).slice(0, 3).map((d) => d.decision);
+  const evidencedDecisions = decisionsWithDirectEvidence(input, evidence).slice(0, 3);
+  const tradeoffs = evidencedDecisions.map((decision) => decision.decision);
   const improvements = input.dangerZones.slice(0, 2).map(
     (dz) => `Review test proximity and complexity around ${dz.path}`
   );
@@ -788,6 +813,7 @@ function buildWalkthroughScript(
       ...refValues(evidence.startHereRefs, 2),
       evidence.architectureRef,
       ...refValues(evidence.commandRefs, 1),
+      ...evidencedDecisions.flatMap((decision) => decision.evidence_refs),
     ],
   };
 }
@@ -816,14 +842,14 @@ function buildBehavioralHooks(
     });
   }
 
-  const decisions = input.technicalDecisions ?? [];
+  const decisions = decisionsWithDirectEvidence(input, evidence);
   if (decisions.length >= 2) {
-    const decisionRefs = decisions.flatMap((d) => d.evidence_refs).slice(0, 4);
+    const displayedDecisions = decisions.slice(0, 3);
+    const decisionRefs = displayedDecisions.flatMap((d) => d.evidence_refs).slice(0, 4);
     hooks.push({
       prompt: "Tradeoff (STAR template)",
-      answer_starter: `Discuss technical choices such as ${decisions.map((d) => d.decision).join(" and ")} and why they fit the observed repo signals.`,
-      evidence_refs:
-        decisionRefs.length > 0 ? decisionRefs : [evidence.architectureRef],
+      answer_starter: `Discuss technical choices such as ${displayedDecisions.map((d) => d.decision).join(" and ")} and why they fit the observed repo signals.`,
+      evidence_refs: decisionRefs,
       sufficient_evidence: true,
     });
   } else {
