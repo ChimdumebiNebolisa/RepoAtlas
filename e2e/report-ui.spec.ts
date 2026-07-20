@@ -189,7 +189,7 @@ test.describe("Report UI flows", () => {
     await page.getByRole("button", { name: /View report/i }).click();
 
     const exportSummary = page.getByText(
-      /Generated report ready for PDF and PNG export\. Markdown needs saved report storage, which is currently unavailable\./i
+      /Generated report ready for PDF and PNG export and 7-day encrypted browser sharing\. Markdown and saved server links require saved report storage, which is currently unavailable\./i
     );
     await expect(exportSummary).toBeVisible();
     const markdownButton = page.getByRole("button", { name: /Export Markdown/i }).first();

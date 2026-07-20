@@ -5,6 +5,7 @@ import { InputForm } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
 import { homepageFaqItems } from "@/lib/homepageContent";
 import { clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
+import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import type { Report } from "@/types/report";
 
 const projectTypes = [
@@ -99,7 +100,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         <div className="header-badges" aria-label="Product capabilities">
           <Badge>No AI required</Badge>
           <Badge>TS/JS + Python + Java</Badge>
-          <Badge>Export Markdown/PDF/PNG</Badge>
+          <Badge>{reportCapabilityCopy.headerBadge}</Badge>
         </div>
       </header>
 
@@ -259,8 +260,9 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <span>files only</span>
           <span>TS/JS, Python, Java</span>
           <span>structural signals</span>
-          <span>PDF, PNG, Markdown, link</span>
+          <span>{reportCapabilityCopy.homepagePipelineSummary}</span>
         </div>
+        <p className="pipeline-capability-note">{reportCapabilityCopy.homepageStorageNote}</p>
       </section>
 
       <section className="brief-section page-container">
@@ -320,7 +322,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <>
             <p className="sample-report-copy">
               Explore the bundled read-only report. PDF and PNG preview exports work here; Markdown
-              export is enabled after analysis.
+              requires a saved analysis.
             </p>
             <div className="sample-report-shell">
               <ReportTabs report={sampleReport} variant="preview" />

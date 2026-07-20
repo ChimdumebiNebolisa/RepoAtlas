@@ -786,6 +786,15 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-size: 0.7rem;
   text-align: center;
 }
+.pipeline-capability-note {
+  max-width: 62ch;
+  margin: 1.4rem auto 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  text-align: center;
+  text-wrap: pretty;
+}
 
 .brief-section {
   display: grid;
