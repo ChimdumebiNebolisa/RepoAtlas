@@ -1,7 +1,7 @@
 # RepoAtlas Engineering Specification
 
-**Version:** 1.3  
-**Status:** Living spec (validated against `main` 2026-07-10)  
+**Version:** 1.4
+**Status:** Living spec (validated against `main` 2026-07-20)
 **Target:** Local dev first; optional Vercel Blob storage  
 
 ---
@@ -10,7 +10,7 @@
 
 ### Problem
 
-Engineers preparing for interviews, take-homes, and unfamiliar-repo onboarding waste time exploring ad hoc: finding entrypoints, understanding structure, and identifying high-risk areas. There is no structured, automated way to produce an evidence-backed **Candidate Brief** without AI hallucination risk.
+Engineers preparing to discuss a repository need to find entrypoints, understand structure, and identify high-risk areas quickly. RepoAtlas produces an evidence-backed **Candidate Brief** for an interview walkthrough, bug investigation, planned change, or pull-request discussion without AI-generated claims.
 
 ### Key Value Proposition
 
@@ -22,7 +22,7 @@ Engineers preparing for interviews, take-homes, and unfamiliar-repo onboarding w
 - **Start Here** – Prioritized reading list with explanations.
 - **Danger Zones** – Risk-ranked files/modules with breakdown.
 - **Run and Contribute** – Commands extracted from configs and docs.
-- **Markdown Export** – Full report as downloadable `.md`, including Mermaid graph artifact text for markdown consumers.
+- **Export** – Full report as client-generated PDF or PNG in every completed session. Saved reports also support downloadable Markdown with Mermaid graph artifact text.
 
 ### What RepoAtlas Is
 
@@ -53,19 +53,34 @@ Input (zip upload OR public GitHub URL) → Validation → Analysis (loading) �
 ```
 
 1. User picks an input method via an accessible tablist:
-   - **Upload ZIP** — selects a `.zip` of the repository (primary flow), or
-   - **Public GitHub URL** — pastes a canonical `https://github.com/owner/repo` URL with an optional branch/tag ref.
+   - **Public GitHub URL** — pastes a canonical `https://github.com/owner/repo` URL with an optional branch/tag ref (default), or
+   - **Upload ZIP** — selects a `.zip` of the repository.
 2. Client validates input client-side (mirroring server rules) and submits `POST /api/analyze` (multipart for zip, JSON `{ githubUrl, ref? }` for GitHub).
 3. Server saves zip to temp / downloads the public GitHub archive, extracts, runs analyzer.
 4. UI shows an honest loading state ("Analyzing… (up to 2 min)").
-5. On success: `reportId` returned; UI validates it and fetches the report to render tabs.
-6. User can export report views client-side (PDF/PNG) from the UI.
+5. On success, the API always returns a valid `reportId` plus a persistence status:
+   - Saved: `{ reportId, persisted: true }`; the UI fetches the stored report by ID.
+   - Inline fallback: `{ reportId, report, persisted: false }`; the UI renders the returned report and does not expose the unsaved ID as a report capability.
+6. User can export report views client-side (PDF/PNG) from either result. Markdown requires a saved report.
+7. Sharing uses a 7-day stored token when the report was saved or a 7-day encrypted browser-only URL fragment when it was returned inline.
 
 The legacy JSON `zipRef` field is **not** accepted over the network (see §10); internal code and tests call `analyzeRepository()` directly for that path.
 
-### UI Page Map
+### UI page map
 
-Single-page application at `/`:
+Public product and trust pages:
+
+| Route | Purpose |
+|-----|---------|
+| `/` | Analysis input, bundled sample, and completed saved or inline report workspace |
+| `/interview-preparation` | Interview-preparation use case with a direct path to analysis |
+| `/privacy` | Repository and report handling boundaries |
+| `/terms` | Service and output interpretation boundaries |
+| `/contact` | Managed support contact |
+| `/report/:id` | Legacy direct view for a saved report |
+| `/share/:token` | Read-only stored-token or portable encrypted share view |
+
+Completed report workspace at `/`, `/report/:id`, or `/share/:token`:
 
 | Tab | Content | Acceptance Criteria |
 |-----|---------|---------------------|
@@ -81,7 +96,8 @@ Single-page application at `/`:
 
 - **Idle**: Input form visible with ZIP / GitHub URL tabs.
 - **Analyzing**: A single honest indicator ("Analyzing… (up to 2 min)"). No fabricated staged progress — the analyzer does not stream stage events, so the UI does not pretend to. Submit is disabled.
-- **Fetching report**: After a validated `reportId` is returned, an optional skeleton for tabs until the report loads.
+- **Fetching saved report**: After `{ persisted: true }` and a validated `reportId` are returned, an optional skeleton for tabs until the stored report loads.
+- **Rendering inline report**: After `{ persisted: false, report }` is returned, the UI renders the report immediately without a second API request.
 
 ### Error States
 
@@ -103,9 +119,10 @@ Single-page application at `/`:
 
 ### Export Experience
 
-- UI supports client-side export workflows (PDF/PNG full-report raster snapshots via `html2canvas` + `jspdf`).
-- Markdown export API is available at `GET /api/reports/:id/export/md` (includes Candidate Brief section).
-- Opt-in read-only sharing: `POST /api/reports/:id/share` → `/share/:token` (7-day TTL; report JSON only).
+- UI supports client-side export workflows (PDF/PNG full-report raster snapshots via `html2canvas` + `jspdf`) for saved and inline reports.
+- Markdown export is available at `GET /api/reports/:id/export/md` only after successful persistence. The UI disables it for inline reports and explains the storage requirement.
+- Saved-report sharing: `POST /api/reports/:id/share` → `/share/:token` (7-day TTL; report JSON only).
+- Inline-report sharing: the browser compresses and AES-GCM-encrypts the validated report into `/share/portable#…`. The URL fragment is not sent to the server; the recipient browser decrypts it and enforces the encoded 7-day expiry. URLs over 24,000 characters are rejected with PDF fallback guidance.
 
 ---
 
@@ -118,7 +135,8 @@ flowchart TB
     subgraph UI [Next.js UI]
         Input[Input Form]
         Tabs[Report Tabs]
-        Export[Export Button]
+        Export[PDF + PNG Export]
+        PortableShare[Encrypted URL Fragment]
     end
 
     subgraph API [API Routes]
@@ -134,7 +152,7 @@ flowchart TB
 
     subgraph Storage [Storage]
         TempWorkspace[Temp Workspace]
-        ReportJSON[(Report JSON on disk)]
+        ReportJSON[(Filesystem or private Blob JSON)]
     end
 
     Input --> Analyze
@@ -143,29 +161,33 @@ flowchart TB
     Ingest --> Index
     Index --> Packs
     Packs --> Scoring
-    Scoring --> ReportJSON
-    ReportJSON --> Analyze
-    Analyze --> Tabs
+    Scoring --> Analyze
+    Analyze -. best-effort save .-> ReportJSON
+    ReportJSON --> Tabs
+    Analyze -->|inline fallback| Tabs
     Tabs --> Export
+    Tabs --> PortableShare
 ```
 
 ### Components
 
 | Component | Description |
 |-----------|-------------|
-| **Next.js UI** | React + TypeScript + Tailwind CSS. Single page with input form and tabbed report. |
-| **API Routes** | Next.js Route Handler in App Router. Current API surface is `app/api/analyze/route.ts`. |
+| **Next.js UI** | React + TypeScript + Tailwind CSS. Public product and trust pages plus tabbed report views. |
+| **API Routes** | Next.js Route Handlers for analysis, saved reports, Markdown export, stored-token sharing, and cleanup. |
 | **Analyzer Worker** | Node.js (TypeScript) module. Runs in-process; not a separate Go process. |
 | **Temp Workspace** | `os.tmpdir()` subdir per analysis. Clone or extract zip here. |
-| **Report Storage** | JSON files on disk. Path: `{REPORTS_DIR}/{reportId}.json`. No database. |
+| **Report Storage** | JSON files on disk locally (`{REPORTS_DIR}/{reportId}.json`) or in a connected private Vercel Blob store. Production without usable Blob credentials returns reports inline instead of failing the completed analysis. |
+| **Portable Sharing** | Browser-only compression, AES-GCM encryption, expiry validation, and report validation for inline report links. |
 
 ### Data Flow
 
 1. **Request**: Client `POST /api/analyze` with multipart zip (`file` or `zip`), JSON `{ githubUrl, ref? }`, or `{ sample: true }`. JSON `zipRef` is **rejected**.
 2. **Ingest**: Server extracts uploaded zip (server-created temp path only) or downloads a public GitHub archive into temp workspace.
 3. **Analysis**: Analyzer walks workspace, runs common pipeline + applicable language packs.
-4. **Report**: Analyzer produces `Report` JSON; server validates size, writes to storage, returns `{ reportId }`.
-5. **Render**: UI fetches report by id; stored JSON is validated at read time (`src/lib/reportSchema.ts`).
+4. **Report**: Analyzer produces validated `Report` JSON and attempts persistence when the runtime has storage credentials.
+5. **Response**: Successful persistence returns `{ reportId, persisted: true }`. Unavailable storage or a best-effort save failure returns `{ reportId, report, persisted: false }`.
+6. **Render**: The UI fetches a saved report by ID or renders the inline report directly. Stored JSON and portable shared JSON are validated before use (`src/lib/reportSchema.ts`).
 
 ---
 
@@ -216,9 +238,10 @@ Rejected: non-HTTPS, non-`github.com` hosts, `tree`/`blob` subpaths, query strin
 ### Workspace Cleanup Rules
 
 - Delete temp dir on analysis completion (success **or** failure). `analyzeRepository()` wraps the whole run in `try/finally` and always invokes `workspace.cleanup()`, including when report persistence throws (regression test: `src/analyzer/cleanup.test.ts`).
-- Report files: filesystem and Vercel Blob storage support deletion and a TTL/max-count sweep. `sweepExpiredReports()` uses `analyzed_at` on the filesystem and blob upload timestamps for blob storage. Retention is `REPORT_TTL_DAYS` (default 30; 7 when Blob token is set) and `REPORT_MAX_COUNT` (default 100).
+- Report files: filesystem and Vercel Blob storage support deletion and a TTL/max-count sweep. `sweepExpiredReports()` uses `analyzed_at` on the filesystem and blob upload timestamps for blob storage. Retention is `REPORT_TTL_DAYS` (default 7 with Blob storage credentials, otherwise 30) and `REPORT_MAX_COUNT` (default 100).
 - Share tokens: 7-day TTL; `sweepExpiredShareTokens()` lists and deletes expired records on **both** filesystem and Blob (`src/lib/sharing.ts`).
-- Cron: `POST /api/cron/cleanup` runs report + share sweeps. In **production** (`VERCEL=1` or `NODE_ENV=production`), the route **fails closed** with `503 MISCONFIGURED` when `CRON_SECRET` is unset; when set, requires `Authorization: Bearer <CRON_SECRET>`.
+- Cron: `POST /api/cron/cleanup` runs report + share sweeps. On Vercel (`VERCEL=1`), the route **fails closed** with `503 MISCONFIGURED` when `CRON_SECRET` is unset; when set, it requires `Authorization: Bearer <CRON_SECRET>`.
+- Production without usable Blob credentials returns reports inline. Saved report retention and stored-token cleanup cannot operate until both Blob storage and the protected cleanup schedule are connected.
 
 ### Centralized Limits (`src/lib/ingestLimits.ts`)
 
@@ -549,7 +572,7 @@ export interface Report {
 }
 ```
 
-`SemanticGraph` is defined in `src/types/semanticGraph.ts` (versioned nodes/edges with resolution status and line-bounded evidence). Python and Java adapters are follow-up work.
+`SemanticGraph` is defined in `src/types/semanticGraph.ts` (versioned nodes/edges with resolution status and line-bounded evidence). TS/JS, Python, and Java adapters are implemented and covered by fixtures.
 `document_inventory` (see `src/types/report.ts`) captures every discovered document, duplicate groups (with canonical + suppressed paths and a reason), optional similar groups, and the chosen `canonical_readme`.
 
 See `src/types/report.ts` for full `CandidateBrief`, `EvidenceRef`, and deep-analysis type definitions.
@@ -585,13 +608,28 @@ Maintenance rule: when route handlers are added/removed/renamed, update this tab
 
 > The old JSON `zipRef` field is intentionally **rejected** with `400 / INVALID_INPUT` — caller-controlled server paths are never analyzable through the public API (Phase 1 finding A). Internal callers/tests use `analyzeRepository({ zipRef })` directly.
 
-**Response (200)**:
+**Response (200, saved report)**:
 
 ```json
 {
-  "reportId": "uuid-string"
+  "reportId": "uuid-string",
+  "persisted": true
 }
 ```
+
+**Response (200, inline fallback)**:
+
+```json
+{
+  "reportId": "uuid-string",
+  "persisted": false,
+  "report": {
+    "report_version": 3
+  }
+}
+```
+
+The inline response contains the complete validated `Report`. It is used when persistence is not configured or a best-effort write fails.
 
 **Error responses**:
 
@@ -620,7 +658,7 @@ There is **no public DELETE**. Report ids are read-only capabilities; retention 
 
 - **Current API routes:** `POST /api/analyze`, `GET /api/reports/:id`, `POST /api/reports/:id/share`, `GET /api/share/:token`, `GET /api/reports/:id/export/md`, and `GET`/`POST /api/cron/cleanup`. There is no public `DELETE` route (removed; retention via server-side TTL sweep).
 - There is no separate `POST /api/upload`; uploads are handled by `POST /api/analyze` via multipart fields `file` or `zip`.
-- UI report rendering/export can use `/api/reports/:id` and `/api/reports/:id/export/md` after analysis returns `reportId`.
+- Saved reports use `/api/reports/:id`, `/api/reports/:id/export/md`, and the stored-token share routes. Inline reports render from the analysis response, retain PDF/PNG export, and use `/share/portable#…` for encrypted browser-only sharing.
 
 ### Retry Behavior
 
@@ -645,6 +683,7 @@ There is **no public DELETE**. Report ids are read-only capabilities; retention 
 | `StartHereTable` | Sortable table; path, score, explanation |
 | `DangerZonesTable` | Sortable table; path, score, breakdown |
 | `RunContributeSection` | Lists run commands + contribute signals |
+| `ReportTabs` sharing | Creates a stored-token link for saved reports or an encrypted portable link for inline reports |
 
 ### Runtime Graph Rendering Strategy (ELK)
 
@@ -674,9 +713,9 @@ else {
 
 ### Report Caching
 
-- Store report in React state after fetch.
-- Optional: `localStorage.setItem(`repoatlas:${reportId}`, JSON.stringify(report))` for revisit during session.
-- No persistent cross-session cache in MVP.
+- Store the saved or inline report in React state for the active page.
+- RepoAtlas does not write inline reports to local storage or another persistent browser cache.
+- Cross-session access requires a saved report route or an encrypted portable share URL.
 
 ---
 
@@ -685,6 +724,7 @@ else {
 | Concern | Mitigation |
 |---------|------------|
 | Capability-link access | Report UUID is a read-only capability; public `DELETE` removed. See [adr/001-capability-access.md](./adr/001-capability-access.md). |
+| Portable share exposure | Inline reports are compressed and AES-GCM-encrypted in the URL fragment. Fragments are not sent in HTTP requests; the recipient browser validates the report and encoded 7-day expiry before rendering. Anyone with the complete link can read it. |
 | Browser content execution | Production responses use the tested CSP in `securityHeaders.js`: same-origin scripts/connections, `object-src 'none'`, `frame-src 'none'`, and no `unsafe-eval`; `data:`/`blob:` are limited to client export image/font/worker capabilities. |
 | Arbitrary server file read | Public API rejects JSON `zipRef`; only server-created temp paths and server-owned fixtures reach the zip ingest path. Report ids validated as UUID before storage access. |
 | Corrupt stored JSON | `parseAndValidateReport()` at read time; invalid payloads return not found. |
@@ -730,7 +770,7 @@ else {
 
 ### Integration Tests
 
-- Full analyze flow: POST /api/analyze with multipart fixture zip or internal `analyzeRepository({ zipRef })` in tests → assert `{ reportId }` and persisted report artifact.
+- Full analyze flow: POST `/api/analyze` with a multipart fixture or call `analyzeRepository({ zipRef })` internally, then assert either `{ reportId, persisted: true }` plus a saved artifact or `{ reportId, report, persisted: false }` plus a renderable inline report.
 - Public API rejects JSON `zipRef` with `400 INVALID_INPUT`.
 - Error mapping: invalid payloads/content types → documented `INVALID_INPUT`, `ZIP_INVALID`, `REPO_TOO_LARGE`, `TIMEOUT`.
 - Stored report validation: corrupt JSON → `404` on GET.
@@ -759,7 +799,7 @@ Documentation-discovery edge cases (whitespace-only duplicates, similar-but-diff
 - **Start Here tab**: Root README and entrypoint in list.
 - **Danger Zones tab**: At least one file with score and breakdown.
 - **Run & Contribute tab**: At least run commands or contribute signals.
-- **Export**: Markdown download succeeds and contains expected sections.
+- **Export**: PDF and PNG produce valid files for saved and inline reports; Markdown succeeds for a saved report and is unavailable with accurate guidance for an inline report.
 
 ---
 
@@ -865,7 +905,7 @@ flowchart LR
 1. **0:00–0:15** – Open RepoAtlas; upload a zip of a repo (e.g. download from GitHub Code → Download ZIP, then select the file).
 2. **0:15–0:45** – Click "Analyze Repository"; show loading state; wait for completion.
 3. **0:45–1:30** – Walk through tabs: Overview (metadata), Folder Map (expand tree), Architecture (interactive ELK graph), Start Here (table), Danger Zones (table), Run & Contribute.
-4. **1:30–2:00** – Click "Export Markdown"; download; show Markdown file structure.
+4. **1:30–2:00** – Export PDF or PNG. If the report was saved, export Markdown; otherwise show the storage-dependent Markdown message and create an encrypted private link.
 
 ---
 
@@ -877,8 +917,8 @@ MVP items are shipped. For current status see [CHANGELOG.md](../CHANGELOG.md); f
 
 ## 16. Non-Goals (Explicit)
 
-- Database or persistent storage beyond JSON on disk
-- Serverless or edge deployment assumptions
+- Account-based or database-backed report ownership
+- Persistent report storage beyond local JSON files or optional private Vercel Blob JSON
 - Security vulnerability scanning
 - Executing or profiling repository code
 - Full AST parsing for all languages (use heuristics where AST is costly)

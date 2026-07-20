@@ -1,6 +1,6 @@
 # RepoAtlas
 
-**Deterministic, no-AI repository analysis** — upload a repo zip or paste a **public GitHub URL** and get an evidence-backed **Candidate Brief** for interviews, take-homes, onboarding, and open-source contribution prep.
+**Deterministic, no-AI repository analysis** — upload a repo zip or paste a **public GitHub URL** and get an evidence-backed **Candidate Brief** for an interview walkthrough, bug investigation, planned change, or pull-request discussion.
 
 RepoAtlas reads repository files as text only (never executes them) and produces:
 
@@ -10,7 +10,7 @@ RepoAtlas reads repository files as text only (never executes them) and produces
 - Start Here: ranked reading path with signal-based explanations
 - Danger Zones: risk-ranked hotspots with metric breakdowns (including churn when git metadata is present)
 - Run and Contribute: extracted run commands from package.json, Makefile, Docker, README, and more
-- Export: full report as PDF, PNG, or Markdown (`repoatlas-candidate-brief-{repo}-{date}.md`)
+- Export: full report as PDF or PNG in every completed session; Markdown when saved report storage is available (`repoatlas-candidate-brief-{repo}-{date}.md`)
 
 Deep analysis is currently implemented for TypeScript/JavaScript, Python, and Java repositories.
 
@@ -19,7 +19,7 @@ Two input modes are supported through the web UI:
 - **Upload ZIP** — best for local snapshots; up to **100 MB** compressed locally, **4 MB** on Vercel (platform body limit). Use GitHub URL mode for larger public repos when deployed.
 - **Public GitHub URL** — canonical `https://github.com/owner/repo` with optional branch/tag ref; server streams the public archive (up to 100 MB compressed).
 
-RepoAtlas extracts or downloads the archive, analyzes the repository, stores the report, and returns a report ID (read-only capability) that the UI can load or export.
+RepoAtlas extracts or downloads the archive and analyzes the repository. When report storage is available, it saves the report and returns a read-only report ID. When storage is unavailable or a save fails, it returns the completed report inline so the UI can still show it and export PDF or PNG. Markdown downloads and saved report URLs require successful persistence.
 
 ---
 
@@ -54,11 +54,13 @@ RepoAtlas extracts or downloads the archive, analyzes the repository, stores the
 - Multi-language packs: TS/JS, Python, and Java packs provide deeper static analysis
 - Interactive visualization: pan and zoom dependency view with ELK layout
 - Portable exports:
-  - Client-side full report export to PDF and PNG
-  - Server-side Markdown export via `GET /api/reports/:id/export/md`
-- Report persistence: report JSON on disk (`reports/`) or a connected Vercel Blob store using OIDC or `BLOB_READ_WRITE_TOKEN`
-- Read-only sharing: `/share/:token` (7-day opt-in links; report JSON only — never your uploaded zip)
-- Legacy direct view: `/report/:id` (prefer token sharing for recipients)
+  - Client-side full report export to PDF and PNG for saved and inline reports
+  - Server-side Markdown export via `GET /api/reports/:id/export/md` for saved reports only
+- Best-effort report persistence: report JSON on disk (`reports/`) for local use or in a connected private Vercel Blob store using OIDC or `BLOB_READ_WRITE_TOKEN`
+- Private sharing after a completed brief:
+  - Saved reports use a server-stored, 7-day token at `/share/:token`
+  - Inline reports use a compressed, AES-GCM-encrypted URL fragment at `/share/portable#…`; the recipient's browser decrypts it without fetching report data from the API
+- Legacy saved-report view: `/report/:id` (prefer token sharing for recipients)
 
 See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANGELOG.md) for shipped changes.
 
@@ -78,14 +80,15 @@ See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANG
 6. Scoring computes `start_here` ranking and `danger_zones` risk score (with optional churn dimension).
 7. The interview builder assembles the **Candidate Brief** from extracted signals and evidence refs (including line-bounded semantic import evidence when present).
 8. Optional commit insights run when git metadata or GitHub URL context is available.
-9. The report is validated, stored, and returned by report ID.
-10. The UI loads the report and supports export and sharing.
+9. The report is validated and the server attempts to save it when storage is configured.
+10. A saved result returns `{ reportId, persisted: true }`, which the UI loads by ID. An unsaved result returns `{ reportId, report, persisted: false }`, which the UI renders inline.
+11. The UI supports PDF and PNG for either result. Markdown and saved-report routes require persistence; inline results can still create a 7-day encrypted browser-only share link.
 
 ---
 
 ## Architecture
 
-- Flow: ZIP upload or public GitHub URL -> ingest -> analyzer -> storage -> API returns report ID -> UI fetches and exports by report ID
+- Flow: ZIP upload or public GitHub URL -> ingest -> analyzer -> best-effort storage -> saved report fetch or inline response -> report UI
 - Runtime Architecture Map UI: interactive dependency graph using ELK layout with pan and zoom controls; when `semantic_graph` is present, the UI shows unresolved-edge counts without dumping every unresolved edge into the main graph
 - Markdown artifact rendering: Mermaid syntax is used only in exported markdown artifacts, not as the runtime graph renderer
 - Frontend: Next.js App Router, React, Tailwind CSS
@@ -96,6 +99,7 @@ See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANG
   - `POST /api/reports/:id/share`
   - `GET /api/share/:token`
   - `GET` / `POST /api/cron/cleanup`
+- Public pages: `/`, `/interview-preparation`, `/privacy`, `/terms`, and `/contact`
 - Share page: `/share/:token` (read-only UI)
 - Legacy report page: `/report/:id`
 - Analyzer: in-process TypeScript module
@@ -184,9 +188,9 @@ You can also click **Try sample Candidate Brief** on the homepage to analyze `fi
 
 ### Export options
 
-- PDF: full report snapshot export
-- PNG: full report snapshot export
-- Markdown: `GET /api/reports/:id/export/md`, also available from UI export controls
+- PDF: full report snapshot export for saved and inline reports
+- PNG: full report snapshot export for saved and inline reports
+- Markdown: available from the UI and `GET /api/reports/:id/export/md` only when the report was saved; inline reports explain that saved storage is required
 
 ### API: multipart upload or public GitHub URL
 
@@ -210,13 +214,13 @@ curl -X POST http://localhost:3000/api/analyze \
 > `400 INVALID_INPUT` — the server never reads arbitrary local paths supplied by
 > a request.
 
-After analysis, fetch the report JSON:
+If the analysis response has `persisted: true`, fetch the saved report JSON:
 
 ```bash
 curl http://localhost:3000/api/reports/<report-id>
 ```
 
-Export the report as Markdown:
+The same saved report can be exported as Markdown:
 
 ```bash
 curl -OJ http://localhost:3000/api/reports/<report-id>/export/md
@@ -253,13 +257,28 @@ Example JSON body:
 }
 ```
 
-Success response:
+Success response when the report was saved:
 
 ```json
 {
-  "reportId": "uuid"
+  "reportId": "uuid",
+  "persisted": true
 }
 ```
+
+Success response when storage is unavailable or a save fails:
+
+```json
+{
+  "reportId": "uuid",
+  "persisted": false,
+  "report": {
+    "report_version": 3
+  }
+}
+```
+
+The inline response contains the complete validated report. The browser renders it directly and does not treat the generated `reportId` as a saved capability.
 
 Common error codes exposed by the current route:
 
@@ -298,7 +317,7 @@ Common statuses:
 
 ### `POST /api/reports/:id/share`
 
-Creates an opt-in, token-gated share link (7-day expiry). Returns:
+Creates an opt-in, token-gated share link for a saved report (7-day expiry). Returns:
 
 ```json
 {
@@ -311,6 +330,8 @@ Creates an opt-in, token-gated share link (7-day expiry). Returns:
 ### `GET /api/share/:token`
 
 Returns `{ report, share: { expiresAt, createdAt } }` for valid, non-expired tokens.
+
+Inline reports do not use these API routes. The browser compresses and encrypts the report into a `/share/portable#…` URL fragment with an encoded 7-day expiry. The fragment does not reach the server in the HTTP request; the recipient's browser decrypts and validates the report locally. Links over 24,000 characters are rejected with guidance to share a PDF instead.
 
 ### `GET /api/reports/:id/export/md`
 
@@ -342,9 +363,10 @@ Runs TTL sweeps for expired reports (filesystem and Blob) and share tokens. In p
 See [`.env.example`](.env.example) for the full list and [SECURITY.md](SECURITY.md) for the security model. Highlights:
 
 - Vercel production: connect a private Blob store; current connections inject short-lived OIDC credentials automatically
+- Vercel production without usable Blob credentials: analysis still completes through the inline response, while saved report URLs, stored-token sharing, Markdown downloads, and retention cleanup are unavailable
 - Local development: `REPORTS_DIR` is optional when not using Blob storage and defaults to `<project-root>/reports`
 - Local Blob testing: set `BLOB_READ_WRITE_TOKEN` if you want to exercise Blob storage outside Vercel
-- Report retention (filesystem): `REPORT_TTL_DAYS` (default 30; 7 when Blob token is set), `REPORT_MAX_COUNT` (default 100)
+- Report retention: `REPORT_TTL_DAYS` (default 7 with Blob storage credentials, otherwise 30), `REPORT_MAX_COUNT` (default 100)
 - Cron cleanup auth: optional `CRON_SECRET` for `POST /api/cron/cleanup`
 - Rate limiting: optional `ANALYZE_RATE_LIMIT_PER_MIN`, `MAX_CONCURRENT_ANALYSES`
 
