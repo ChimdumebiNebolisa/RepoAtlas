@@ -171,6 +171,7 @@ export async function POST(request: NextRequest) {
 
     const persistenceAvailable = canPersistReports();
     const report = await analyzeRepository(analyzeInput, {
+      requestId,
       deadlineMs: MAX_ANALYSIS_TIME_MS,
       signal: abortSignal,
       persist: persistenceAvailable,

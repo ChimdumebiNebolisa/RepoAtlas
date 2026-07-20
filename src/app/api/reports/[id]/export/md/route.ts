@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 import { ERROR_CODES, toApiErrorPayload } from "@/lib/errors";
 import { exportReportToMarkdown } from "@/lib/export";
 import { buildExportFilename } from "@/lib/exportNames";
+import { reportExportErrorLogPayload } from "@/lib/failureDiagnostics";
 import { getReport } from "@/lib/storage";
 
 const UUID_LIKE_PATTERN =
@@ -17,6 +19,7 @@ export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const requestId = randomUUID();
   const { id: rawId } = await context.params;
   const id = rawId?.trim() ?? "";
 
@@ -59,7 +62,11 @@ export async function GET(
       },
     });
   } catch (err) {
+    console.error(JSON.stringify(reportExportErrorLogPayload(requestId, err)));
     const { status, code, message } = toApiErrorPayload(err);
-    return NextResponse.json({ code, message }, { status, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { code, message, requestId },
+      { status, headers: { "Cache-Control": "no-store" } }
+    );
   }
 }

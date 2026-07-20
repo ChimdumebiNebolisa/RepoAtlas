@@ -106,6 +106,10 @@ describe("POST /api/analyze failure states", () => {
       expect(body.requestId).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       );
+      expect(analyzeRepository).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "github" }),
+        expect.objectContaining({ requestId: body.requestId })
+      );
       if (failure.code === ERROR_CODES.RATE_LIMITED) {
         expect(response.headers.get("retry-after")).toBe("60");
       }
