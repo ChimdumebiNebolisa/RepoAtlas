@@ -590,7 +590,26 @@ export function ReportTabs({
                       )}
                     </p>
                   )}
-                  {shareError && <p role="alert" className="report-share-error">{shareError}</p>}
+                  {shareError && (
+                    <div className="report-share-recovery">
+                      <p
+                        id={`${tabsId}-share-error`}
+                        role="alert"
+                        className="report-share-error"
+                      >
+                        {shareError}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleExportPdf}
+                        disabled={exporting !== null}
+                        aria-describedby={`${tabsId}-share-error`}
+                        className="report-action report-action-secondary"
+                      >
+                        {exporting === "pdf" ? "Exporting PDF..." : "Export PDF instead"}
+                      </button>
+                    </div>
+                  )}
                   {shareExpiresAt && (
                     <p className="report-share-expiry">
                       Expires {new Date(shareExpiresAt).toLocaleString()}

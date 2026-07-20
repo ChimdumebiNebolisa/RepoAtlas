@@ -461,7 +461,7 @@ rm -rf .playwright-reports test-results
 PLAYWRIGHT_PORT=3100 npx playwright test e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=5 --grep 'completed brief uses native sharing when the browser provides it'
 ```
 
-Then run the complete browser gate. It should finish with 114 passes and no
+Then run the complete browser gate. It should finish with 120 passes and no
 flaky-test summary:
 
 ```bash
