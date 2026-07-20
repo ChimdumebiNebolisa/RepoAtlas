@@ -128,12 +128,14 @@ test.describe("Repository input modes", () => {
         });
       });
 
-      await page.goto("/");
-      await page
-        .getByLabel("Public GitHub repository URL")
-        .fill("https://github.com/octocat/demo");
+      await page.goto("/", { waitUntil: "networkidle" });
+      const githubUrlInput = page.getByLabel("Public GitHub repository URL");
+      await githubUrlInput.fill("https://github.com/octocat/demo");
+      await expect(githubUrlInput).toHaveValue("https://github.com/octocat/demo");
       if (failure.ref) {
-        await page.getByLabel(/Branch or tag/i).fill(failure.ref);
+        const githubRefInput = page.getByLabel(/Branch or tag/i);
+        await githubRefInput.fill(failure.ref);
+        await expect(githubRefInput).toHaveValue(failure.ref);
       }
       const analyzeButton = page.getByRole("button", {
         name: /Analyze public GitHub repository/i,
