@@ -35,6 +35,22 @@ function makeBrief(): CandidateBrief {
       { audience: "resume", text: "Resume", evidence_refs: ["resume", "summary"] },
       { audience: "linkedin", text: "LinkedIn", evidence_refs: ["linkedin"] },
     ],
+    walkthrough_script: {
+      thirty_second: "Short",
+      two_minute: "Longer",
+      deep_technical: "Deep",
+      tradeoffs_to_mention: ["React"],
+      improvements_next: [],
+      evidence_refs: ["decision"],
+    },
+    behavioral_hooks: [
+      {
+        prompt: "Tradeoff (STAR template)",
+        answer_starter: "Discuss React.",
+        evidence_refs: ["decision"],
+        sufficient_evidence: true,
+      },
+    ],
     evidence_refs: [],
     warnings: [],
   };
@@ -53,6 +69,10 @@ describe("evidence indexes", () => {
     expect(index.get("week")).toEqual(["First week"]);
     expect(index.get("pr")).toEqual(["First PR: First change"]);
     expect(index.get("linkedin")).toEqual(["Resume: linkedin"]);
+    expect(index.get("decision")).toEqual([
+      "Walkthrough Script",
+      "Behavioral Hook: Tradeoff (STAR template)",
+    ]);
   });
 
   it("groups evidence references by kind while preserving order", () => {

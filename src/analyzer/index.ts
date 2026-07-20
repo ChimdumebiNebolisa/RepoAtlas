@@ -382,7 +382,8 @@ export async function analyzeRepository(
       canonicalReadme: documentInventory.canonical_readme,
       repoName: workspace.name,
     });
-    const technical_decisions = detectTechnicalDecisions(workspace.path);
+    const technicalDecisionDetection = detectTechnicalDecisions(workspace.path);
+    const technical_decisions = technicalDecisionDetection.decisions;
     const symbols = extractSymbols(workspace.path, filePaths);
     const architecture_insights = analyzeArchitectureBoundaries(architecture);
 
@@ -411,6 +412,7 @@ export async function analyzeRepository(
       projectProfile: project_profile,
       projectPurpose: project_purpose,
       technicalDecisions: technical_decisions,
+      technicalDecisionEvidence: technicalDecisionDetection.evidence,
       testInventory: test_inventory,
       commitInsights: commit_insights,
       architectureInsights: architecture_insights,

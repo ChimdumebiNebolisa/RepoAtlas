@@ -382,6 +382,13 @@ export function CandidateBriefPanel({ candidateBrief, demoMode }: CandidateBrief
               <li key={hook.prompt} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <p className="font-medium text-slate-900">{hook.prompt}</p>
                 <p className="mt-1 text-slate-700">{hook.answer_starter}</p>
+                {!demoMode && (
+                  <EvidenceList
+                    ids={hook.evidence_refs}
+                    evidenceById={evidenceById}
+                    onNavigate={scrollToEvidence}
+                  />
+                )}
               </li>
             ))}
           </ul>
