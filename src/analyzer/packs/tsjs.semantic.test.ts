@@ -229,6 +229,47 @@ describe("TS/JS semantic graph fixture matrix", () => {
     }
   });
 
+  it("resolves workspace source when exports point to omitted build output", () => {
+    const workspace = writeWorkspace({
+      "package.json": JSON.stringify({
+        name: "root",
+        private: true,
+        workspaces: ["packages/*"],
+      }),
+      "packages/core/package.json": JSON.stringify({
+        name: "@scope/core",
+        exports: { ".": "./dist/index.mjs" },
+      }),
+      "packages/core/src/index.ts": "export const core = 1;\n",
+      "packages/core/src/private.ts": "export const hidden = 1;\n",
+      "packages/app/package.json": JSON.stringify({ name: "@scope/app" }),
+      "packages/app/src/main.ts":
+        'import { core } from "@scope/core";\nimport { hidden } from "@scope/core/private";\nvoid core;\nvoid hidden;\n',
+    });
+    const core = relKey("packages", "core", "src", "index.ts");
+    const app = relKey("packages", "app", "src", "main.ts");
+    try {
+      const result = runTsJsPack(workspace, buildPipeline([core, app]));
+      expect(result.imports.get(app)).toEqual(new Set([core]));
+      expect(
+        result.semanticGraph?.edges.find((edge) => edge.specifier === "@scope/core")
+      ).toMatchObject({
+        resolution: "resolved_internal",
+        to: `file:${normalizeKey(core)}`,
+      });
+      expect(
+        result.semanticGraph?.edges.find(
+          (edge) => edge.specifier === "@scope/core/private"
+        )
+      ).toMatchObject({
+        resolution: "unresolved",
+        reason: "unsupported_package_exports",
+      });
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("records external and unresolved modules without inflating fan-in", () => {
     const workspace = writeWorkspace({
       "src/index.ts":
