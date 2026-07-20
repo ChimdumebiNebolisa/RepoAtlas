@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { InputForm } from "@/components/InputForm";
+import { InputForm, type InputFormHandle } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
 import { homepageFaqItems } from "@/lib/homepageContent";
 import { clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
@@ -62,6 +62,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const [showViewReportButton, setShowViewReportButton] = useState(false);
   const [showSampleReport, setShowSampleReport] = useState(false);
   const reportSectionRef = useRef<HTMLElement | null>(null);
+  const inputFormRef = useRef<InputFormHandle | null>(null);
   const sampleButtonRef = useRef<HTMLButtonElement | null>(null);
   const sampleSectionRef = useRef<HTMLElement | null>(null);
 
@@ -74,6 +75,13 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     setShowSampleReport(true);
     requestAnimationFrame(() => {
       sampleSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const generateSampleBrief = () => {
+    inputFormRef.current?.generateSample();
+    requestAnimationFrame(() => {
+      sampleButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   };
 
@@ -99,30 +107,28 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         </a>
         <div className="header-badges" aria-label="Product capabilities">
           <Badge>No AI required</Badge>
-          <Badge>TS/JS + Python + Java</Badge>
+          <Badge>TypeScript/JS + Python + Java</Badge>
           <Badge>{reportCapabilityCopy.headerBadge}</Badge>
         </div>
       </header>
 
       <section id="top" className="hero page-container">
         <div className="hero-copy">
-          <p className="eyebrow">Evidence-backed repository analysis</p>
-          <h1>Turn a codebase into an interview-ready Candidate Brief.</h1>
+          <p className="eyebrow">For repository-centered interviews</p>
+          <h1>Walk through the repository with file-backed talking points.</h1>
           <p className="hero-description">
-            Upload a repository zip or paste a public GitHub URL — RepoAtlas maps the structure,
-            risk areas, run commands, and evidence-backed talking points without executing code
-            or calling AI.
+            RepoAtlas turns TypeScript/JavaScript, Python, and Java codebases into a Candidate
+            Brief that shows where to start, how the architecture fits together, what looks
+            risky, and which files support each talking point.
           </p>
           <div className="hero-actions">
-            <a className="btn btn-primary" href="#analyze">
-              Analyze Repository <Arrow />
-            </a>
-            <button className="text-action" type="button" onClick={openSampleReport}>
-              Try sample Candidate Brief <Arrow />
+            <button className="btn btn-primary" type="button" onClick={generateSampleBrief}>
+              Generate sample Candidate Brief <Arrow />
             </button>
+            <a className="text-action" href="#analyze">Use your own repository <Arrow /></a>
           </div>
           <p className="hero-microcopy">
-            ZIP upload or public GitHub URL. Local-first static analysis. No code execution. No AI calls.
+            Bundled sample, no upload needed. Deterministic static analysis. No code execution or AI calls.
           </p>
         </div>
 
@@ -159,6 +165,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <h2>Start with the sample or a public GitHub repository.</h2>
           <p>Generate a complete bundled brief with one click, or paste a public GitHub URL to analyze your own codebase.</p>
           <InputForm
+            ref={inputFormRef}
             onAnalyzeStart={() => {
               setLoading(true);
               setError(null);

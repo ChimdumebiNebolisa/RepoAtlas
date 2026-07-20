@@ -9,12 +9,27 @@ import {
 } from "./helpers";
 
 test.describe("Candidate Brief smoke", () => {
-  test("homepage loads with sample action", async ({ page }) => {
+  test("homepage hero leads with a complete bundled sample", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText("Candidate Brief Generator")).toBeVisible();
+    const hero = page.locator(".hero");
+
     await expect(
-      page.getByRole("button", { name: /Try sample Candidate Brief/i })
+      hero.getByRole("heading", {
+        name: "Walk through the repository with file-backed talking points.",
+      })
     ).toBeVisible();
+    await expect(hero.getByText("TypeScript/JavaScript, Python, and Java")).toBeVisible();
+    await expect(hero.locator(".btn-primary")).toHaveCount(1);
+    await expect(hero.getByRole("link", { name: /Use your own repository/i })).toHaveAttribute(
+      "href",
+      "#analyze"
+    );
+
+    await hero.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+    await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
+      timeout: 90_000,
+    });
   });
 
   test("sample analyze renders Candidate Brief tab", async ({ page }) => {
