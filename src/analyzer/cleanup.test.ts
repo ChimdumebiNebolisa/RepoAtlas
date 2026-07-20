@@ -73,15 +73,25 @@ describe("analyzeRepository cleanup", () => {
 
   it("returns an inline report when best-effort persistence fails", async () => {
     saveReportMock.mockRejectedValue(new Error("storage unavailable"));
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const result = await analyzeRepository(
       { zipRef: workspaceDir },
-      { allowInlineFallback: true }
+      { allowInlineFallback: true, requestId: "safe-request-id" }
     );
 
     expect(result.report.repo_metadata.name).toBe("demo");
     expect(result.persisted).toBe(false);
     expect(saveReportMock).toHaveBeenCalledTimes(1);
     expect(cleanupSpy).toHaveBeenCalledTimes(1);
+    expect(consoleWarn).toHaveBeenCalledWith(
+      JSON.stringify({
+        level: "warn",
+        event: "report_persistence_failed",
+        failureClass: "storage_unavailable",
+        outcome: "inline_report",
+        requestId: "safe-request-id",
+      })
+    );
   }, 30000);
 });

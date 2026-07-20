@@ -8,6 +8,9 @@ const POSTHOG_INGEST_HOST = "https://us.i.posthog.com";
 export type AnalysisInputType = "zip" | "github" | "sample";
 export type ReportShareMethod = "native" | "clipboard";
 export type ReportShareType = "stored_link" | "portable_link";
+export type ReportExportFormat = "pdf" | "png" | "markdown";
+export type ReportVariant = "live" | "preview" | "shared";
+export type ReportExportFailureClass = "render_failed" | "http_error" | "request_failed";
 
 type ProductEvent =
   | "route_viewed"
@@ -16,6 +19,7 @@ type ProductEvent =
   | "analysis_completed"
   | "analysis_failed"
   | "report_exported"
+  | "report_export_failed"
   | "report_shared";
 
 type ProductEventProperties = Record<
@@ -90,5 +94,20 @@ export function captureReportShared(
   posthog.capture("report_shared", {
     share_method: shareMethod,
     share_type: shareType,
+  });
+}
+
+export function captureReportExportFailure(
+  format: ReportExportFormat,
+  reportVariant: ReportVariant,
+  failureClass: ReportExportFailureClass,
+  status?: number
+) {
+  if (!initialized) return;
+  posthog.capture("report_export_failed", {
+    format,
+    report_variant: reportVariant,
+    failure_class: failureClass,
+    ...(typeof status === "number" ? { status } : {}),
   });
 }

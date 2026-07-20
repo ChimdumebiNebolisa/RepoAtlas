@@ -25,6 +25,10 @@ import { analyzeCommitInsights } from "./gitHistory";
 import { saveReport } from "@/lib/storage";
 import { randomUUID } from "crypto";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import {
+  partialAnalysisTimeoutLogPayload,
+  reportPersistenceFailureLogPayload,
+} from "@/lib/failureDiagnostics";
 
 const TSJS_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const PYTHON_EXTENSIONS = new Set([".py"]);
@@ -39,6 +43,8 @@ function githubUrlOf(input: AnalyzeInput): string | undefined {
 }
 
 export interface AnalyzeOptions {
+  /** Opaque request correlation identifier for privacy-safe diagnostics. */
+  requestId?: string;
   /** Bounded job the generated Candidate Brief should be adapted for. */
   analysisIntent?: AnalysisIntent;
   /** Wall-clock budget for analysis. When exceeded after folder map, a partial report is saved. */
@@ -237,7 +243,8 @@ async function finishReport(
   reportId: string,
   report: Report,
   persist: boolean,
-  allowInlineFallback: boolean
+  allowInlineFallback: boolean,
+  requestId?: string
 ): Promise<AnalyzeResult> {
   if (!persist) return { reportId, report, persisted: false };
   try {
@@ -245,7 +252,7 @@ async function finishReport(
     return { reportId, report, persisted: true };
   } catch (error) {
     if (!allowInlineFallback) throw error;
-    console.warn("Report persistence unavailable; returning completed report inline.");
+    console.warn(JSON.stringify(reportPersistenceFailureLogPayload(requestId)));
     return { reportId, report, persisted: false };
   }
 }
@@ -269,6 +276,7 @@ export async function analyzeRepository(
     );
 
     if (deadline.isExpired()) {
+      console.warn(JSON.stringify(partialAnalysisTimeoutLogPayload(options.requestId)));
       const report = buildPartialReport({
         analyzeInput: input,
         workspacePath: workspace.path,
@@ -280,13 +288,20 @@ export async function analyzeRepository(
         documentInventory,
         analysisIntent: options.analysisIntent,
       });
-      return finishReport(reportId, report, shouldPersist, allowInlineFallback);
+      return finishReport(
+        reportId,
+        report,
+        shouldPersist,
+        allowInlineFallback,
+        options.requestId
+      );
     }
 
     const filePaths = Array.from(pipeline.file_metadata.keys());
     const packs = runLanguagePacks(workspace.path, pipeline, filePaths);
 
     if (deadline.isExpired()) {
+      console.warn(JSON.stringify(partialAnalysisTimeoutLogPayload(options.requestId)));
       const architecture = combineArchitecture(packs);
       const report = buildPartialReport({
         analyzeInput: input,
@@ -301,7 +316,13 @@ export async function analyzeRepository(
         analysisIntent: options.analysisIntent,
         extraWarnings: collectLanguageWarnings(packs),
       });
-      return finishReport(reportId, report, shouldPersist, allowInlineFallback);
+      return finishReport(
+        reportId,
+        report,
+        shouldPersist,
+        allowInlineFallback,
+        options.requestId
+      );
     }
 
     const architecture = combineArchitecture(packs);
@@ -331,6 +352,7 @@ export async function analyzeRepository(
     }
 
     if (deadline.isExpired()) {
+      console.warn(JSON.stringify(partialAnalysisTimeoutLogPayload(options.requestId)));
       const report = buildPartialReport({
         analyzeInput: input,
         workspacePath: workspace.path,
@@ -346,7 +368,13 @@ export async function analyzeRepository(
         extraWarnings: warnings.filter((w) => !pipeline.warnings.includes(w)),
         analysisIntent: options.analysisIntent,
       });
-      return finishReport(reportId, report, shouldPersist, allowInlineFallback);
+      return finishReport(
+        reportId,
+        report,
+        shouldPersist,
+        allowInlineFallback,
+        options.requestId
+      );
     }
 
     const project_profile = detectProjectProfile(workspace.path, filePaths);
@@ -421,7 +449,13 @@ export async function analyzeRepository(
       warnings,
     };
 
-    return finishReport(reportId, report, shouldPersist, allowInlineFallback);
+    return finishReport(
+      reportId,
+      report,
+      shouldPersist,
+      allowInlineFallback,
+      options.requestId
+    );
   } finally {
     await workspace.cleanup?.();
   }

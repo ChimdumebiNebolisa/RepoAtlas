@@ -11,11 +11,11 @@ import { ReportDocument } from "./ReportDocument";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
 import { DeepAnalysisSection } from "./DeepAnalysisSection";
 import { DocumentsPanel } from "./DocumentsPanel";
-import { ERROR_CODES } from "@/lib/errors";
 import { buildExportFilename } from "@/lib/exportNames";
 import { isHttpUrl, repoSourceLabel, formatTimestamp } from "@/lib/format";
 import {
   captureProductEvent,
+  captureReportExportFailure,
   captureReportShared,
   type ReportShareMethod,
   type ReportShareType,
@@ -72,10 +72,9 @@ export function formatApiError(payload: ApiErrorLike | null | undefined, fallbac
 
 export function describeMarkdownExportFailure(
   payload: ApiErrorLike | null | undefined,
-  status: number,
-  reportId: string
+  status: number
 ) {
-  return `Markdown export failed (${reportId}, HTTP ${status}). ${formatApiError(
+  return `Markdown export failed (HTTP ${status}). ${formatApiError(
     payload,
     FALLBACK_ANALYSIS_MESSAGE
   )}`;
@@ -245,6 +244,7 @@ export function ReportTabs({
       downloadBlob(blob, `${exportBasename}.png`);
       captureProductEvent("report_exported", { format: "png", report_variant: variant });
     } catch (error) {
+      captureReportExportFailure("png", variant, "render_failed");
       setExportError(error instanceof Error ? error.message : "PNG export failed.");
     } finally {
       setExporting(null);
@@ -326,6 +326,7 @@ export function ReportTabs({
       downloadBlob(pdf.output("blob"), `${exportBasename}.pdf`);
       captureProductEvent("report_exported", { format: "pdf", report_variant: variant });
     } catch (error) {
+      captureReportExportFailure("pdf", variant, "render_failed");
       setExportError(error instanceof Error ? error.message : "PDF export failed.");
     } finally {
       setExporting(null);
@@ -350,12 +351,10 @@ export function ReportTabs({
       const res = await fetch(getMarkdownRoute(reportId));
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        const message = describeMarkdownExportFailure(payload, res.status, reportId);
+        const message = describeMarkdownExportFailure(payload, res.status);
+        captureReportExportFailure("markdown", variant, "http_error", res.status);
         console.error("Markdown export request failed", {
-          reportId,
           status: res.status,
-          code: payload.code ?? ERROR_CODES.ANALYSIS_FAILED,
-          message: payload.message ?? FALLBACK_ANALYSIS_MESSAGE,
         });
         setExportError(message);
         return;
@@ -376,6 +375,7 @@ export function ReportTabs({
       setMarkdownSupport("available");
       setMarkdownNote(null);
     } catch (error) {
+      captureReportExportFailure("markdown", variant, "request_failed");
       setExportError(error instanceof Error ? error.message : "Markdown export failed.");
     } finally {
       setExporting(null);

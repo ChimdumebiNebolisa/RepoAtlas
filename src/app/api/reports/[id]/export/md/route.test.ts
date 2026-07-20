@@ -99,6 +99,7 @@ describe("GET /api/reports/[id]/export/md", () => {
 
   it("returns structured error payload for unexpected exceptions", async () => {
     getReportMock.mockRejectedValue(new Error("boom"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const response = await GET(new Request("http://localhost") as any, {
       params: Promise.resolve({ id: validId }),
@@ -108,6 +109,13 @@ describe("GET /api/reports/[id]/export/md", () => {
     await expect(response.json()).resolves.toEqual({
       code: "ANALYSIS_FAILED",
       message: "Analysis failed. Check server logs.",
+      requestId: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      ),
     });
+    expect(consoleError).toHaveBeenCalledOnce();
+    const logLine = String(consoleError.mock.calls[0]?.[0]);
+    expect(logLine).toContain('"event":"report_export_failed"');
+    expect(logLine).not.toContain(validId);
   });
 });

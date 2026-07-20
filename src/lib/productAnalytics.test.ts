@@ -10,6 +10,7 @@ vi.mock("posthog-js", () => ({ default: posthog }));
 import {
   analysisEntrySource,
   captureAnalysisEvent,
+  captureReportExportFailure,
   captureReportShared,
   initializeProductAnalytics,
   stableRouteName,
@@ -80,6 +81,19 @@ describe("captureReportShared", () => {
     expect(posthog.capture).toHaveBeenLastCalledWith("report_shared", {
       share_method: "clipboard",
       share_type: "portable_link",
+    });
+  });
+});
+
+describe("captureReportExportFailure", () => {
+  it("records only bounded export diagnostics", () => {
+    captureReportExportFailure("markdown", "live", "http_error", 503);
+
+    expect(posthog.capture).toHaveBeenLastCalledWith("report_export_failed", {
+      format: "markdown",
+      report_variant: "live",
+      failure_class: "http_error",
+      status: 503,
     });
   });
 });
