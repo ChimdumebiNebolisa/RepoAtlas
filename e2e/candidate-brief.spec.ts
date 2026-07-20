@@ -32,6 +32,44 @@ test.describe("Candidate Brief smoke", () => {
     });
   });
 
+  test("homepage shows the four Candidate Brief outputs before analysis", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/");
+
+    const outcomes = page.getByTestId("walkthrough-outcomes");
+    await expect(outcomes.getByRole("heading", { name: "Entry points" })).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Architecture" })).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Risk signals" })).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Reading order" })).toBeVisible();
+    await expect(outcomes).toContainText("PDF and PNG exports are ready");
+    await expect(outcomes).not.toContainText("Markdown");
+
+    const isBeforeAnalysis = await outcomes.evaluate((section) => {
+      const analysis = document.querySelector("#analyze");
+
+      return Boolean(
+        analysis &&
+          section.compareDocumentPosition(analysis) & Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    });
+    expect(isBeforeAnalysis).toBe(true);
+  });
+
+  test("brief output summary stays compact at 390px", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    const outcomes = page.getByTestId("walkthrough-outcomes");
+    await expect(outcomes).toBeVisible();
+    await expect(outcomes.getByRole("article")).toHaveCount(4);
+
+    const dimensions = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+  });
+
   test("sample analyze renders Candidate Brief tab", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
     const walkthrough = page.getByTestId("walkthrough-script").last();

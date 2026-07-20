@@ -37,6 +37,13 @@ const briefContents = [
   "Confidence notes",
 ];
 
+const walkthroughOutputs = [
+  ["Entry points", "Likely files and commands that start the system."],
+  ["Architecture", "Boundaries and dependency paths across the codebase."],
+  ["Risk signals", "Structural hotspots to inspect, not assumed bugs."],
+  ["Reading order", "A ranked path from orientation to deeper review."],
+] as const;
+
 const guardrails = [
   "Does not execute uploaded code",
   "Does not call AI",
@@ -156,6 +163,34 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             <strong>Every conclusion points back to repository evidence.</strong>
             <span className="evidence-ref">source / path / signal</span>
           </div>
+        </div>
+      </section>
+
+      <section
+        className="walkthrough-outcomes page-container"
+        aria-labelledby="walkthrough-outcomes-heading"
+        data-testid="walkthrough-outcomes"
+      >
+        <header className="walkthrough-outcomes-header">
+          <div>
+            <p className="section-kicker">Inside the brief</p>
+            <h2 id="walkthrough-outcomes-heading">Four answers for the repository walkthrough.</h2>
+          </div>
+          <p className="walkthrough-export-note">
+            <span aria-hidden="true">&#10003;</span>
+            {reportCapabilityCopy.homepageBriefExports}
+          </p>
+        </header>
+        <div className="walkthrough-outcome-list">
+          {walkthroughOutputs.map(([title, description], index) => (
+            <article key={title}>
+              <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
