@@ -27,6 +27,14 @@ export default defineConfig({
         branches: 78,
         functions: 82,
         lines: 63,
+        "src/app/api/reports/**/share/route.ts": {
+          branches: 80,
+          lines: 90,
+        },
+        "src/app/api/share/**/route.ts": {
+          branches: 80,
+          lines: 90,
+        },
       },
     },
   },
