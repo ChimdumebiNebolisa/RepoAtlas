@@ -261,6 +261,35 @@ function resolveViaPackageJson(
   return { abs: null, unsupportedExports: false };
 }
 
+/**
+ * Workspace archives commonly omit generated `dist/` output while their
+ * package exports still point at it. For an internal workspace edge, fall
+ * back to the conventional source entrypoint instead of misclassifying the
+ * package import as unresolved.
+ */
+function resolveWorkspaceSourceEntrypoint(
+  pkgRootAbs: string,
+  subpath: string
+): string | null {
+  const sourceSubpath = subpath === "" || subpath === "." ? "index" : subpath;
+  const sourceRootAbs = path.resolve(pkgRootAbs, "src");
+  const sourceBase = path.resolve(sourceRootAbs, sourceSubpath);
+  if (
+    sourceBase !== sourceRootAbs &&
+    !sourceBase.startsWith(sourceRootAbs + path.sep)
+  ) {
+    return null;
+  }
+  const candidates = [sourceBase];
+
+  for (const ext of RESOLUTION_EXTENSIONS) candidates.push(sourceBase + ext);
+  for (const indexName of INDEX_NAMES) {
+    candidates.push(path.join(sourceBase, indexName));
+  }
+
+  return candidates.find((candidate) => existsFile(candidate)) ?? null;
+}
+
 function loadCompilerOptions(workspacePath: string): {
   options: ts.CompilerOptions;
   configDir: string;
@@ -442,10 +471,15 @@ export function createTsJsResolver(
         ? ""
         : specifier.slice(pkgName.length).replace(/^\//, "");
     const pkgRootAbs = path.join(workspacePath, ws.rootRel === "." ? "" : ws.rootRel);
-    const { abs, unsupportedExports } = resolveViaPackageJson(
+    const { abs: packageJsonTarget, unsupportedExports } = resolveViaPackageJson(
       pkgRootAbs,
       remainder || "."
     );
+    const abs =
+      packageJsonTarget ??
+      (unsupportedExports
+        ? null
+        : resolveWorkspaceSourceEntrypoint(pkgRootAbs, remainder || "."));
     if (unsupportedExports && !abs) {
       return { status: "unresolved", reason: "unsupported_package_exports" };
     }
