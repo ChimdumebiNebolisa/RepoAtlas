@@ -21,6 +21,7 @@ import {
   type ReportShareType,
 } from "@/lib/productAnalytics";
 import { createPortableShareLink } from "@/lib/portableSharing";
+import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 
 const ElkArchitectureGraph = dynamic(
   () => import("./ElkArchitectureGraph").then((module) => module.ElkArchitectureGraph),
@@ -477,11 +478,11 @@ export function ReportTabs({
       <div className="report-toolbar">
         <p id={`${tabsId}-export-summary`} className="report-toolbar-copy">
           {variant === "preview"
-            ? "Read-only sample. PDF and PNG are available here; analyze a repository to export Markdown."
+            ? reportCapabilityCopy.previewReport
             : variant === "shared"
               ? "Shared read-only Candidate Brief. PDF and PNG export are available; Markdown requires the original analysis session."
               : !reportId
-                ? "Generated report ready for PDF and PNG export. Markdown needs saved report storage, which is currently unavailable."
+                ? reportCapabilityCopy.inlineReport
                 : markdownSupport === "available"
                   ? "Generated report ready for PDF, PNG, and Markdown export."
                   : markdownNote?.startsWith("Checking")

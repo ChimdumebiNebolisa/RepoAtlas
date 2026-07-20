@@ -63,7 +63,9 @@ async function openControlledInlineReport(page: Page) {
   });
   await page.getByRole("button", { name: /View report/i }).click();
   await expect(
-    page.getByText(/Markdown needs saved report storage, which is currently unavailable/i)
+    page.getByText(
+      /Markdown and saved server links require saved report storage, which is currently unavailable/i
+    )
   ).toBeVisible();
 }
 

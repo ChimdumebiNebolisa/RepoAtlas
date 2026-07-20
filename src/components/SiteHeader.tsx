@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return <span className="badge">{children}</span>;
@@ -18,7 +19,7 @@ export function SiteHeader() {
         <div className="header-badges" aria-label="Product capabilities">
           <Badge>No AI required</Badge>
           <Badge>TS/JS + Python + Java</Badge>
-          <Badge>Export Markdown/PDF/PNG</Badge>
+          <Badge>{reportCapabilityCopy.headerBadge}</Badge>
         </div>
       </div>
     </header>
