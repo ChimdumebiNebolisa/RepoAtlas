@@ -441,6 +441,34 @@ npm run test:e2e
 npm run capture:portfolio
 ```
 
+To repeat the mobile checks that previously needed a retry, start from clean
+Playwright state and keep retries disabled. The four checks cover GitHub
+rate-limit recovery, private-or-missing repository recovery, invalid-ref
+recovery, and stored private-link sharing. The mobile project uses WebKit, so
+install its browser and system dependencies first if they are not already
+available (`npx playwright install --with-deps webkit`).
+
+```bash
+rm -rf .playwright-reports test-results
+PLAYWRIGHT_PORT=3100 npx playwright test e2e/input-modes.spec.ts e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=10 --grep 'shows a clear recovery action for (GitHub rate limit|private or missing repository|invalid ref)|completed brief shares a stored private link'
+```
+
+Expect 40 passes on the first attempt: four checks repeated 10 times, with no
+retry. The separate native-share contract should pass five of five runs:
+
+```bash
+rm -rf .playwright-reports test-results
+PLAYWRIGHT_PORT=3100 npx playwright test e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=5 --grep 'completed brief uses native sharing when the browser provides it'
+```
+
+Then run the complete browser gate. It should finish with 114 passes and no
+flaky-test summary:
+
+```bash
+rm -rf .playwright-reports test-results
+PLAYWRIGHT_PORT=3100 npm run test:e2e
+```
+
 ---
 
 ## Fixtures
