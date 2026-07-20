@@ -6,6 +6,11 @@ import { getReport } from "@/lib/storage";
 
 // Shared report payloads must not be cached by browsers or shared CDNs.
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
+const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,64}$/;
+
+function isValidShareToken(token: string): boolean {
+  return SHARE_TOKEN_PATTERN.test(token);
+}
 
 export async function GET(
   _request: Request,
@@ -14,7 +19,7 @@ export async function GET(
   const { token: rawToken } = await context.params;
   const token = rawToken?.trim() ?? "";
 
-  if (!token) {
+  if (!isValidShareToken(token)) {
     return NextResponse.json(
       { code: ERROR_CODES.INVALID_INPUT, message: "Invalid share token." },
       { status: 400, headers: NO_STORE_HEADERS }
