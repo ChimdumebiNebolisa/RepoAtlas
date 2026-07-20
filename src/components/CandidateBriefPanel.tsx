@@ -157,6 +157,74 @@ function TalkingPoint({
   );
 }
 
+function WalkthroughSection({
+  walkthrough,
+}: {
+  walkthrough: NonNullable<CandidateBrief["walkthrough_script"]>;
+}) {
+  return (
+    <section
+      data-testid="walkthrough-script"
+      className="overflow-hidden rounded-xl border border-emerald-200 bg-white"
+    >
+      <div className="border-b border-emerald-200 bg-emerald-50 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+          Start here
+        </p>
+        <h3 className="mt-1 text-base font-semibold text-slate-900">Walkthrough Script</h3>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">
+          Start with the version that fits the time you have, then use the evidence-backed
+          sections below for follow-up questions.
+        </p>
+      </div>
+      <div className="p-4">
+        <div className="grid gap-3 lg:grid-cols-2">
+          <article
+            data-testid="walkthrough-30-second"
+            className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold text-slate-900">30-second</h4>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Use this for a quick introduction or a direct “what does this repository do?”
+                  prompt.
+                </p>
+              </div>
+              <div className="shrink-0">
+                <CopyButton text={walkthrough.thirty_second} label="Copy 30s" />
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-700">{walkthrough.thirty_second}</p>
+          </article>
+          <article
+            data-testid="walkthrough-2-minute"
+            className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold text-slate-900">2-minute</h4>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Use this when you have time to explain the reading path, architecture, and risk
+                  signals.
+                </p>
+              </div>
+              <div className="shrink-0">
+                <CopyButton text={walkthrough.two_minute} label="Copy 2min" />
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-700">{walkthrough.two_minute}</p>
+          </article>
+        </div>
+        <div className="mt-4 border-t border-slate-200 pt-4 text-sm text-slate-700">
+          <p className="font-medium text-slate-900">Deep technical</p>
+          <p className="mt-1 leading-6">{walkthrough.deep_technical}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function CandidateBriefPanel({ candidateBrief, demoMode }: CandidateBriefPanelProps) {
   const evidenceSectionRef = useRef<HTMLDivElement>(null);
   const usedBy = useMemo(
@@ -191,6 +259,10 @@ export function CandidateBriefPanel({ candidateBrief, demoMode }: CandidateBrief
 
   return (
     <div className={`space-y-4 ${demoMode ? "text-[15px]" : ""}`}>
+      {candidateBrief.walkthrough_script && (
+        <WalkthroughSection walkthrough={candidateBrief.walkthrough_script} />
+      )}
+
       {analysisFocus && (
         <section className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50">
           <div className="border-b border-emerald-200 bg-white/70 p-4">
@@ -370,29 +442,6 @@ export function CandidateBriefPanel({ candidateBrief, demoMode }: CandidateBrief
           />
         </div>
       </Section>
-
-      {candidateBrief.walkthrough_script && (
-        <Section title="Walkthrough Script" help={SECTION_HELP["Walkthrough Script"]}>
-          <div className="space-y-3 text-sm text-slate-700">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-medium text-slate-900">30-second</p>
-                <p className="mt-1">{candidateBrief.walkthrough_script.thirty_second}</p>
-              </div>
-              <CopyButton text={candidateBrief.walkthrough_script.thirty_second} label="Copy 30s" />
-            </div>
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-medium text-slate-900">2-minute</p>
-                <p className="mt-1">{candidateBrief.walkthrough_script.two_minute}</p>
-              </div>
-              <CopyButton text={candidateBrief.walkthrough_script.two_minute} label="Copy 2min" />
-            </div>
-            <p className="font-medium text-slate-900">Deep technical</p>
-            <p>{candidateBrief.walkthrough_script.deep_technical}</p>
-          </div>
-        </Section>
-      )}
 
       {candidateBrief.behavioral_hooks && candidateBrief.behavioral_hooks.length > 0 && (
         <Section title="Behavioral Hooks" help={SECTION_HELP["Behavioral Hooks"]}>
