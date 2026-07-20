@@ -53,6 +53,16 @@ The riskiest areas are the top danger-zone files because they combine measurable
 - src/analyzer/packs/tsjs.ts: risk 76; High fan-out and parser-like control flow patterns.
 - **Evidence**: `risk-1`, `risk-2`
 
+### What tradeoffs does this repository contain?
+
+The repository directly shows Next.js, Tailwind CSS, Vitest as technical choices. These are defensible places to discuss tradeoffs, but the files do not prove why maintainers chose them or what alternatives they rejected.
+
+- **Confidence**: high
+- framework: Next.js. The evidence supports the choice itself, not its motivation or runtime effect.
+- styling: Tailwind CSS. The evidence supports the choice itself, not its motivation or runtime effect.
+- testing: Vitest. The evidence supports the choice itself, not its motivation or runtime effect.
+- **Evidence**: `sample-decision-package`
+
 ### What would you improve first?
 
 Improve the repository through small, evidence-backed changes: clarify how to run it, tighten contribution guidance, or add coverage around risk-ranked files.
@@ -62,6 +72,8 @@ Improve the repository through small, evidence-backed changes: clarify how to ru
 - Add or expand contributor guidance: No CONTRIBUTING guide was detected. A focused first PR can clarify setup, test commands, and how contributors should validate changes.
 - Map behavior around src/analyzer/scoring.ts: The top danger-zone file is a useful place to add clarifying tests or notes after reading its callers and dependencies.
 - **Evidence**: `cmd-1`, `cmd-2`, `cmd-3`, `doc-1`, `doc-2`, `risk-1`
+
+#### Extra preparation
 
 ### How would you contribute in your first week?
 
@@ -92,6 +104,7 @@ _No Candidate Brief warnings._
 ### Evidence References
 
 - `arch-1` - architecture: Architecture graph summary; 6 nodes and 5 edges detected from supported import/dependency analysis.
+- `sample-decision-package` - decision: Technical decision source: package.json; path=package.json; Bundled sample manifest used for deterministic technical-decision detection.
 - `start-1` - start\_here: Reading candidate: README.md; path=README.md; Priority 95: Project scope, setup, and quick start for onboarding.
 - `start-2` - start\_here: Reading candidate: src/app/page.tsx; path=src/app/page.tsx; Priority 90: Main app shell, UX, and report wiring.
 - `start-3` - start\_here: Reading candidate: src/app/api/analyze/route.ts; path=src/app/api/analyze/route.ts; Priority 86: Entry point for analysis and report generation.

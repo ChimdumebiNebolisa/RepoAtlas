@@ -72,6 +72,12 @@ function sampleReport(): Report {
           evidence_refs: ["risk-1"],
           confidence: "medium",
         },
+        tradeoffs: {
+          answer: "The repository directly shows Next.js and Vitest as technical choices.",
+          bullets: ["The evidence supports the choices, not their motivation."],
+          evidence_refs: ["decision-1"],
+          confidence: "medium",
+        },
         improve_first: {
           answer: "Improve evidence-backed docs or tests first.",
           bullets: ["Add coverage around the risk-ranked file."],

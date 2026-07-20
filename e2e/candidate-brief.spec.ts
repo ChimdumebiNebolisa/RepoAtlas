@@ -21,6 +21,18 @@ test.describe("Candidate Brief smoke", () => {
     await runSampleAnalyzeOnPage(page);
     await expect(page.getByRole("heading", { name: "Repo Summary" }).last()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Reading Path" }).last()).toBeVisible();
+    const talkingPoints = page
+      .getByRole("heading", { name: "Interview Talking Points" })
+      .last()
+      .locator("xpath=ancestor::section[1]");
+    await expect(
+      talkingPoints.getByRole("heading", { name: "What tradeoffs does this repository contain?" })
+    ).toBeVisible();
+    await expect(
+      talkingPoints.getByText(/repository directly shows Next\.js, Vitest as technical choices/i)
+    ).toBeVisible();
+    await expect(talkingPoints.getByRole("button", { name: "decision-1" })).toBeVisible();
+    await expect(talkingPoints.getByText("Extra preparation")).toBeVisible();
   });
 
   test("walkthrough buttons copy the exact 30-second and 2-minute scripts", async ({ page }) => {

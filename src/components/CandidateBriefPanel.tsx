@@ -22,6 +22,13 @@ const SECTION_HELP: Record<string, string> = {
   Evidence: "Every claim above links back to these detected signals.",
 };
 
+const LEGACY_TRADEOFF_FALLBACK: BriefAnswer = {
+  answer: "This saved report predates direct tradeoff evidence. Re-run the analysis for a defensible answer.",
+  bullets: ["No technical choice is named without a direct manifest or configuration reference."],
+  evidence_refs: [],
+  confidence: "low",
+};
+
 function confidenceClass(confidence: "high" | "medium" | "low") {
   if (confidence === "high") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (confidence === "medium") return "border-amber-200 bg-amber-50 text-amber-700";
@@ -336,12 +343,24 @@ export function CandidateBriefPanel({ candidateBrief, demoMode }: CandidateBrief
             demoMode={demoMode}
           />
           <TalkingPoint
+            title="What tradeoffs does this repository contain?"
+            answer={talkingPoints.tradeoffs ?? LEGACY_TRADEOFF_FALLBACK}
+            evidenceById={evidenceById}
+            onNavigate={scrollToEvidence}
+            demoMode={demoMode}
+          />
+          <TalkingPoint
             title="What would you improve first?"
             answer={talkingPoints.improve_first}
             evidenceById={evidenceById}
             onNavigate={scrollToEvidence}
             demoMode={demoMode}
           />
+        </div>
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+            Extra preparation
+          </p>
           <TalkingPoint
             title="How would you contribute in your first week?"
             answer={talkingPoints.first_week_contribution}

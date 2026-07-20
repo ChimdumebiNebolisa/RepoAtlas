@@ -139,9 +139,19 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
     brief.interview_talking_points.riskiest_areas
   );
   md += briefAnswerToMarkdown(
+    "What tradeoffs does this repository contain?",
+    brief.interview_talking_points.tradeoffs ?? {
+      answer: "This saved report predates direct tradeoff evidence. Re-run the analysis for a defensible answer.",
+      bullets: [],
+      evidence_refs: [],
+      confidence: "low",
+    }
+  );
+  md += briefAnswerToMarkdown(
     "What would you improve first?",
     brief.interview_talking_points.improve_first
   );
+  md += "#### Extra preparation\n\n";
   md += briefAnswerToMarkdown(
     "How would you contribute in your first week?",
     brief.interview_talking_points.first_week_contribution

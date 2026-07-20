@@ -129,6 +129,35 @@ export function buildSampleReport(): Report {
         extracted: true,
         evidence_refs: [],
       },
+      technicalDecisions: [
+        {
+          category: "framework",
+          decision: "Next.js",
+          signals: ["package.json: next"],
+          evidence_refs: ["sample-decision-package"],
+        },
+        {
+          category: "styling",
+          decision: "Tailwind CSS",
+          signals: ["package.json: tailwindcss"],
+          evidence_refs: ["sample-decision-package"],
+        },
+        {
+          category: "testing",
+          decision: "Vitest",
+          signals: ["package.json: vitest"],
+          evidence_refs: ["sample-decision-package"],
+        },
+      ],
+      technicalDecisionEvidence: [
+        {
+          id: "sample-decision-package",
+          kind: "decision",
+          label: "Technical decision source: package.json",
+          path: "package.json",
+          detail: "Bundled sample manifest used for deterministic technical-decision detection.",
+        },
+      ],
     }),
   };
 }

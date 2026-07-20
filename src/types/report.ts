@@ -260,6 +260,7 @@ export interface CandidateBrief {
   interview_talking_points: {
     walk_me_through_codebase: BriefAnswer;
     riskiest_areas: BriefAnswer;
+    tradeoffs: BriefAnswer;
     improve_first: BriefAnswer;
     first_week_contribution: BriefAnswer;
   };

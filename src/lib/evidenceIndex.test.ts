@@ -25,6 +25,7 @@ function makeBrief(): CandidateBrief {
     interview_talking_points: {
       walk_me_through_codebase: { answer: "Walk", bullets: [], evidence_refs: ["walk"], confidence: "high" },
       riskiest_areas: { answer: "Risk", bullets: [], evidence_refs: ["risk"], confidence: "medium" },
+      tradeoffs: { answer: "Tradeoffs", bullets: [], evidence_refs: ["decision"], confidence: "medium" },
       improve_first: { answer: "Improve", bullets: [], evidence_refs: ["improve"], confidence: "medium" },
       first_week_contribution: { answer: "Week one", bullets: [], evidence_refs: ["week"], confidence: "low" },
     },
@@ -65,14 +66,15 @@ describe("evidence indexes", () => {
     expect(index.get("readme")).toEqual(["Reading Path: README.md"]);
     expect(index.get("walk")).toEqual(["Walk me through"]);
     expect(index.get("risk")).toEqual(["Riskiest areas"]);
+    expect(index.get("decision")).toEqual([
+      "Tradeoffs",
+      "Walkthrough Script",
+      "Behavioral Hook: Tradeoff (STAR template)",
+    ]);
     expect(index.get("improve")).toEqual(["Improve first"]);
     expect(index.get("week")).toEqual(["First week"]);
     expect(index.get("pr")).toEqual(["First PR: First change"]);
     expect(index.get("linkedin")).toEqual(["Resume: linkedin"]);
-    expect(index.get("decision")).toEqual([
-      "Walkthrough Script",
-      "Behavioral Hook: Tradeoff (STAR template)",
-    ]);
   });
 
   it("groups evidence references by kind while preserving order", () => {
