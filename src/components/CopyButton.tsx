@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface CopyButtonProps {
   text: string;
@@ -8,32 +8,70 @@ interface CopyButtonProps {
 }
 
 export function CopyButton({ text, label = "Copy" }: CopyButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState<"idle" | "success" | "error">("idle");
+  const resetTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function handleCopy() {
+  useEffect(() => {
+    return () => {
+      if (resetTimeout.current) clearTimeout(resetTimeout.current);
+    };
+  }, []);
+
+  function showFeedback(result: "success" | "error") {
+    if (resetTimeout.current) clearTimeout(resetTimeout.current);
+    setFeedback(result);
+    resetTimeout.current = setTimeout(() => setFeedback("idle"), 2000);
+  }
+
+  function copyWithBrowserFallback(): boolean {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+
     try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      return document.execCommand("copy");
+    } catch {
+      return false;
+    } finally {
+      textarea.remove();
     }
   }
 
+  async function handleCopy() {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(text);
+      showFeedback("success");
+    } catch {
+      showFeedback(copyWithBrowserFallback() ? "success" : "error");
+    }
+  }
+
+  const visibleLabel =
+    feedback === "success" ? "Copied" : feedback === "error" ? "Copy failed" : label;
+  const statusMessage =
+    feedback === "success"
+      ? "Copied to clipboard."
+      : feedback === "error"
+        ? "Copy failed. Copy the text manually."
+        : "";
+
   return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="report-action report-action-secondary report-action-compact"
-    >
-      {copied ? "Copied" : label}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="report-action report-action-secondary report-action-compact"
+      >
+        {visibleLabel}
+      </button>
+      <span role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {statusMessage}
+      </span>
+    </>
   );
 }

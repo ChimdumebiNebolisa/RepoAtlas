@@ -23,6 +23,39 @@ test.describe("Candidate Brief smoke", () => {
     await expect(page.getByRole("heading", { name: "Reading Path" }).last()).toBeVisible();
   });
 
+  test("walkthrough buttons copy the exact 30-second and 2-minute scripts", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            (window as typeof window & { copiedWalkthroughs?: string[] }).copiedWalkthroughs ??= [];
+            (window as typeof window & { copiedWalkthroughs: string[] }).copiedWalkthroughs.push(text);
+          },
+        },
+      });
+    });
+    await runSampleAnalyzeOnPage(page);
+
+    const walkthroughHeading = page.getByRole("heading", { name: "Walkthrough Script" }).last();
+    const walkthroughSection = walkthroughHeading.locator("xpath=ancestor::section[1]");
+    const thirtySecond = (await walkthroughSection.getByText("30-second").locator("xpath=..//p[2]").textContent()) ?? "";
+    const twoMinute = (await walkthroughSection.getByText("2-minute").locator("xpath=..//p[2]").textContent()) ?? "";
+
+    await walkthroughSection.getByRole("button", { name: "Copy 30s" }).click();
+    await expect(walkthroughSection.getByRole("status").first()).toHaveText("Copied to clipboard.");
+    await walkthroughSection.getByRole("button", { name: "Copy 2min" }).click();
+    await expect(walkthroughSection.getByRole("status").nth(1)).toHaveText("Copied to clipboard.");
+
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as typeof window & { copiedWalkthroughs?: string[] }).copiedWalkthroughs
+        )
+      )
+      .toEqual([thirtySecond, twoMinute]);
+  });
+
   test("invalid share token shows error", async ({ page }) => {
     await page.goto("/share/not-a-valid-share-token");
     await expect(page.getByText(/expired|not found/i)).toBeVisible();
