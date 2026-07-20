@@ -7,7 +7,7 @@ import path from "path";
 import type { Report } from "@/types/report";
 import { put, get, list, del } from "@vercel/blob";
 import { getReportMaxCount, getReportTtlMs } from "@/lib/reportTtl";
-import { parseAndValidateReport } from "@/lib/reportSchema";
+import { parseStoredReport, serializeStoredReport } from "@/lib/storedReportSchema";
 import { deleteSharesForReport } from "@/lib/sharing";
 import {
   getStaticBlobToken,
@@ -52,7 +52,7 @@ export interface SweepReportsResult {
 }
 
 export async function saveReport(reportId: string, report: Report): Promise<void> {
-  const body = JSON.stringify(report, null, 2);
+  const body = serializeStoredReport(report);
 
   if (shouldUseBlobStorage()) {
     const token = getStaticBlobToken();
@@ -112,7 +112,7 @@ export async function getReport(reportId: string): Promise<Report | null> {
       offset += chunk.length;
     }
     const text = new TextDecoder().decode(buffer);
-    const validated = parseAndValidateReport(text);
+    const validated = parseStoredReport(text);
     if (!validated.ok) return null;
     return validated.report;
   }
@@ -123,7 +123,7 @@ export async function getReport(reportId: string): Promise<Report | null> {
       /* turbopackIgnore: true */ filePath,
       "utf-8"
     );
-    const validated = parseAndValidateReport(data);
+    const validated = parseStoredReport(data);
     if (!validated.ok) return null;
     return validated.report;
   } catch {

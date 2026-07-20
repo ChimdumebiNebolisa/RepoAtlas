@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import AdmZip from "adm-zip";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { STORED_REPORT_SCHEMA_VERSION } from "@/lib/storedReportSchema";
 
 const fixturePath = path.resolve(process.cwd(), "fixtures/repo-ts");
 
@@ -29,6 +30,8 @@ describe("API integration: analyze -> report -> markdown export", () => {
     const analyzeRoute = await import("@/app/api/analyze/route");
     const reportRoute = await import("@/app/api/reports/[id]/route");
     const exportRoute = await import("@/app/api/reports/[id]/export/md/route");
+    const createShareRoute = await import("@/app/api/reports/[id]/share/route");
+    const openShareRoute = await import("@/app/api/share/[token]/route");
 
     // Public API accepts multipart uploads (not caller-controlled zipRef paths).
     const zip = new AdmZip();
@@ -49,6 +52,12 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(analyzePayload.reportId).toBeTruthy();
     const reportId = analyzePayload.reportId as string;
 
+    const stored = JSON.parse(
+      await fs.promises.readFile(path.join(tempReportsDir, `${reportId}.json`), "utf-8")
+    );
+    expect(stored.storage_schema_version).toBe(STORED_REPORT_SCHEMA_VERSION);
+    expect(stored.report.repo_metadata.name).toContain("repo-ts");
+
     const reportResponse = await reportRoute.GET(new Request("http://localhost") as never, {
       params: Promise.resolve({ id: reportId }),
     });
@@ -63,6 +72,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(report.danger_zones).toBeInstanceOf(Array);
     expect(report.run_commands).toBeInstanceOf(Array);
     expect(report.contribute_signals).toBeDefined();
+    expect(report.storage_schema_version).toBeUndefined();
 
     const exportResponse = await exportRoute.GET(new Request("http://localhost") as never, {
       params: Promise.resolve({ id: reportId }),
@@ -79,6 +89,28 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(markdown).toContain("## Start Here");
     expect(markdown).toContain("## Danger Zones");
     expect(markdown).toContain("## Run & Contribute");
+
+    const shareResponse = await createShareRoute.POST(
+      new Request("http://localhost/api/reports/share", { method: "POST" }),
+      { params: Promise.resolve({ id: reportId }) }
+    );
+    expect(shareResponse.status).toBe(201);
+    const share = (await shareResponse.json()) as { token: string; expiresAt: string };
+
+    const sharedResponse = await openShareRoute.GET(
+      new Request(`http://localhost/api/share/${share.token}`),
+      { params: Promise.resolve({ token: share.token }) }
+    );
+    expect(sharedResponse.status).toBe(200);
+    const shared = await sharedResponse.json();
+    expect(shared).toEqual({
+      report,
+      share: {
+        createdAt: expect.any(String),
+        expiresAt: share.expiresAt,
+      },
+    });
+    expect(shared.report.storage_schema_version).toBeUndefined();
   }, 30000);
 
   it("creates a report from multipart zip upload", async () => {

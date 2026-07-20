@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "crypto";
 import type { Report } from "@/types/report";
+import { STORED_REPORT_SCHEMA_VERSION } from "@/lib/storedReportSchema";
 
 // In-memory blob store shared with the mock below.
 const store = new Map<string, { body: string; uploadedAt: Date }>();
@@ -73,12 +74,50 @@ describe("blob-backed storage", () => {
 
   it("saves, reads, lists and deletes blob reports", async () => {
     const id = randomUUID();
-    await saveReport(id, minimalReport(new Date().toISOString()));
+    const report = minimalReport(new Date().toISOString());
+    await saveReport(id, report);
+    expect(JSON.parse(store.get(`reports/${id}.json`)?.body ?? "null")).toEqual({
+      storage_schema_version: STORED_REPORT_SCHEMA_VERSION,
+      report,
+    });
     expect(await listReportIds()).toContain(id);
-    expect(await getReport(id)).not.toBeNull();
+    expect(await getReport(id)).toEqual(report);
 
     expect(await deleteReport(id)).toBe(true);
     expect(await listReportIds()).not.toContain(id);
+  });
+
+  it("reads a valid legacy unversioned blob report through the migration", async () => {
+    const id = randomUUID();
+    const report = minimalReport(new Date().toISOString());
+    store.set(`reports/${id}.json`, {
+      body: JSON.stringify(report),
+      uploadedAt: new Date(),
+    });
+
+    expect(await getReport(id)).toEqual(report);
+  });
+
+  it("rejects unknown future and malformed storage records", async () => {
+    const futureId = randomUUID();
+    const corruptId = randomUUID();
+    store.set(`reports/${futureId}.json`, {
+      body: JSON.stringify({
+        storage_schema_version: STORED_REPORT_SCHEMA_VERSION + 1,
+        report: { private_repository_detail: "do not leak" },
+      }),
+      uploadedAt: new Date(),
+    });
+    store.set(`reports/${corruptId}.json`, {
+      body: JSON.stringify({
+        storage_schema_version: STORED_REPORT_SCHEMA_VERSION,
+        report: { private_repository_detail: "do not leak" },
+      }),
+      uploadedAt: new Date(),
+    });
+
+    expect(await getReport(futureId)).toBeNull();
+    expect(await getReport(corruptId)).toBeNull();
   });
 
   it("uses Vercel OIDC credentials when no static token is configured", async () => {
