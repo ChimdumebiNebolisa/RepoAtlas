@@ -5,6 +5,8 @@ import { randomUUID } from "crypto";
 import { PNG } from "pngjs";
 import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { Report } from "../src/types/report";
+import { buildSampleReport } from "../src/lib/buildSampleReport";
+import { MAX_PNG_CANVAS_DIMENSION } from "../src/components/ReportTabs";
 
 const PDF_SIGNATURE = Buffer.from("%PDF-");
 const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
@@ -29,8 +31,20 @@ async function readDownload(download: Download): Promise<Buffer> {
   return buffer;
 }
 
-async function openControlledInlineReport(page: Page) {
-  if (!process.env.PLAYWRIGHT_EXTERNAL_URL) {
+async function openControlledInlineReport(page: Page, controlledReport?: Report) {
+  if (controlledReport) {
+    await page.route("**/api/analyze", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          reportId: randomUUID(),
+          report: controlledReport,
+          persisted: false,
+        }),
+      });
+    });
+  } else if (!process.env.PLAYWRIGHT_EXTERNAL_URL) {
     const analyze = await page.request.post("/api/analyze", { data: { sample: true } });
     expect(analyze.ok()).toBeTruthy();
     const body = (await analyze.json()) as {
@@ -126,5 +140,25 @@ test("inline Candidate Brief exports valid, readable PDF and PNG files", async (
   const png = PNG.sync.read(pngBuffer);
   expect(png.width).toBeGreaterThan(0);
   expect(png.height).toBeGreaterThan(0);
+  expect(nonWhitePixelRatio(png)).toBeGreaterThan(0.01);
+});
+
+test("long Candidate Brief exports PNG below the browser canvas limit", async ({ page }) => {
+  test.setTimeout(240_000);
+  const report = buildSampleReport();
+  report.warnings = Array.from(
+    { length: 1_000 },
+    (_, index) => `Long report export regression warning ${index + 1}: ${"evidence ".repeat(8)}`
+  );
+  await openControlledInlineReport(page, report);
+
+  const download = await downloadFromButton(page, "Export PNG");
+  const pngBuffer = await readDownload(download);
+  expect(pngBuffer.subarray(0, PNG_SIGNATURE.length)).toEqual(PNG_SIGNATURE);
+  const png = PNG.sync.read(pngBuffer);
+  expect(png.width).toBeGreaterThan(0);
+  expect(png.height).toBeGreaterThan(0);
+  expect(png.width).toBeLessThanOrEqual(MAX_PNG_CANVAS_DIMENSION);
+  expect(png.height).toBeLessThanOrEqual(MAX_PNG_CANVAS_DIMENSION);
   expect(nonWhitePixelRatio(png)).toBeGreaterThan(0.01);
 });
