@@ -443,6 +443,87 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 .evidence-card strong { display: block; margin-block: 0.55rem 0.9rem; font-size: 0.85rem; line-height: 1.5; }
 
+.walkthrough-outcomes {
+  margin-top: -2.5rem;
+  margin-bottom: 1.25rem;
+  padding: 1.4rem clamp(1.25rem, 2.5vw, 2rem);
+  border: 1px solid rgba(111, 143, 129, 0.28);
+  border-radius: var(--radius-card);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 6px 22px rgba(22, 66, 48, 0.05);
+  backdrop-filter: blur(10px);
+}
+.walkthrough-outcomes-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-bottom: 1.15rem;
+  border-bottom: 1px solid var(--line);
+}
+.walkthrough-outcomes-header h2 {
+  max-width: 31rem;
+  margin: 0.4rem 0 0;
+  font-size: clamp(1.35rem, 2.3vw, 1.8rem);
+  font-weight: 660;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+.walkthrough-export-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: #466258;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.walkthrough-export-note > span {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.walkthrough-outcome-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.walkthrough-outcome-list article {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 1.6rem minmax(0, 1fr);
+  gap: 0.55rem;
+  padding: 1.15rem 1rem 0.1rem;
+}
+.walkthrough-outcome-list article:first-child { padding-left: 0; }
+.walkthrough-outcome-list article:last-child { padding-right: 0; }
+.walkthrough-outcome-list article + article { border-left: 1px solid var(--line); }
+.walkthrough-outcome-list article > span {
+  color: #799185;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+.walkthrough-outcome-list h3 {
+  margin: 0;
+  font-size: 0.84rem;
+  letter-spacing: -0.015em;
+}
+.walkthrough-outcome-list p {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
 .action-section {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.75fr);
@@ -1302,6 +1383,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
   }
   .hero h1 { max-width: 15ch; }
   .hero-visual { min-height: 28rem; }
+  .walkthrough-outcomes-header { align-items: flex-start; }
+  .walkthrough-outcome-list { grid-template-columns: 1fr 1fr; }
+  .walkthrough-outcome-list article:nth-child(3) { padding-left: 0; border-left: 0; }
+  .walkthrough-outcome-list article:nth-child(n + 3) { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
   .action-section, .interviewer-layout, .brief-section, .faq-layout, .trust-section, .closing-content { grid-template-columns: 1fr; }
   .project-grid { grid-template-columns: 1fr 1fr; }
   .interviewer-intro, .faq-intro { position: static; }
@@ -1335,6 +1420,26 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .quick-start .btn { width: 100%; }
   .analysis-intent-grid { grid-template-columns: 1fr; }
   .hero-visual { min-height: 24rem; }
+  .walkthrough-outcomes {
+    margin-top: -1.75rem;
+    margin-bottom: 1rem;
+    padding: 1.25rem;
+  }
+  .walkthrough-outcomes-header { align-items: flex-start; flex-direction: column; gap: 0.8rem; }
+  .walkthrough-outcome-list { grid-template-columns: 1fr; }
+  .walkthrough-outcome-list article,
+  .walkthrough-outcome-list article:first-child,
+  .walkthrough-outcome-list article:last-child,
+  .walkthrough-outcome-list article:nth-child(3) {
+    margin: 0;
+    padding: 0.95rem 0;
+    border-left: 0;
+    border-top: 0;
+  }
+  .walkthrough-outcome-list article + article {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
   .brief-sheet { inset: 0 0.5rem 2.5rem 0; }
   .brief-sheet-footer { display: none; }
   .evidence-card { width: 82%; }

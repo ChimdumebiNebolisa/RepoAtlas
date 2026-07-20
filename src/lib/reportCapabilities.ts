@@ -9,6 +9,7 @@ const storageDependentPair = REPORT_CAPABILITY_RULES.storageDependent.join(" and
 
 export const reportCapabilityCopy = {
   headerBadge: "PDF/PNG + encrypted sharing",
+  homepageBriefExports: `${exportPair} exports are ready with every completed brief.`,
   homepagePipelineSummary: "PDF, PNG, encrypted link",
   homepageStorageNote: `${exportPair} exports and ${REPORT_CAPABILITY_RULES.portableSharing} work with completed reports. ${storageDependentPair} require saved report storage.`,
   inlineReport: `Generated report ready for ${exportPair} export and ${REPORT_CAPABILITY_RULES.portableSharing}. ${storageDependentPair} require saved report storage, which is currently unavailable.`,
