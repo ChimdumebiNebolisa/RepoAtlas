@@ -35,6 +35,10 @@ export default defineConfig({
           branches: 80,
           lines: 90,
         },
+        "src/app/api/cron/cleanup/route.ts": {
+          branches: 90,
+          lines: 95,
+        },
       },
     },
   },

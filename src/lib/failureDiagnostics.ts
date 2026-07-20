@@ -50,3 +50,14 @@ export function reportExportErrorLogPayload(requestId: string, err: unknown) {
     status: appErr.status,
   };
 }
+
+/** Privacy-safe server evidence for a failed authenticated retention sweep. */
+export function retentionCleanupFailureLogPayload(requestId: string) {
+  return {
+    level: "error" satisfies LogLevel,
+    event: "retention_cleanup_failed",
+    requestId,
+    failureClass: "server_error",
+    outcome: "cleanup_incomplete",
+  };
+}

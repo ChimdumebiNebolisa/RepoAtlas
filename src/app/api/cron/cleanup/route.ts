@@ -1,3 +1,6 @@
+import { randomUUID } from "crypto";
+
+import { retentionCleanupFailureLogPayload } from "@/lib/failureDiagnostics";
 import { sweepExpiredReports } from "@/lib/storage";
 import { sweepExpiredShareTokens } from "@/lib/sharing";
 
@@ -21,16 +24,29 @@ export async function POST(request: Request) {
     }
   }
 
-  const [reports, shares] = await Promise.all([
-    sweepExpiredReports(),
-    sweepExpiredShareTokens(),
-  ]);
+  try {
+    const [reports, shares] = await Promise.all([
+      sweepExpiredReports(),
+      sweepExpiredShareTokens(),
+    ]);
 
-  return Response.json({
-    reports,
-    shares,
-    scannedAt: new Date().toISOString(),
-  });
+    return Response.json({
+      reports,
+      shares,
+      scannedAt: new Date().toISOString(),
+    });
+  } catch {
+    const requestId = randomUUID();
+    console.error(JSON.stringify(retentionCleanupFailureLogPayload(requestId)));
+    return Response.json(
+      {
+        code: "CLEANUP_FAILED",
+        message: "Cleanup failed. Check server logs.",
+        requestId,
+      },
+      { status: 500 }
+    );
+  }
 }
 
 /** Authenticated health check only — no inventory scan. */

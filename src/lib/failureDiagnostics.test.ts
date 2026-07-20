@@ -3,6 +3,7 @@ import {
   partialAnalysisTimeoutLogPayload,
   reportExportErrorLogPayload,
   reportPersistenceFailureLogPayload,
+  retentionCleanupFailureLogPayload,
 } from "./failureDiagnostics";
 import { AppError, ERROR_CODES } from "./errors";
 
@@ -52,5 +53,15 @@ describe("failure diagnostics", () => {
     expect(JSON.stringify(payload)).not.toMatch(
       /private-owner|private-repository|private-report-token|private-secret/
     );
+  });
+
+  it("records retention cleanup failures without stored content", () => {
+    expect(retentionCleanupFailureLogPayload("safe-request-id")).toEqual({
+      level: "error",
+      event: "retention_cleanup_failed",
+      requestId: "safe-request-id",
+      failureClass: "server_error",
+      outcome: "cleanup_incomplete",
+    });
   });
 });
