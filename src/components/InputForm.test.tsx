@@ -263,4 +263,104 @@ describe("InputForm", () => {
     expect(onAnalyzeComplete).toHaveBeenCalledWith(inlineReport, null);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps report identifiers and raw server details out of client diagnostics", async () => {
+    const user = userEvent.setup();
+    const onAnalyzeError = vi.fn();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const reportId = "11111111-1111-4111-8111-111111111111";
+    const privateMessage =
+      "Failed for https://github.com/private-owner/private-repository token=private-secret";
+    const fetchMock = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ reportId, persisted: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: "PRIVATE_CODE_WITH_DETAILS",
+            message: privateMessage,
+          }),
+          { status: 503, headers: { "content-type": "application/json" } }
+        )
+      );
+
+    render(
+      <InputForm
+        onAnalyzeStart={noop}
+        onAnalyzeComplete={noop}
+        onAnalyzeError={onAnalyzeError}
+        loading={false}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(consoleError).toHaveBeenCalledOnce();
+    expect(consoleError).toHaveBeenCalledWith(
+      JSON.stringify({
+        stage: "report_load",
+        errorCode: "ANALYSIS_FAILED",
+        status: 503,
+      })
+    );
+    expect(JSON.stringify(consoleError.mock.calls)).not.toMatch(
+      /11111111|private-owner|private-repository|private-secret|PRIVATE_CODE_WITH_DETAILS/
+    );
+    expect(onAnalyzeError).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to load analysis report")
+    );
+    expect(captureAnalysisEvent).toHaveBeenLastCalledWith(
+      "analysis_failed",
+      "sample",
+      "interview",
+      {
+        stage: "report_load",
+        status_code: 503,
+        error_code: "ANALYSIS_FAILED",
+      }
+    );
+  });
+
+  it("keeps raw network errors out of client diagnostics", async () => {
+    const user = userEvent.setup();
+    const onAnalyzeError = vi.fn();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const rawError = new Error(
+      "https://github.com/private-owner/private-repository token=private-secret"
+    );
+    vi.spyOn(global, "fetch").mockRejectedValueOnce(rawError);
+
+    render(
+      <InputForm
+        onAnalyzeStart={noop}
+        onAnalyzeComplete={noop}
+        onAnalyzeError={onAnalyzeError}
+        loading={false}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+
+    expect(consoleError).toHaveBeenCalledOnce();
+    expect(consoleError).toHaveBeenCalledWith(
+      JSON.stringify({ stage: "network", errorCode: "NETWORK_ERROR" })
+    );
+    expect(JSON.stringify(consoleError.mock.calls)).not.toMatch(
+      /private-owner|private-repository|private-secret/
+    );
+    expect(onAnalyzeError).toHaveBeenCalledWith("Network error. Please try again.");
+    expect(captureAnalysisEvent).toHaveBeenLastCalledWith(
+      "analysis_failed",
+      "sample",
+      "interview",
+      {
+        stage: "network",
+        error_code: "NETWORK_ERROR",
+      }
+    );
+  });
 });
