@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type RefObject } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState, type RefObject } from "react";
 import type { AnalysisIntent, Report } from "@/types/report";
 import { ERROR_CODES } from "@/lib/errors";
 import { parseGithubRepoUrl, isValidGitRef } from "@/lib/github";
@@ -53,6 +53,10 @@ interface InputFormProps {
   sampleButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
+export interface InputFormHandle {
+  generateSample: () => void;
+}
+
 interface ApiErrorLike {
   code?: string;
   message?: string;
@@ -103,13 +107,16 @@ export function isValidReportId(id: unknown): id is string {
   return typeof id === "string" && UUID_LIKE.test(id.trim());
 }
 
-export function InputForm({
-  onAnalyzeStart,
-  onAnalyzeComplete,
-  onAnalyzeError,
-  loading,
-  sampleButtonRef,
-}: InputFormProps) {
+export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function InputForm(
+  {
+    onAnalyzeStart,
+    onAnalyzeComplete,
+    onAnalyzeError,
+    loading,
+    sampleButtonRef,
+  },
+  forwardedRef
+) {
   const [mode, setMode] = useState<InputMode>("github");
   const [file, setFile] = useState<File | null>(null);
   const [githubUrl, setGithubUrl] = useState("");
@@ -268,6 +275,12 @@ export function InputForm({
       "sample"
     );
   };
+
+  useImperativeHandle(forwardedRef, () => ({
+    generateSample: () => {
+      void handleSample();
+    },
+  }));
 
   const switchMode = (next: InputMode) => {
     if (loading) return;
@@ -445,4 +458,4 @@ export function InputForm({
       </div>
     </form>
   );
-}
+});
