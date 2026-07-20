@@ -5,6 +5,7 @@ import type { AnalysisIntent, Report } from "@/types/report";
 import { ERROR_CODES } from "@/lib/errors";
 import { parseGithubRepoUrl, isValidGitRef } from "@/lib/github";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
+import { clientFailureDiagnostic } from "@/lib/clientFailureDiagnostics";
 import {
   analysisEntrySource,
   captureAnalysisEvent,
@@ -161,30 +162,31 @@ export function InputForm({
       const reportRes = await fetch(`/api/reports/${reportId}`);
       const reportPayload = await reportRes.json().catch(() => ({}));
       if (!reportRes.ok) {
+        const diagnostic = clientFailureDiagnostic(
+          "report_load",
+          reportPayload.code,
+          reportRes.status
+        );
         captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
           ...entryProperties,
           stage: "report_load",
           status_code: reportRes.status,
-          error_code: reportPayload.code ?? ERROR_CODES.ANALYSIS_FAILED,
+          error_code: diagnostic.errorCode,
         });
-        console.error("Failed to fetch analyzed report", {
-          reportId,
-          status: reportRes.status,
-          code: reportPayload.code ?? ERROR_CODES.ANALYSIS_FAILED,
-          message: reportPayload.message ?? FALLBACK_ANALYSIS_MESSAGE,
-        });
+        console.error(JSON.stringify(diagnostic));
         onAnalyzeError(formatReportFetchError(reportPayload, reportRes.status, reportId));
         return;
       }
       captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
       onAnalyzeComplete(reportPayload as Report, reportId);
-    } catch (error) {
+    } catch {
+      const diagnostic = clientFailureDiagnostic("network");
       captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
         ...entryProperties,
         stage: "network",
-        error_code: "NETWORK_ERROR",
+        error_code: diagnostic.errorCode,
       });
-      console.error("Unexpected error during analysis submission", error);
+      console.error(JSON.stringify(diagnostic));
       onAnalyzeError("Network error. Please try again.");
     }
   };
