@@ -55,6 +55,19 @@ interface ReportTabsProps {
   initialDemoMode?: boolean;
 }
 
+// Chromium and WebKit cannot encode a PNG when either canvas dimension reaches
+// their implementation limit. Keep a little headroom for html2canvas rounding.
+export const MAX_PNG_CANVAS_DIMENSION = 32_000;
+
+export function fitExportCanvasScale(
+  width: number,
+  height: number,
+  requestedScale: number
+): number {
+  const longestSide = Math.max(1, width, height);
+  return Math.min(requestedScale, MAX_PNG_CANVAS_DIMENSION / longestSide);
+}
+
 interface ApiErrorLike {
   code?: string;
   message?: string;
@@ -197,7 +210,7 @@ export function ReportTabs({
     }
   };
 
-  const renderExportCanvas = async (scale = 1.5) => {
+  const renderExportCanvas = async (scale = 1.5, constrainForPng = false) => {
     setExportMountActive(true);
     await waitForExportMount();
     if (!exportRef.current) {
@@ -206,10 +219,17 @@ export function ReportTabs({
     }
     await waitForExportContent();
     const { default: html2canvas } = await import("html2canvas");
+    const resolvedScale = constrainForPng
+      ? fitExportCanvasScale(
+          exportRef.current.scrollWidth,
+          exportRef.current.scrollHeight,
+          scale
+        )
+      : scale;
     try {
       return await html2canvas(exportRef.current, {
         backgroundColor: "#ffffff",
-        scale,
+        scale: resolvedScale,
         useCORS: true,
         windowWidth: 1200,
       });
@@ -237,7 +257,7 @@ export function ReportTabs({
     try {
       setExportError(null);
       setExporting("png");
-      const canvas = await renderExportCanvas();
+      const canvas = await renderExportCanvas(1.5, true);
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png", 1)
       );
