@@ -703,6 +703,35 @@ function buildFirstWeekAnswer(
   };
 }
 
+function buildTradeoffAnswer(
+  input: BuildCandidateBriefInput,
+  evidence: EvidenceIndex
+): BriefAnswer {
+  const decisions = decisionsWithDirectEvidence(input, evidence).slice(0, 3);
+
+  if (decisions.length < 2) {
+    return {
+      answer: "This repository does not provide enough direct evidence for a defensible tradeoff answer.",
+      bullets: [
+        "Each named technical choice must resolve to a manifest or configuration file.",
+        "The brief does not infer maintainer intent, rejected alternatives, or production behavior.",
+      ],
+      evidence_refs: Array.from(new Set(decisions.flatMap((decision) => decision.evidence_refs))),
+      confidence: "low",
+    };
+  }
+
+  return {
+    answer: `The repository directly shows ${decisions.map((decision) => decision.decision).join(", ")} as technical choices. These are defensible places to discuss tradeoffs, but the files do not prove why maintainers chose them or what alternatives they rejected.`,
+    bullets: decisions.map(
+      (decision) =>
+        `${decision.category}: ${decision.decision}. The evidence supports the choice itself, not its motivation or runtime effect.`
+    ),
+    evidence_refs: Array.from(new Set(decisions.flatMap((decision) => decision.evidence_refs))),
+    confidence: decisions.length >= 3 ? "high" : "medium",
+  };
+}
+
 function buildResumeBullets(
   input: BuildCandidateBriefInput,
   evidence: EvidenceIndex
@@ -848,7 +877,7 @@ function buildBehavioralHooks(
     const decisionRefs = displayedDecisions.flatMap((d) => d.evidence_refs).slice(0, 4);
     hooks.push({
       prompt: "Tradeoff (STAR template)",
-      answer_starter: `Discuss technical choices such as ${displayedDecisions.map((d) => d.decision).join(" and ")} and why they fit the observed repo signals.`,
+      answer_starter: `Use ${displayedDecisions.map((d) => d.decision).join(" and ")} as directly evidenced technical choices. Separate what the files prove from questions about rationale, alternatives, and runtime effects.`,
       evidence_refs: decisionRefs,
       sufficient_evidence: true,
     });
@@ -890,6 +919,7 @@ export function buildCandidateBrief(input: BuildCandidateBriefInput): CandidateB
   const walkThrough = buildWalkthroughAnswer(input, evidence);
   const riskAnswer = buildRiskAnswer(input, evidence);
   const improveFirst = buildImproveFirstAnswer(firstPrPlan, evidence);
+  const tradeoffs = buildTradeoffAnswer(input, evidence);
   const firstWeek = buildFirstWeekAnswer(input, evidence, firstPrPlan);
   const confidence_assessment = buildConfidenceAssessment(input);
   const walkthrough_script = buildWalkthroughScript(input, evidence);
@@ -910,6 +940,7 @@ export function buildCandidateBrief(input: BuildCandidateBriefInput): CandidateB
     interview_talking_points: {
       walk_me_through_codebase: walkThrough,
       riskiest_areas: riskAnswer,
+      tradeoffs,
       improve_first: improveFirst,
       first_week_contribution: firstWeek,
     },

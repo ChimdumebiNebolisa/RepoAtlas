@@ -24,6 +24,7 @@ describe("Candidate Brief snapshots (repo-ts)", () => {
     expect(brief.first_pr_plan.length).toBeGreaterThan(0);
     expect(brief.first_pr_plan.length).toBeLessThanOrEqual(3);
     expect(brief.evidence_refs.length).toBeGreaterThan(0);
+    expect(brief.interview_talking_points.tradeoffs.answer).toBeTruthy();
 
     const knownIds = new Set(brief.evidence_refs.map((ref) => ref.id));
     const referenced = [

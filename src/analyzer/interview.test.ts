@@ -74,6 +74,7 @@ describe("buildCandidateBrief", () => {
     expect(brief.reading_path.length).toBeGreaterThan(0);
     expect(brief.interview_talking_points.walk_me_through_codebase).toBeDefined();
     expect(brief.interview_talking_points.riskiest_areas).toBeDefined();
+    expect(brief.interview_talking_points.tradeoffs).toBeDefined();
     expect(brief.interview_talking_points.improve_first).toBeDefined();
     expect(brief.interview_talking_points.first_week_contribution).toBeDefined();
     expect(brief.first_pr_plan.length).toBeGreaterThan(0);
@@ -172,6 +173,15 @@ describe("buildCandidateBrief", () => {
       sufficient_evidence: false,
     });
     expect(brief.walkthrough_script?.tradeoffs_to_mention).toEqual([]);
+    expect(brief.interview_talking_points.tradeoffs).toEqual({
+      answer: "This repository does not provide enough direct evidence for a defensible tradeoff answer.",
+      bullets: [
+        "Each named technical choice must resolve to a manifest or configuration file.",
+        "The brief does not infer maintainer intent, rejected alternatives, or production behavior.",
+      ],
+      evidence_refs: [],
+      confidence: "low",
+    });
   });
 
   it("links every displayed technical decision to direct repository evidence", () => {
@@ -192,6 +202,15 @@ describe("buildCandidateBrief", () => {
     expect(tradeoff?.sufficient_evidence).toBe(true);
     expect(tradeoff?.evidence_refs).toEqual(["decision-1", "decision-2"]);
     expect(brief.walkthrough_script?.tradeoffs_to_mention).toEqual(["React", "Vitest"]);
+    expect(brief.interview_talking_points.tradeoffs).toMatchObject({
+      answer: expect.stringContaining("React, Vitest"),
+      bullets: [
+        expect.stringContaining("framework: React"),
+        expect.stringContaining("testing: Vitest"),
+      ],
+      evidence_refs: ["decision-1", "decision-2"],
+      confidence: "medium",
+    });
     expect(brief.walkthrough_script?.evidence_refs).toEqual(
       expect.arrayContaining(["decision-1", "decision-2"])
     );
