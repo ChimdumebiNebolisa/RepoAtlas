@@ -128,14 +128,25 @@ test.describe("Report UI flows", () => {
 
   test("completed brief uses native sharing when the browser provides it", async ({ page }) => {
     await page.addInitScript(() => {
-      Object.defineProperty(Navigator.prototype, "share", {
+      Object.defineProperty(window.navigator, "share", {
         configurable: true,
         value: async (data: ShareData) => {
+          window.sessionStorage.setItem("repoatlas-e2e-native-share-invoked", "true");
           window.sessionStorage.setItem("repoatlas-e2e-native-share", JSON.stringify(data));
         },
       });
+      window.sessionStorage.setItem("repoatlas-e2e-native-share-ready", "true");
     });
     await runSampleAnalyzeOnPage(page);
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          ownsShare: Object.prototype.hasOwnProperty.call(window.navigator, "share"),
+          ready: window.sessionStorage.getItem("repoatlas-e2e-native-share-ready"),
+        }))
+      )
+      .toEqual({ ownsShare: true, ready: "true" });
 
     await page.getByRole("button", { name: /Share Candidate Brief/i }).click();
 
@@ -144,6 +155,13 @@ test.describe("Report UI flows", () => {
       const value = window.sessionStorage.getItem("repoatlas-e2e-native-share");
       return value ? (JSON.parse(value) as ShareData) : null;
     });
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          window.sessionStorage.getItem("repoatlas-e2e-native-share-invoked")
+        )
+      )
+      .toBe("true");
     expect(sharedData?.url).toMatch(/\/share\//);
     expect(sharedData?.title).toBe("RepoAtlas Candidate Brief");
   });
