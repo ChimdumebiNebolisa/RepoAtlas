@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 import fs from "fs";
 import path from "path";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
+import type { Page } from "@playwright/test";
 import {
   REPORTS_DIR,
   REPORT_TABS,
@@ -13,6 +14,46 @@ import {
 } from "./helpers";
 import { buildSampleReport } from "../src/lib/buildSampleReport";
 import { PORTABLE_SHARE_MAX_URL_LENGTH } from "../src/lib/portableSharing";
+
+async function openControlledInlineReport(page: Page, report = buildSampleReport()) {
+  await page.route("**/api/analyze", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        reportId: "550e8400-e29b-41d4-a716-446655440000",
+        report,
+        persisted: false,
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+  await page.getByRole("button", { name: /View report/i }).click();
+  await expect(page.getByRole("button", { name: "Share Candidate Brief" })).toBeVisible();
+}
+
+async function expectWorkingPdfRecovery(page: Page) {
+  const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
+  await page.getByRole("button", { name: "Export PDF instead" }).click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  expect(downloadPath).toBeTruthy();
+  const pdf = fs.readFileSync(downloadPath!);
+  expect(pdf.subarray(0, 5)).toEqual(Buffer.from("%PDF-"));
+  expect(pdf.byteLength).toBeGreaterThan(10_000);
+}
+
+function buildOversizedPortableReport() {
+  const report = buildSampleReport();
+  return {
+    ...report,
+    warnings: Array.from({ length: 1_000 }, (_, index) =>
+      createHash("sha256").update(`portable-share-boundary-${index}`).digest("hex")
+    ),
+  };
+}
 
 test.describe("Report UI flows", () => {
   test("all report tabs render after sample analyze", async ({ page }) => {
@@ -317,6 +358,42 @@ test.describe("Report UI flows", () => {
 });
 
 test.describe("Share UI edge cases", () => {
+  test("inline share offers a working PDF when browser compression is unavailable", async ({ page }) => {
+    test.setTimeout(240_000);
+    await page.addInitScript(() => {
+      Object.defineProperty(globalThis, "CompressionStream", {
+        configurable: true,
+        value: undefined,
+      });
+      Object.defineProperty(globalThis, "DecompressionStream", {
+        configurable: true,
+        value: undefined,
+      });
+    });
+    await openControlledInlineReport(page);
+
+    await page.getByRole("button", { name: "Share Candidate Brief" }).click();
+
+    await expect(page.locator(".report-share-error")).toHaveText(
+      "Private links are not supported in this browser. Export PDF to share this brief."
+    );
+    await expect(page.getByText(/Shared successfully|Private link copied/i)).toHaveCount(0);
+    await expectWorkingPdfRecovery(page);
+  });
+
+  test("oversized inline share offers a working PDF without false success", async ({ page }) => {
+    test.setTimeout(240_000);
+    await openControlledInlineReport(page, buildOversizedPortableReport());
+
+    await page.getByRole("button", { name: "Share Candidate Brief" }).click();
+
+    await expect(page.locator(".report-share-error")).toHaveText(
+      "This brief is too large for a private link. Export PDF to share it instead."
+    );
+    await expect(page.getByText(/Shared successfully|Private link copied/i)).toHaveCount(0);
+    await expectWorkingPdfRecovery(page);
+  });
+
   test("expired share token shows error on share page", async ({ page, request }) => {
     const reportId = await analyzeSample(request);
     const create = await request.post(`/api/reports/${reportId}/share`);

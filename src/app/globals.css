@@ -294,6 +294,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
   justify-items: stretch;
 }
 
+.report-share-recovery {
+  display: grid;
+  gap: 0.5rem;
+}
+
 .report-share-success,
 .report-share-error,
 .report-share-expiry {
