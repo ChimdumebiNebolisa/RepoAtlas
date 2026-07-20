@@ -19,6 +19,32 @@ test.describe("Candidate Brief smoke", () => {
 
   test("sample analyze renders Candidate Brief tab", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
+    const walkthrough = page.getByTestId("walkthrough-script").last();
+    const walkthroughOrder = await walkthrough.evaluate((section) => {
+      const headings = ["Repo Summary", "Reading Path", "Interview Talking Points"];
+      return headings.every((label) => {
+        const detailHeading = Array.from(document.querySelectorAll("h3")).find(
+          (heading) => heading.textContent === label && section.parentElement?.contains(heading)
+        );
+        return Boolean(
+          detailHeading &&
+            (section.compareDocumentPosition(detailHeading) & Node.DOCUMENT_POSITION_FOLLOWING)
+        );
+      });
+    });
+
+    expect(walkthroughOrder).toBe(true);
+    await expect(walkthrough.getByTestId("walkthrough-30-second")).toBeVisible();
+    await expect(walkthrough.getByTestId("walkthrough-2-minute")).toBeVisible();
+    await expect(walkthrough.getByText(/quick introduction/i)).toBeVisible();
+    await expect(walkthrough.getByText(/explain the reading path/i)).toBeVisible();
+    await expect(walkthrough.getByRole("button", { name: "Copy 30s" })).toBeVisible();
+    await expect(walkthrough.getByRole("button", { name: "Copy 2min" })).toBeVisible();
+
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(hasHorizontalOverflow).toBe(false);
     await expect(page.getByRole("heading", { name: "Repo Summary" }).last()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Reading Path" }).last()).toBeVisible();
     const talkingPoints = page
@@ -51,8 +77,10 @@ test.describe("Candidate Brief smoke", () => {
 
     const walkthroughHeading = page.getByRole("heading", { name: "Walkthrough Script" }).last();
     const walkthroughSection = walkthroughHeading.locator("xpath=ancestor::section[1]");
-    const thirtySecond = (await walkthroughSection.getByText("30-second").locator("xpath=..//p[2]").textContent()) ?? "";
-    const twoMinute = (await walkthroughSection.getByText("2-minute").locator("xpath=..//p[2]").textContent()) ?? "";
+    const thirtySecond =
+      (await walkthroughSection.getByTestId("walkthrough-30-second").locator("p").last().textContent()) ?? "";
+    const twoMinute =
+      (await walkthroughSection.getByTestId("walkthrough-2-minute").locator("p").last().textContent()) ?? "";
 
     await walkthroughSection.getByRole("button", { name: "Copy 30s" }).click();
     await expect(walkthroughSection.getByRole("status").first()).toHaveText("Copied to clipboard.");

@@ -68,3 +68,28 @@ describe("CandidateBriefPanel tradeoff answer", () => {
     expect(screen.getByText(/does not infer maintainer intent/i)).toBeInTheDocument();
   });
 });
+
+describe("CandidateBriefPanel walkthrough hierarchy", () => {
+  it("leads with both walkthrough formats before the detailed brief sections", () => {
+    const brief = buildSampleReport().candidate_brief;
+    expect(brief).toBeDefined();
+
+    render(<CandidateBriefPanel candidateBrief={brief} />);
+
+    const walkthrough = screen.getByTestId("walkthrough-script");
+    const detailedHeadings = ["Repo Summary", "Reading Path", "Interview Talking Points"];
+
+    for (const heading of detailedHeadings) {
+      const detailSection = screen.getByRole("heading", { name: heading }).closest("section");
+      expect(detailSection).not.toBeNull();
+      expect(walkthrough.compareDocumentPosition(detailSection!)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    }
+
+    expect(within(walkthrough).getByText(/quick introduction/i)).toBeInTheDocument();
+    expect(within(walkthrough).getByText(/explain the reading path/i)).toBeInTheDocument();
+    expect(within(walkthrough).getByRole("button", { name: "Copy 30s" })).toBeInTheDocument();
+    expect(within(walkthrough).getByRole("button", { name: "Copy 2min" })).toBeInTheDocument();
+  });
+});
