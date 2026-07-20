@@ -90,6 +90,22 @@ test.describe("Report UI flows", () => {
   });
 
   test("completed brief shares a stored private link and opens the recipient view", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, "share", {
+        configurable: true,
+        value: undefined,
+      });
+      Object.defineProperty(Navigator.prototype, "clipboard", {
+        configurable: true,
+        get() {
+          return {
+            writeText: async (value: string) => {
+              window.sessionStorage.setItem("repoatlas-e2e-stored-share-url", value);
+            },
+          };
+        },
+      });
+    });
     await runSampleAnalyzeOnPage(page);
 
     await expect(page.getByText(/Share this Candidate Brief privately/i)).toBeVisible();
@@ -99,12 +115,37 @@ test.describe("Report UI flows", () => {
     await expect(shareLink).toBeVisible({ timeout: 15_000 });
     const href = await shareLink.getAttribute("href");
     expect(href).toMatch(/\/share\//);
+    await expect
+      .poll(() => page.evaluate(() => window.sessionStorage.getItem("repoatlas-e2e-stored-share-url")))
+      .toBe(href);
 
     await page.goto(href!);
     await expect(page.getByText(/Shared Candidate Brief/i)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible({
       timeout: 30_000,
     });
+  });
+
+  test("completed brief uses native sharing when the browser provides it", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, "share", {
+        configurable: true,
+        value: async (data: ShareData) => {
+          window.sessionStorage.setItem("repoatlas-e2e-native-share", JSON.stringify(data));
+        },
+      });
+    });
+    await runSampleAnalyzeOnPage(page);
+
+    await page.getByRole("button", { name: /Share Candidate Brief/i }).click();
+
+    await expect(page.getByText(/Shared successfully/i)).toBeVisible();
+    const sharedData = await page.evaluate(() => {
+      const value = window.sessionStorage.getItem("repoatlas-e2e-native-share");
+      return value ? (JSON.parse(value) as ShareData) : null;
+    });
+    expect(sharedData?.url).toMatch(/\/share\//);
+    expect(sharedData?.title).toBe("RepoAtlas Candidate Brief");
   });
 
   test("inline report shares a bounded portable link without a storage or token request", async ({ page }) => {
