@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Report } from "@/types/report";
 
@@ -172,6 +172,41 @@ describe("InputForm", () => {
       "planned_change",
       {}
     );
+  });
+
+  it("submits the current GitHub controls before controlled state settles", async () => {
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const { form } = renderForm();
+    const githubUrlInput = within(form).getByLabelText(
+      /Public GitHub repository URL/i
+    ) as HTMLInputElement;
+    const githubRefInput = within(form).getByLabelText(/Branch or tag/i) as HTMLInputElement;
+    const setNativeValue = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value"
+    )?.set;
+    setNativeValue?.call(githubUrlInput, "https://github.com/octocat/demo");
+    setNativeValue?.call(githubRefInput, "release/v1");
+    fireEvent.submit(form);
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    const request = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(String(request?.body))).toEqual({
+      githubUrl: "https://github.com/octocat/demo",
+      analysisIntent: "interview",
+      ref: "release/v1",
+    });
   });
 
   it("sends the selected bounded intent with a ZIP analysis", async () => {
