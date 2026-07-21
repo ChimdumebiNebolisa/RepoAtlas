@@ -34,6 +34,10 @@ describe("homepage structured data", () => {
   it("keeps homepage metadata distinct from the focused interview page", () => {
     expect(homepageMetadata.title).not.toBe(interviewPreparationMetadata.title);
     expect(homepageMetadata.description).not.toBe(interviewPreparationMetadata.description);
+    expect(interviewPreparationMetadata.description).toBe(
+      "Turn a repository into an evidence-linked Candidate Brief with likely entry points, architecture, risk signals, reading order, and talking points.",
+    );
+    expect(interviewPreparationMetadata.description.length).toBeLessThanOrEqual(160);
   });
 
   it("describes RepoAtlas without commercial or unsupported claims", () => {

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { InputForm, type InputFormHandle } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
+import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
 import { homepageFaqItems } from "@/lib/homepageContent";
 import { clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 import { reportCapabilityCopy } from "@/lib/reportCapabilities";
@@ -36,13 +37,6 @@ const briefContents = [
   "Evidence index",
   "Confidence notes",
 ];
-
-const walkthroughOutputs = [
-  ["Entry points", "Likely files and commands that start the system."],
-  ["Architecture", "Boundaries and dependency paths across the codebase."],
-  ["Risk signals", "Structural hotspots to inspect, not assumed bugs."],
-  ["Reading order", "A ranked path from orientation to deeper review."],
-] as const;
 
 const guardrails = [
   "Does not execute uploaded code",
@@ -182,7 +176,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           </p>
         </header>
         <div className="walkthrough-outcome-list">
-          {walkthroughOutputs.map(([title, description], index) => (
+          {candidateBriefWalkthroughOutputs.map(({ title, description }, index) => (
             <article key={title}>
               <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
               <div>
