@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 const nextBin = process.platform === "win32" ? "next.cmd" : "next";
 const broadTraceMarkers = [
@@ -30,7 +32,7 @@ child.on("error", (error) => {
   process.exitCode = 1;
 });
 
-child.on("close", (code, signal) => {
+child.on("close", async (code, signal) => {
   if (broadTraceMarkers.some((marker) => buildOutput.includes(marker))) {
     console.error(
       "Build failed because broad server-file tracing returned. Keep repository filesystem access outside the build-time trace."
@@ -43,6 +45,26 @@ child.on("close", (code, signal) => {
     console.error(`Next.js build terminated by signal ${signal}.`);
     process.exitCode = 1;
     return;
+  }
+
+  if (code === 0) {
+    const analyzeTracePath = path.join(
+      process.cwd(),
+      ".next",
+      "server",
+      "app",
+      "api",
+      "analyze",
+      "route.js.nft.json"
+    );
+    const analyzeTrace = await readFile(analyzeTracePath, "utf8");
+    if (!analyzeTrace.includes("fixtures/repo-ts/README.md")) {
+      console.error(
+        "Build failed because the deployed analysis route omitted the bundled sample README."
+      );
+      process.exitCode = 1;
+      return;
+    }
   }
 
   process.exitCode = code ?? 1;
