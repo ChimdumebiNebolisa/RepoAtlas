@@ -6,10 +6,25 @@ export default defineConfig({
     jsx: "automatic",
   },
   test: {
-    environment: "node",
-    environmentMatchGlobs: [["**/*.test.tsx", "jsdom"]],
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "dom",
+          environment: "jsdom",
+          include: ["src/**/*.test.tsx"],
+        },
+      },
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "html", "json-summary"],
