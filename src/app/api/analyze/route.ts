@@ -94,7 +94,15 @@ export async function POST(request: NextRequest) {
     let analysisIntent: AnalysisIntent = "interview";
 
     if (contentType.includes("multipart/form-data")) {
-      const formData = await request.formData();
+      let formData: FormData;
+      try {
+        formData = await request.formData();
+      } catch {
+        return badRequest(
+          ERROR_CODES.INVALID_INPUT,
+          "Request body is not valid multipart form data."
+        );
+      }
       const requestedIntent = formData.get("analysisIntent");
       if (requestedIntent != null) {
         const parsedIntent = parseAnalysisIntent(requestedIntent);

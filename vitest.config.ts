@@ -54,6 +54,10 @@ export default defineConfig({
           branches: 90,
           lines: 95,
         },
+        "src/app/api/analyze/route.ts": {
+          branches: 80,
+          lines: 85,
+        },
       },
     },
   },
