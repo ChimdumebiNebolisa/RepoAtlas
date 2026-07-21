@@ -74,6 +74,34 @@ describe("InputForm", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the interview walkthrough prominent and reveals other focuses on demand", async () => {
+    const user = userEvent.setup();
+    const { form } = renderForm();
+    const disclosure = within(form)
+      .getByText(/Use a different conversation focus/i)
+      .closest("summary");
+    const details = disclosure?.closest("details");
+
+    expect(within(form).getByRole("radio", { name: /Interview walkthrough/i })).toBeChecked();
+    expect(details).not.toHaveAttribute("open");
+    expect(
+      within(form).getByRole("radio", { name: /Investigate a bug/i })
+    ).not.toBeVisible();
+
+    await user.click(disclosure as HTMLElement);
+
+    expect(details).toHaveAttribute("open");
+    expect(within(form).getByRole("radio", { name: /Investigate a bug/i })).toBeVisible();
+    expect(within(form).getByRole("radio", { name: /Plan a change/i })).toBeVisible();
+    expect(within(form).getByRole("radio", { name: /Discuss a pull request/i })).toBeVisible();
+
+    await user.click(within(form).getByRole("radio", { name: /Investigate a bug/i }));
+    expect(within(form).getByText(/Selected: Investigate a bug/i)).toBeVisible();
+
+    await user.click(within(form).getByRole("radio", { name: /Interview walkthrough/i }));
+    expect(details).not.toHaveAttribute("open");
+  });
+
   it("sends the selected bounded intent with the sample analysis", async () => {
     const user = userEvent.setup();
     const inlineReport = { report_version: 3 } as unknown as Report;
@@ -88,7 +116,8 @@ describe("InputForm", () => {
       )
     );
 
-    renderForm();
+    const { form } = renderForm();
+    await user.click(within(form).getByText(/Use a different conversation focus/i));
     await user.click(screen.getByRole("radio", { name: /investigate a bug/i }));
     await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
 
@@ -97,6 +126,96 @@ describe("InputForm", () => {
       sample: true,
       analysisIntent: "bug",
     });
+  });
+
+  it("sends the selected bounded intent with a GitHub analysis", async () => {
+    const user = userEvent.setup();
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const { form } = renderForm();
+    await user.click(within(form).getByText(/Use a different conversation focus/i));
+    await user.click(within(form).getByRole("radio", { name: /Plan a change/i }));
+    await user.type(
+      within(form).getByLabelText(/Public GitHub repository URL/i),
+      "https://github.com/octocat/demo"
+    );
+    await user.click(
+      within(form).getByRole("button", { name: /Analyze public GitHub repository/i })
+    );
+
+    const request = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(String(request?.body))).toEqual({
+      githubUrl: "https://github.com/octocat/demo",
+      analysisIntent: "planned_change",
+    });
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      1,
+      "analysis_started",
+      "github",
+      "planned_change",
+      {}
+    );
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      2,
+      "analysis_completed",
+      "github",
+      "planned_change",
+      {}
+    );
+  });
+
+  it("sends the selected bounded intent with a ZIP analysis", async () => {
+    const user = userEvent.setup();
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const { form } = renderForm();
+    await user.click(within(form).getByText(/Use a different conversation focus/i));
+    await user.click(within(form).getByRole("radio", { name: /Discuss a pull request/i }));
+    await user.click(within(form).getByRole("tab", { name: /Upload ZIP/i }));
+    await user.upload(
+      within(form).getByLabelText(/Choose repository zip file/i),
+      new File(["zip"], "repository.zip", { type: "application/zip" })
+    );
+    await user.click(within(form).getByRole("button", { name: /Analyze uploaded ZIP/i }));
+
+    const request = fetchMock.mock.calls[0]?.[1];
+    const body = request?.body as FormData;
+    expect(body.get("analysisIntent")).toBe("pull_request");
+    expect(body.get("file")).toBeInstanceOf(File);
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      1,
+      "analysis_started",
+      "zip",
+      "pull_request",
+      {}
+    );
+    expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
+      2,
+      "analysis_completed",
+      "zip",
+      "pull_request",
+      {}
+    );
   });
 
   it("attributes an analysis started from the interview-preparation page", async () => {
