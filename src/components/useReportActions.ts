@@ -215,12 +215,16 @@ export function useReportActions({
       setExportMountActive(false);
       throw new Error("Report snapshot is not ready yet.");
     }
-    await waitForExportContent();
-    const { default: html2canvas } = await import("html2canvas");
-    const resolvedScale = constrainForPng
-      ? fitExportCanvasScale(exportRef.current.scrollWidth, exportRef.current.scrollHeight, scale)
-      : scale;
     try {
+      await waitForExportContent();
+      const { default: html2canvas } = await import("html2canvas");
+      const resolvedScale = constrainForPng
+        ? fitExportCanvasScale(
+            exportRef.current.scrollWidth,
+            exportRef.current.scrollHeight,
+            scale
+          )
+        : scale;
       return await html2canvas(exportRef.current, {
         backgroundColor: "#ffffff",
         scale: resolvedScale,
