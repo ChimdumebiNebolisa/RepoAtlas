@@ -130,6 +130,8 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   const [secondaryIntentsOpen, setSecondaryIntentsOpen] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const githubUrlInputRef = useRef<HTMLInputElement>(null);
+  const githubRefInputRef = useRef<HTMLInputElement>(null);
 
   // Runs the analyze request and validates the reportId in every flow.
   const runAnalysis = async (init: RequestInit, inputType: AnalysisInputType) => {
@@ -226,7 +228,11 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
       return;
     }
 
-    const validationError = validateGithubInput(githubUrl, githubRef);
+    // Read the submitted controls directly so an immediate click cannot race the
+    // controlled-state update produced by the final input event.
+    const submittedGithubUrl = githubUrlInputRef.current?.value ?? githubUrl;
+    const submittedGithubRef = githubRefInputRef.current?.value ?? githubRef;
+    const validationError = validateGithubInput(submittedGithubUrl, submittedGithubRef);
     if (validationError) {
       setFieldError(validationError);
       return;
@@ -237,9 +243,9 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          githubUrl: githubUrl.trim(),
+          githubUrl: submittedGithubUrl.trim(),
           analysisIntent,
-          ...(githubRef.trim() ? { ref: githubRef.trim() } : {}),
+          ...(submittedGithubRef.trim() ? { ref: submittedGithubRef.trim() } : {}),
         }),
       },
       "github"
@@ -445,6 +451,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
             Public GitHub repository URL
           </label>
           <input
+            ref={githubUrlInputRef}
             id="githubUrl"
             type="url"
             inputMode="url"
@@ -468,6 +475,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
             Branch or tag (optional)
           </label>
           <input
+            ref={githubRefInputRef}
             id="githubRef"
             type="text"
             placeholder="Defaults to the repository default branch"
