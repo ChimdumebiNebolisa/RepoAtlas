@@ -212,20 +212,19 @@ test.describe("Report UI flows", () => {
     let portableApiRequested = false;
 
     await page.addInitScript(() => {
-      Object.defineProperty(Navigator.prototype, "share", {
+      Object.defineProperty(window.navigator, "share", {
         configurable: true,
         value: undefined,
       });
-      Object.defineProperty(Navigator.prototype, "clipboard", {
+      Object.defineProperty(window.navigator, "clipboard", {
         configurable: true,
-        get() {
-          return {
-            writeText: async (value: string) => {
-              window.sessionStorage.setItem("repoatlas-e2e-share-url", value);
-            },
-          };
+        value: {
+          writeText: async (value: string) => {
+            window.sessionStorage.setItem("repoatlas-e2e-share-url", value);
+          },
         },
       });
+      window.sessionStorage.setItem("repoatlas-e2e-portable-share-ready", "true");
     });
     await page.route("**/api/analyze", async (route) => {
       await route.fulfill({
@@ -251,6 +250,24 @@ test.describe("Report UI flows", () => {
       /Generated report ready for PDF and PNG export and 7-day encrypted browser sharing\. Markdown and saved server links require saved report storage, which is currently unavailable\./i
     );
     await expect(exportSummary).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          ownsClipboard: Object.prototype.hasOwnProperty.call(
+            window.navigator,
+            "clipboard"
+          ),
+          ownsShare: Object.prototype.hasOwnProperty.call(window.navigator, "share"),
+          ready: window.sessionStorage.getItem("repoatlas-e2e-portable-share-ready"),
+          shareType: typeof window.navigator.share,
+        }))
+      )
+      .toEqual({
+        ownsClipboard: true,
+        ownsShare: true,
+        ready: "true",
+        shareType: "undefined",
+      });
     const markdownButton = page.getByRole("button", { name: /Export Markdown/i }).first();
     await expect(markdownButton).toBeDisabled();
     await expect(markdownButton).toHaveAttribute("title", /saved report storage/i);
@@ -361,6 +378,10 @@ test.describe("Share UI edge cases", () => {
   test("inline share offers a working PDF when browser compression is unavailable", async ({ page }) => {
     test.setTimeout(240_000);
     await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, "share", {
+        configurable: true,
+        value: undefined,
+      });
       Object.defineProperty(globalThis, "CompressionStream", {
         configurable: true,
         value: undefined,
@@ -369,8 +390,26 @@ test.describe("Share UI edge cases", () => {
         configurable: true,
         value: undefined,
       });
+      window.sessionStorage.setItem("repoatlas-e2e-no-compression-ready", "true");
     });
     await openControlledInlineReport(page);
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          compressionType: typeof globalThis.CompressionStream,
+          decompressionType: typeof globalThis.DecompressionStream,
+          ownsShare: Object.prototype.hasOwnProperty.call(window.navigator, "share"),
+          ready: window.sessionStorage.getItem("repoatlas-e2e-no-compression-ready"),
+          shareType: typeof window.navigator.share,
+        }))
+      )
+      .toEqual({
+        compressionType: "undefined",
+        decompressionType: "undefined",
+        ownsShare: true,
+        ready: "true",
+        shareType: "undefined",
+      });
 
     await page.getByRole("button", { name: "Share Candidate Brief" }).click();
 
