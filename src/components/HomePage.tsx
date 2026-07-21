@@ -92,6 +92,11 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     setLoading(false);
     setError(null);
     setShowViewReportButton(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        reportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
   };
 
   return (
@@ -103,7 +108,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <span className="brand-mark" aria-hidden="true">R</span>
           <span>
             <strong>RepoAtlas</strong>
-            <small>Candidate Brief Generator</small>
+            <small>Repository Context Briefs</small>
           </span>
         </a>
         <div className="header-badges" aria-label="Product capabilities">
@@ -115,12 +120,12 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
 
       <section id="top" className="hero page-container">
         <div className="hero-copy">
-          <p className="eyebrow">For repository-centered interviews</p>
-          <h1>Walk through the repository with file-backed talking points.</h1>
+          <p className="eyebrow">For unfamiliar repositories</p>
+          <h1>Get the context you need before you touch the code.</h1>
           <p className="hero-description">
-            RepoAtlas turns TypeScript/JavaScript, Python, and Java codebases into a Candidate
-            Brief that shows where to start, how the architecture fits together, what looks
-            risky, and which files support each talking point.
+            RepoAtlas turns a public GitHub repository or ZIP into an evidence-linked brief: where to start,
+            how the architecture fits together, what deserves scrutiny, and which files support
+            each conclusion.
           </p>
           <div className="hero-actions">
             <button className="btn btn-primary" type="button" onClick={generateSampleBrief}>
@@ -129,7 +134,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             <a className="text-action" href="#analyze">Use your own repository <Arrow /></a>
           </div>
           <p className="hero-microcopy">
-            Bundled sample, no upload needed. Deterministic static analysis. No code execution or AI calls.
+            Static analysis you can inspect. No code execution or AI calls.
           </p>
         </div>
 
@@ -168,7 +173,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         <header className="walkthrough-outcomes-header">
           <div>
             <p className="section-kicker">Inside the brief</p>
-            <h2 id="walkthrough-outcomes-heading">Four answers for the repository walkthrough.</h2>
+            <h2 id="walkthrough-outcomes-heading">Four questions every unfamiliar repository raises.</h2>
           </div>
           <p className="walkthrough-export-note">
             <span aria-hidden="true">&#10003;</span>
@@ -191,8 +196,8 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
       <section id="analyze" className="action-section page-container">
         <article className="analyze-card">
           <p className="section-kicker">Your first Candidate Brief</p>
-          <h2>Start with the sample or a public GitHub repository.</h2>
-          <p>Generate a complete bundled brief with one click, or paste a public GitHub URL to analyze your own codebase.</p>
+          <h2>Analyze a repository and get a usable reading path.</h2>
+          <p>Paste a public GitHub URL or upload a ZIP. Choose the conversation you are preparing for, then inspect the evidence-backed brief.</p>
           <InputForm
             ref={inputFormRef}
             onAnalyzeStart={() => {
@@ -237,6 +242,27 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           </button>
         </aside>
       </section>
+
+      {report && (
+        <section ref={reportSectionRef} className="generated-report page-container">
+          <div className="section-heading compact">
+            <h2>
+              {report.candidate_brief?.analysis_focus
+                ? `Your ${report.candidate_brief.analysis_focus.label} Brief`
+                : "Your Candidate Brief"}
+            </h2>
+            <p>
+              {report.candidate_brief?.analysis_focus
+                ? "The completed brief is adapted to your selected issue focus and tied to repository evidence."
+                : reportId
+                  ? "The generated report is ready to inspect, export, or share with a read-only link."
+                  : "The generated report is ready to inspect and export as PDF or PNG."}
+            </p>
+          </div>
+          <ReportTabs report={report} reportId={reportId} />
+        </section>
+      )}
+
 
       <section className="project-types page-container">
         <div className="section-heading">
@@ -405,26 +431,6 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           ))}
         </div>
       </section>
-
-      {report && (
-        <section ref={reportSectionRef} className="generated-report page-container">
-          <div className="section-heading compact">
-            <h2>
-              {report.candidate_brief?.analysis_focus
-                ? `Your ${report.candidate_brief.analysis_focus.label} Brief`
-                : "Your Candidate Brief"}
-            </h2>
-            <p>
-              {report.candidate_brief?.analysis_focus
-                ? "The completed brief is adapted to your selected issue focus and tied to repository evidence."
-                : reportId
-                  ? "The generated report is ready to inspect, export, or share with a read-only link."
-                  : "The generated report is ready to inspect and export as PDF or PNG."}
-            </p>
-          </div>
-          <ReportTabs report={report} reportId={reportId} />
-        </section>
-      )}
 
       <section className="closing-section">
         <div className="page-container closing-content">
