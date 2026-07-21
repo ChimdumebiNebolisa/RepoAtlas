@@ -223,6 +223,7 @@ test.describe("Report UI flows", () => {
   });
 
   test("completed brief uses native sharing when the browser provides it", async ({ page }) => {
+    await page.addInitScript(installDeterministicPortableCodec);
     await page.addInitScript(() => {
       Object.defineProperty(window.navigator, "share", {
         configurable: true,
