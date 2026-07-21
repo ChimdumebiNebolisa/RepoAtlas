@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import type { BriefAnswer, CandidateBrief, EvidenceRef } from "@/types/report";
 import { CopyButton } from "@/components/CopyButton";
+import { CandidateBriefEvidence } from "@/components/CandidateBriefEvidence";
+import { CandidateBriefWalkthrough } from "@/components/CandidateBriefWalkthrough";
+import { EvidenceList } from "@/components/EvidenceLinks";
 import { buildEvidenceUsedByIndex, groupEvidenceByKind } from "@/lib/evidenceIndex";
-import {
-  captureWalkthroughCopied,
-  type ReportVariant,
-} from "@/lib/productAnalytics";
+import type { ReportVariant } from "@/lib/productAnalytics";
 
 interface CandidateBriefPanelProps {
   candidateBrief?: CandidateBrief;
@@ -38,68 +38,6 @@ function confidenceClass(confidence: "high" | "medium" | "low") {
   if (confidence === "high") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (confidence === "medium") return "border-amber-200 bg-amber-50 text-amber-700";
   return "border-slate-200 bg-slate-50 text-slate-600";
-}
-
-function EvidenceBadge({
-  id,
-  evidenceById,
-  onNavigate,
-  demoMode,
-}: {
-  id: string;
-  evidenceById: Map<string, EvidenceRef>;
-  onNavigate?: (id: string) => void;
-  demoMode?: boolean;
-}) {
-  const evidence = evidenceById.get(id);
-  const tooltip = [
-    evidence?.label,
-    evidence?.path,
-    evidence?.detail,
-    evidence?.snippet,
-  ]
-    .filter(Boolean)
-    .join(" — ");
-
-  return (
-    <button
-      type="button"
-      onClick={() => onNavigate?.(id)}
-      title={tooltip || id}
-      className="report-action report-action-secondary report-action-compact max-w-full font-mono"
-    >
-      {demoMode ? "evidence" : id}
-    </button>
-  );
-}
-
-function EvidenceList({
-  ids,
-  evidenceById,
-  onNavigate,
-  demoMode,
-}: {
-  ids: string[];
-  evidenceById: Map<string, EvidenceRef>;
-  onNavigate?: (id: string) => void;
-  demoMode?: boolean;
-}) {
-  const uniqueIds = Array.from(new Set(ids)).filter((id) => evidenceById.has(id));
-  if (uniqueIds.length === 0) return null;
-
-  return (
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {uniqueIds.map((id) => (
-        <EvidenceBadge
-          key={id}
-          id={id}
-          evidenceById={evidenceById}
-          onNavigate={onNavigate}
-          demoMode={demoMode}
-        />
-      ))}
-    </div>
-  );
 }
 
 function Section({
@@ -162,80 +100,6 @@ function TalkingPoint({
   );
 }
 
-function WalkthroughSection({
-  walkthrough,
-  reportVariant,
-}: {
-  walkthrough: NonNullable<CandidateBrief["walkthrough_script"]>;
-  reportVariant: ReportVariant;
-}) {
-  return (
-    <section
-      data-testid="walkthrough-script"
-      className="overflow-hidden rounded-xl border border-emerald-200 bg-white"
-    >
-      <div className="border-b border-emerald-200 bg-emerald-50 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-          Start here
-        </p>
-        <h3 className="mt-1 text-base font-semibold text-slate-900">Walkthrough Script</h3>
-        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">
-          Start with the version that fits the time you have, then use the evidence-backed
-          sections below for follow-up questions.
-        </p>
-      </div>
-      <div className="p-4">
-        <div className="grid gap-3 lg:grid-cols-2">
-          <article
-            data-testid="walkthrough-30-second"
-            className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h4 className="text-sm font-semibold text-slate-900">30-second</h4>
-                <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Use this for a quick introduction or a direct “what does this repository do?”
-                  prompt.
-                </p>
-              </div>
-              <div className="shrink-0">
-                <CopyButton
-                  text={walkthrough.thirty_second}
-                  label="Copy 30s"
-                  onCopySuccess={() => captureWalkthroughCopied(reportVariant, "30_second")}
-                />
-              </div>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-700">{walkthrough.thirty_second}</p>
-          </article>
-          <article
-            data-testid="walkthrough-2-minute"
-            className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h4 className="text-sm font-semibold text-slate-900">2-minute</h4>
-                <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Use this when you have time to explain the reading path, architecture, and risk
-                  signals.
-                </p>
-              </div>
-              <div className="shrink-0">
-                <CopyButton
-                  text={walkthrough.two_minute}
-                  label="Copy 2min"
-                  onCopySuccess={() => captureWalkthroughCopied(reportVariant, "2_minute")}
-                />
-              </div>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-700">{walkthrough.two_minute}</p>
-          </article>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function SystemFlowSection({
   walkthrough,
   evidenceById,
@@ -281,7 +145,6 @@ export function CandidateBriefPanel({
   demoMode,
   reportVariant = "live",
 }: CandidateBriefPanelProps) {
-  const evidenceSectionRef = useRef<HTMLDivElement>(null);
   const usedBy = useMemo(
     () => (candidateBrief ? buildEvidenceUsedByIndex(candidateBrief) : new Map()),
     [candidateBrief]
@@ -364,7 +227,7 @@ export function CandidateBriefPanel({
       </Section>
 
       {candidateBrief.walkthrough_script && (
-        <WalkthroughSection
+        <CandidateBriefWalkthrough
           walkthrough={candidateBrief.walkthrough_script}
           reportVariant={reportVariant}
         />
@@ -628,49 +491,7 @@ export function CandidateBriefPanel({
       )}
 
       {!demoMode && (
-        <Section title="Evidence" help={SECTION_HELP.Evidence}>
-          <div ref={evidenceSectionRef} className="space-y-4">
-            {Object.entries(grouped).map(([kind, refs]) => (
-              <div key={kind}>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {kind}
-                </h4>
-                <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  {refs.map((ref) => (
-                    <div
-                      key={ref.id}
-                      id={`evidence-${ref.id}`}
-                      className="rounded-lg border border-slate-200 bg-slate-50 p-3 scroll-mt-24"
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <code className="rounded bg-white px-2 py-1 text-xs text-slate-900">
-                          {ref.id}
-                        </code>
-                      </div>
-                      <p className="mt-2 text-sm font-medium text-slate-900">{ref.label}</p>
-                      {ref.path && (
-                        <p className="mt-1 font-mono text-xs text-slate-600">
-                          {ref.path}
-                          {ref.line_start ? `:${ref.line_start}` : ""}
-                        </p>
-                      )}
-                      {ref.snippet && (
-                        <pre className="mt-2 overflow-x-auto rounded bg-white p-2 text-xs text-slate-700">
-                          {ref.snippet}
-                        </pre>
-                      )}
-                      {usedBy.get(ref.id) && (
-                        <p className="mt-2 text-xs text-slate-500">
-                          Used by: {usedBy.get(ref.id)!.join(", ")}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
+        <CandidateBriefEvidence grouped={grouped} usedBy={usedBy} />
       )}
 
       <p className="text-xs text-slate-500">

@@ -19,8 +19,18 @@ describe("CandidateBriefPanel tradeoff answer", () => {
   it("shows an evidence-linked tradeoff answer in the four primary questions", () => {
     const brief = buildSampleReport().candidate_brief;
     expect(brief).toBeDefined();
+    if (!brief) throw new Error("Expected the bundled sample to include a Candidate Brief.");
 
-    render(<CandidateBriefPanel candidateBrief={brief} />);
+    render(
+      <CandidateBriefPanel
+        candidateBrief={{
+          ...brief,
+          evidence_refs: brief.evidence_refs.filter(
+            (ref) => ref.id === "sample-decision-package"
+          ),
+        }}
+      />
+    );
 
     const section = screen
       .getByRole("heading", { name: "Interview Talking Points" })
