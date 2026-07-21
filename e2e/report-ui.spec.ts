@@ -132,22 +132,40 @@ test.describe("Report UI flows", () => {
 
   test("completed brief shares a stored private link and opens the recipient view", async ({ page }) => {
     await page.addInitScript(() => {
-      Object.defineProperty(Navigator.prototype, "share", {
+      Object.defineProperty(window.navigator, "share", {
         configurable: true,
         value: undefined,
       });
-      Object.defineProperty(Navigator.prototype, "clipboard", {
+      Object.defineProperty(window.navigator, "clipboard", {
         configurable: true,
-        get() {
-          return {
-            writeText: async (value: string) => {
-              window.sessionStorage.setItem("repoatlas-e2e-stored-share-url", value);
-            },
-          };
+        value: {
+          writeText: async (value: string) => {
+            window.sessionStorage.setItem("repoatlas-e2e-stored-share-url", value);
+          },
         },
       });
+      window.sessionStorage.setItem("repoatlas-e2e-stored-share-ready", "true");
     });
     await runSampleAnalyzeOnPage(page);
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          ownsClipboard: Object.prototype.hasOwnProperty.call(
+            window.navigator,
+            "clipboard"
+          ),
+          ownsShare: Object.prototype.hasOwnProperty.call(window.navigator, "share"),
+          ready: window.sessionStorage.getItem("repoatlas-e2e-stored-share-ready"),
+          shareType: typeof window.navigator.share,
+        }))
+      )
+      .toEqual({
+        ownsClipboard: true,
+        ownsShare: true,
+        ready: "true",
+        shareType: "undefined",
+      });
 
     await expect(page.getByText(/Share this Candidate Brief privately/i)).toBeVisible();
     await page.getByRole("button", { name: /Share Candidate Brief/i }).click();
@@ -422,7 +440,27 @@ test.describe("Share UI edge cases", () => {
 
   test("oversized inline share offers a working PDF without false success", async ({ page }) => {
     test.setTimeout(240_000);
+    await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, "share", {
+        configurable: true,
+        value: undefined,
+      });
+      window.sessionStorage.setItem("repoatlas-e2e-oversized-share-ready", "true");
+    });
     await openControlledInlineReport(page, buildOversizedPortableReport());
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          ownsShare: Object.prototype.hasOwnProperty.call(window.navigator, "share"),
+          ready: window.sessionStorage.getItem("repoatlas-e2e-oversized-share-ready"),
+          shareType: typeof window.navigator.share,
+        }))
+      )
+      .toEqual({
+        ownsShare: true,
+        ready: "true",
+        shareType: "undefined",
+      });
 
     await page.getByRole("button", { name: "Share Candidate Brief" }).click();
 
