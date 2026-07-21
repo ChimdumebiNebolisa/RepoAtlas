@@ -85,7 +85,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         </div>
       </header>
 
-      <HomepageHero onGenerateSample={generateSampleBrief} />
+      <HomepageHero onGenerateSample={generateSampleBrief} sampleReport={sampleReport} />
 
       <HomepageWalkthroughOutcomes />
 

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import fs from "fs";
 import { randomUUID } from "crypto";
+import type { Report } from "../src/types/report";
 import {
   REPORTS_DIR,
   expectCompletedReportInViewport,
@@ -204,6 +205,50 @@ test.describe("Candidate Brief smoke", () => {
     await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible({
       timeout: 30_000,
     });
+  });
+
+  test("homepage sample proof matches the report produced by the bundled analysis", async ({ page }) => {
+    const response = await page.request.post("/api/analyze", { data: { sample: true } });
+    expect(response.ok()).toBe(true);
+    const payload = (await response.json()) as {
+      reportId: string;
+      report?: Report;
+      persisted: boolean;
+    };
+    const reportResponse = payload.report
+      ? null
+      : await page.request.get(`/api/reports/${payload.reportId}`);
+    const report = payload.report ?? ((await reportResponse!.json()) as Report);
+    const brief = report.candidate_brief!;
+    const evidenceById = new Map(brief.evidence_refs.map((evidence) => [evidence.id, evidence]));
+    const readingStep = brief.reading_path[0];
+    const architectureEvidence = brief.evidence_refs.find(
+      (evidence) => evidence.kind === "architecture"
+    )!;
+    const evidenceBackedQuestion = brief.interview_questions!.find(
+      (question) =>
+        !question.generic && question.evidence_refs.some((evidenceRef) => evidenceById.has(evidenceRef))
+    )!;
+    const questionEvidence = evidenceById.get(evidenceBackedQuestion.evidence_refs[0])!;
+
+    await page.goto("/");
+    const heroProof = page.getByTestId("sample-hero-card");
+    await expect(heroProof).toContainText(report.repo_metadata.name);
+    await expect(heroProof).toContainText(brief.walkthrough_script!.thirty_second);
+    await expect(heroProof).toContainText(readingStep.path);
+
+    const preview = page.getByTestId("homepage-sample-preview");
+    await expect(preview).toContainText(brief.repo_summary.plain_english);
+    await expect(preview).toContainText(brief.walkthrough_script!.thirty_second);
+    await expect(preview).toContainText(readingStep.path);
+    await expect(preview).toContainText(readingStep.why);
+    await expect(preview).toContainText(architectureEvidence.detail!);
+    await expect(preview).toContainText(evidenceBackedQuestion.question);
+    await expect(preview).toContainText(evidenceBackedQuestion.rationale);
+    await expect(preview).toContainText(architectureEvidence.id);
+    await expect(preview).toContainText(questionEvidence.id);
+    await expect(preview).not.toContainText("src/analyzer/index.ts");
+    await expect(preview).not.toContainText("src/analyzer/scoring.ts");
   });
 
   test("sample analyze exports Markdown from Export tab", async ({ page }) => {

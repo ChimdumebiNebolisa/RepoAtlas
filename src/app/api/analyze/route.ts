@@ -9,6 +9,7 @@ import {
   toApiErrorPayload,
 } from "@/lib/errors";
 import { analyzeErrorLogPayload } from "@/lib/analyzeErrorLog";
+import { bundledSampleInput } from "@/lib/bundledSample";
 import { MAX_ANALYSIS_TIME_MS, maxCompressedBytesForZipUpload, maxZipUploadMb } from "@/lib/ingestLimits";
 import { canPersistReports } from "@/lib/storageConfig";
 import {
@@ -140,11 +141,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (body.sample === true) {
-        analyzeInput = {
-          kind: "zip",
-          zipRef: path.join(process.cwd(), "fixtures", "repo-ts"),
-          zipName: "repo-ts",
-        };
+        analyzeInput = bundledSampleInput();
       } else if (typeof body.githubUrl === "string" && body.githubUrl.trim() !== "") {
         const ref =
           typeof body.ref === "string" && body.ref.trim() !== "" ? body.ref.trim() : undefined;

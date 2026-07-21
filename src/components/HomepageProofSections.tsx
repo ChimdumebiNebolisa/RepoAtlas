@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
 import { homepageFaqItems, homepageTrustBoundaries } from "@/lib/homepageContent";
+import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
 import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import type { Report } from "@/types/report";
 import { ReportTabs } from "@/components/ReportTabs";
@@ -9,7 +10,24 @@ function Arrow() {
   return <span aria-hidden="true">→</span>;
 }
 
-export function HomepageHero({ onGenerateSample }: { onGenerateSample: () => void }) {
+function EvidenceTag({ id, path }: { id: string; path?: string }) {
+  return (
+    <span className="sample-evidence-tag">
+      <span>{id}</span>
+      {path && <code>{path}</code>}
+    </span>
+  );
+}
+
+export function HomepageHero({
+  onGenerateSample,
+  sampleReport,
+}: {
+  onGenerateSample: () => void;
+  sampleReport: Report;
+}) {
+  const sample = buildHomepageSamplePreview(sampleReport);
+
   return (
     <section id="top" className="hero page-container">
       <div className="hero-copy">
@@ -31,30 +49,35 @@ export function HomepageHero({ onGenerateSample }: { onGenerateSample: () => voi
         </p>
       </div>
 
-      <div className="hero-visual" aria-label="Candidate Brief output overview">
-        <div className="brief-sheet">
-          <div className="brief-sheet-header">
-            <span>Candidate Brief</span>
-            <span className="brief-status">evidence linked</span>
+      <div className="hero-visual" aria-label="Real bundled Candidate Brief excerpt">
+        {sample ? (
+          <div className="sample-hero-card" data-testid="sample-hero-card">
+            <div className="sample-hero-header">
+              <span>Real bundled report</span>
+              <span className="brief-status">{sample.confidence} confidence</span>
+            </div>
+            <div className="sample-hero-repo">
+              <span>Candidate Brief</span>
+              <code>{sample.repositoryName}</code>
+            </div>
+            <blockquote>{sample.walkthrough}</blockquote>
+            <div className="sample-hero-evidence">
+              <span>Read first</span>
+              <EvidenceTag
+                id={sample.readingStep.evidence?.id ?? "observed path"}
+                path={sample.readingStep.path}
+              />
+            </div>
           </div>
-          <div className="brief-sheet-title">repo-atlas</div>
-          <div className="brief-reading-path">
-            <span>Read first</span>
-            <code>src/analyzer/index.ts</code>
-            <code>src/analyzer/scoring.ts</code>
-            <code>src/components/ReportTabs.tsx</code>
+        ) : (
+          <div className="sample-hero-card">
+            <div className="sample-hero-header">
+              <span>Bundled Candidate Brief</span>
+              <span className="brief-status">evidence linked</span>
+            </div>
+            <p>The complete sample report is available from the primary action.</p>
           </div>
-          <div className="brief-sheet-footer">
-            <span>Reading path</span>
-            <span>Risk signals</span>
-            <span>Talking points</span>
-          </div>
-        </div>
-        <div className="evidence-card">
-          <span className="evidence-card-label">Claim</span>
-          <strong>Every conclusion points back to repository evidence.</strong>
-          <span className="evidence-ref">source / path / signal</span>
-        </div>
+        )}
       </div>
     </section>
   );
@@ -105,6 +128,8 @@ export function HomepageSampleProof({
   onOpenSample,
   sectionRef,
 }: HomepageSampleProofProps) {
+  const sample = buildHomepageSamplePreview(sampleReport);
+
   return (
     <section
       id="sample-report"
@@ -124,30 +149,64 @@ export function HomepageSampleProof({
         )}
       </div>
       {!showSampleReport ? (
-        <div className="sample-proof-preview">
-          <p className="sample-report-copy">
-            This read-only Candidate Brief comes from the bundled repository. Its paths,
-            architecture count, and risk signals come from the same analysis shown in the full report.
-          </p>
-          <div className="brief-sheet sample-proof-sheet">
-            <div className="brief-sheet-header">
-              <span>Candidate Brief</span>
-              <span className="brief-status">sample</span>
-            </div>
-            <div className="brief-sheet-title">{sampleReport.repo_metadata.name}</div>
-            <div className="brief-reading-path">
-              <span>Read first</span>
-              {sampleReport.start_here.slice(0, 3).map((item) => (
-                <code key={item.path}>{item.path}</code>
-              ))}
-            </div>
-            <div className="brief-sheet-footer">
-              <span>{sampleReport.start_here.length} start-here paths</span>
-              <span>{sampleReport.danger_zones.length} risk signals</span>
-              <span>{sampleReport.architecture.nodes.length} architecture nodes</span>
+        sample ? (
+          <div className="sample-proof-preview" data-testid="homepage-sample-preview">
+            <header className="sample-proof-summary">
+              <div>
+                <span className="sample-proof-label">Plain-English summary</span>
+                <span className="brief-status">{sample.confidence} confidence</span>
+              </div>
+              <p>{sample.summary}</p>
+            </header>
+
+            <article className="sample-proof-walkthrough">
+              <span className="sample-proof-label">What you can say in 30 seconds</span>
+              <blockquote>{sample.walkthrough}</blockquote>
+            </article>
+
+            <div className="sample-proof-details">
+              <article>
+                <span className="sample-proof-label">01 · Start here</span>
+                <code className="sample-proof-path">{sample.readingStep.path}</code>
+                <p>{sample.readingStep.why}</p>
+                {sample.readingStep.evidence && (
+                  <EvidenceTag
+                    id={sample.readingStep.evidence.id}
+                    path={sample.readingStep.evidence.path}
+                  />
+                )}
+              </article>
+
+              <article>
+                <span className="sample-proof-label">02 · Explain the architecture</span>
+                <p>{sample.architecture.explanation}</p>
+                {sample.architecture.evidence && (
+                  <EvidenceTag
+                    id={sample.architecture.evidence.id}
+                    path={sample.architecture.evidence.path}
+                  />
+                )}
+              </article>
+
+              <article>
+                <span className="sample-proof-label">03 · Prepare for the follow-up</span>
+                <h3>{sample.interviewerQuestion.question}</h3>
+                <p>{sample.interviewerQuestion.rationale}</p>
+                {sample.interviewerQuestion.evidence && (
+                  <EvidenceTag
+                    id={sample.interviewerQuestion.evidence.id}
+                    path={sample.interviewerQuestion.evidence.path}
+                  />
+                )}
+              </article>
             </div>
           </div>
-        </div>
+        ) : (
+          <p className="sample-report-copy">
+            The bundled report does not contain enough evidence for a walkthrough preview. Open the
+            full report to inspect the available repository signals.
+          </p>
+        )
       ) : (
         <>
           <p className="sample-report-copy">
