@@ -1,10 +1,19 @@
 import React from "react";
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { buildSampleReport } from "@/lib/buildSampleReport";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
 
-afterEach(cleanup);
+const captureWalkthroughCopied = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/productAnalytics", () => ({ captureWalkthroughCopied }));
+
+afterEach(() => {
+  captureWalkthroughCopied.mockReset();
+  vi.unstubAllGlobals();
+  cleanup();
+});
 
 describe("CandidateBriefPanel tradeoff answer", () => {
   it("shows an evidence-linked tradeoff answer in the four primary questions", () => {
@@ -97,6 +106,21 @@ describe("CandidateBriefPanel walkthrough hierarchy", () => {
     expect(within(walkthrough).getByText(/explain the reading path/i)).toBeInTheDocument();
     expect(within(walkthrough).getByRole("button", { name: "Copy 30s" })).toBeInTheDocument();
     expect(within(walkthrough).getByRole("button", { name: "Copy 2min" })).toBeInTheDocument();
+  });
+
+  it("records only confirmed 30-second and 2-minute copies with the report variant", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const brief = buildSampleReport().candidate_brief;
+
+    render(<CandidateBriefPanel candidateBrief={brief} reportVariant="preview" />);
+    await user.click(screen.getByRole("button", { name: "Copy 30s" }));
+    await user.click(screen.getByRole("button", { name: "Copy 2min" }));
+
+    await waitFor(() => expect(captureWalkthroughCopied).toHaveBeenCalledTimes(2));
+    expect(captureWalkthroughCopied).toHaveBeenNthCalledWith(1, "preview", "30_second");
+    expect(captureWalkthroughCopied).toHaveBeenNthCalledWith(2, "preview", "2_minute");
   });
 
   it("states when the repository cannot support a system-flow claim", () => {

@@ -42,6 +42,23 @@ describe("CopyButton", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Copied to clipboard.");
   });
 
+  it("announces confirmed copy success to the caller", async () => {
+    const user = userEvent.setup();
+    const onCopySuccess = vi.fn();
+    setClipboard(vi.fn().mockResolvedValue(undefined));
+
+    render(
+      <CopyButton
+        text={WALKTHROUGH}
+        label="Copy 30s"
+        onCopySuccess={onCopySuccess}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: "Copy 30s" }));
+
+    await waitFor(() => expect(onCopySuccess).toHaveBeenCalledTimes(1));
+  });
+
   it("reports success only when the browser fallback confirms the exact text was copied", async () => {
     const user = userEvent.setup();
     setClipboard(vi.fn().mockRejectedValue(new Error("Clipboard permission denied")));
@@ -63,15 +80,23 @@ describe("CopyButton", () => {
 
   it("reports failure when neither copy path confirms success", async () => {
     const user = userEvent.setup();
+    const onCopySuccess = vi.fn();
     setClipboard(vi.fn().mockRejectedValue(new Error("Clipboard permission denied")));
     setExecCommand(() => false);
 
-    render(<CopyButton text={WALKTHROUGH} label="Copy 30s" />);
+    render(
+      <CopyButton
+        text={WALKTHROUGH}
+        label="Copy 30s"
+        onCopySuccess={onCopySuccess}
+      />
+    );
     await user.click(screen.getByRole("button", { name: "Copy 30s" }));
 
     expect(screen.getByRole("button", { name: /Copy failed/i })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
       "Copy failed. Copy the text manually."
     );
+    expect(onCopySuccess).not.toHaveBeenCalled();
   });
 });

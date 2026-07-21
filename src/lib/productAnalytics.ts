@@ -10,6 +10,7 @@ export type ReportShareMethod = "native" | "clipboard";
 export type ReportShareType = "stored_link" | "portable_link";
 export type ReportExportFormat = "pdf" | "png" | "markdown";
 export type ReportVariant = "live" | "preview" | "shared";
+export type WalkthroughFormat = "30_second" | "2_minute";
 export type ReportExportFailureClass = "render_failed" | "http_error" | "request_failed";
 
 type ProductEvent =
@@ -20,7 +21,9 @@ type ProductEvent =
   | "analysis_failed"
   | "report_exported"
   | "report_export_failed"
-  | "report_shared";
+  | "report_shared"
+  | "report_viewed"
+  | "walkthrough_copied";
 
 type ProductEventProperties = Record<
   string,
@@ -94,6 +97,24 @@ export function captureReportShared(
   posthog.capture("report_shared", {
     share_method: shareMethod,
     share_type: shareType,
+  });
+}
+
+export function captureReportViewed(reportVariant: ReportVariant) {
+  if (!initialized) return;
+  posthog.capture("report_viewed", {
+    report_variant: reportVariant,
+  });
+}
+
+export function captureWalkthroughCopied(
+  reportVariant: ReportVariant,
+  walkthroughFormat: WalkthroughFormat
+) {
+  if (!initialized) return;
+  posthog.capture("walkthrough_copied", {
+    report_variant: reportVariant,
+    format: walkthroughFormat,
   });
 }
 

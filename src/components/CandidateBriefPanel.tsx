@@ -4,10 +4,15 @@ import { useMemo, useRef } from "react";
 import type { BriefAnswer, CandidateBrief, EvidenceRef } from "@/types/report";
 import { CopyButton } from "@/components/CopyButton";
 import { buildEvidenceUsedByIndex, groupEvidenceByKind } from "@/lib/evidenceIndex";
+import {
+  captureWalkthroughCopied,
+  type ReportVariant,
+} from "@/lib/productAnalytics";
 
 interface CandidateBriefPanelProps {
   candidateBrief?: CandidateBrief;
   demoMode?: boolean;
+  reportVariant?: ReportVariant;
 }
 
 const SECTION_HELP: Record<string, string> = {
@@ -159,8 +164,10 @@ function TalkingPoint({
 
 function WalkthroughSection({
   walkthrough,
+  reportVariant,
 }: {
   walkthrough: NonNullable<CandidateBrief["walkthrough_script"]>;
+  reportVariant: ReportVariant;
 }) {
   return (
     <section
@@ -192,7 +199,11 @@ function WalkthroughSection({
                 </p>
               </div>
               <div className="shrink-0">
-                <CopyButton text={walkthrough.thirty_second} label="Copy 30s" />
+                <CopyButton
+                  text={walkthrough.thirty_second}
+                  label="Copy 30s"
+                  onCopySuccess={() => captureWalkthroughCopied(reportVariant, "30_second")}
+                />
               </div>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-700">{walkthrough.thirty_second}</p>
@@ -210,7 +221,11 @@ function WalkthroughSection({
                 </p>
               </div>
               <div className="shrink-0">
-                <CopyButton text={walkthrough.two_minute} label="Copy 2min" />
+                <CopyButton
+                  text={walkthrough.two_minute}
+                  label="Copy 2min"
+                  onCopySuccess={() => captureWalkthroughCopied(reportVariant, "2_minute")}
+                />
               </div>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-700">{walkthrough.two_minute}</p>
@@ -261,7 +276,11 @@ function SystemFlowSection({
   );
 }
 
-export function CandidateBriefPanel({ candidateBrief, demoMode }: CandidateBriefPanelProps) {
+export function CandidateBriefPanel({
+  candidateBrief,
+  demoMode,
+  reportVariant = "live",
+}: CandidateBriefPanelProps) {
   const evidenceSectionRef = useRef<HTMLDivElement>(null);
   const usedBy = useMemo(
     () => (candidateBrief ? buildEvidenceUsedByIndex(candidateBrief) : new Map()),
@@ -345,7 +364,10 @@ export function CandidateBriefPanel({ candidateBrief, demoMode }: CandidateBrief
       </Section>
 
       {candidateBrief.walkthrough_script && (
-        <WalkthroughSection walkthrough={candidateBrief.walkthrough_script} />
+        <WalkthroughSection
+          walkthrough={candidateBrief.walkthrough_script}
+          reportVariant={reportVariant}
+        />
       )}
 
       <Section title="Reading Path" help={SECTION_HELP["Reading Path"]}>
