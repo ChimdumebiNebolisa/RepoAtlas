@@ -55,6 +55,43 @@ function buildOversizedPortableReport() {
   };
 }
 
+function installDeterministicPortableCodec() {
+  class PassthroughStream {
+    readonly readable: ReadableStream;
+    readonly writable: WritableStream;
+
+    constructor() {
+      const stream = new TransformStream();
+      this.readable = stream.readable;
+      this.writable = stream.writable;
+    }
+  }
+
+  Object.defineProperty(globalThis, "CompressionStream", {
+    configurable: true,
+    value: PassthroughStream,
+  });
+  Object.defineProperty(globalThis, "DecompressionStream", {
+    configurable: true,
+    value: PassthroughStream,
+  });
+  Object.defineProperty(globalThis.crypto, "subtle", {
+    configurable: true,
+    value: {
+      async importKey() {
+        return {};
+      },
+      async encrypt(_algorithm: unknown, _key: unknown, data: ArrayBuffer) {
+        return data;
+      },
+      async decrypt(_algorithm: unknown, _key: unknown, data: ArrayBuffer) {
+        return data;
+      },
+    },
+  });
+  window.sessionStorage.setItem("repoatlas-e2e-portable-codec-ready", "true");
+}
+
 test.describe("Report UI flows", () => {
   test("all report tabs render after sample analyze", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
@@ -229,6 +266,7 @@ test.describe("Report UI flows", () => {
     const report = buildSampleReport();
     let portableApiRequested = false;
 
+    await page.addInitScript(installDeterministicPortableCodec);
     await page.addInitScript(() => {
       Object.defineProperty(window.navigator, "share", {
         configurable: true,
@@ -277,6 +315,8 @@ test.describe("Report UI flows", () => {
           ),
           ownsShare: Object.prototype.hasOwnProperty.call(window.navigator, "share"),
           ready: window.sessionStorage.getItem("repoatlas-e2e-portable-share-ready"),
+          codecReady: window.sessionStorage.getItem("repoatlas-e2e-portable-codec-ready"),
+          ownsSubtle: Object.prototype.hasOwnProperty.call(globalThis.crypto, "subtle"),
           shareType: typeof window.navigator.share,
         }))
       )
@@ -284,6 +324,8 @@ test.describe("Report UI flows", () => {
         ownsClipboard: true,
         ownsShare: true,
         ready: "true",
+        codecReady: "true",
+        ownsSubtle: true,
         shareType: "undefined",
       });
     const markdownButton = page.getByRole("button", { name: /Export Markdown/i }).first();
@@ -440,6 +482,7 @@ test.describe("Share UI edge cases", () => {
 
   test("oversized inline share offers a working PDF without false success", async ({ page }) => {
     test.setTimeout(240_000);
+    await page.addInitScript(installDeterministicPortableCodec);
     await page.addInitScript(() => {
       Object.defineProperty(window.navigator, "share", {
         configurable: true,
@@ -453,12 +496,16 @@ test.describe("Share UI edge cases", () => {
         page.evaluate(() => ({
           ownsShare: Object.prototype.hasOwnProperty.call(window.navigator, "share"),
           ready: window.sessionStorage.getItem("repoatlas-e2e-oversized-share-ready"),
+          codecReady: window.sessionStorage.getItem("repoatlas-e2e-portable-codec-ready"),
+          ownsSubtle: Object.prototype.hasOwnProperty.call(globalThis.crypto, "subtle"),
           shareType: typeof window.navigator.share,
         }))
       )
       .toEqual({
         ownsShare: true,
         ready: "true",
+        codecReady: "true",
+        ownsSubtle: true,
         shareType: "undefined",
       });
 
