@@ -67,8 +67,9 @@ export async function expectCompletedReportInViewport(page: Page): Promise<void>
     const rect = element.getBoundingClientRect();
     return { top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight };
   });
-  expect(position.top).toBeGreaterThanOrEqual(0);
-  expect(position.bottom).toBeLessThanOrEqual(position.viewportHeight);
+  // WebKit can report a fractional edge just outside zero after layout rounding.
+  expect(position.top).toBeGreaterThanOrEqual(-1);
+  expect(position.bottom).toBeLessThanOrEqual(position.viewportHeight + 1);
   await expect(page.getByRole("tab", { name: "Candidate Brief" }).last()).toHaveAttribute(
     "aria-selected",
     "true"
