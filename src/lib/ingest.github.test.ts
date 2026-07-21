@@ -61,10 +61,12 @@ function buildCodeloadZip(): Buffer {
 
 let originalFetch: typeof global.fetch;
 let capturedHeaders: Array<Record<string, string>>;
+let capturedUrls: string[];
 
 beforeEach(() => {
   originalFetch = global.fetch;
   capturedHeaders = [];
+  capturedUrls = [];
   process.env.GITHUB_TOKEN = "super-secret-server-token";
 });
 
@@ -77,6 +79,7 @@ afterEach(() => {
 function installFetch(handler: (url: string, init?: FakeInit) => unknown) {
   global.fetch = vi.fn(async (input: unknown, init?: FakeInit) => {
     const url = typeof input === "string" ? input : String(input);
+    capturedUrls.push(url);
     if (init?.headers) capturedHeaders.push(init.headers as Record<string, string>);
     return handler(url, init) as never;
   }) as unknown as typeof global.fetch;
@@ -110,6 +113,11 @@ describe("ingestFromGithub (mocked)", () => {
       expect(result.url).toBe("https://github.com/octocat/demo");
       expect(fs.existsSync(result.path)).toBe(true);
       expect(fs.existsSync(`${result.path}/README.md`)).toBe(true);
+      expect(capturedUrls).toEqual([
+        "https://api.github.com/repos/octocat/demo",
+        "https://api.github.com/repos/octocat/demo/commits/main",
+        `https://codeload.github.com/octocat/demo/zip/${SHA}`,
+      ]);
 
       // No Authorization header on ANY request, even with GITHUB_TOKEN set.
       for (const headers of capturedHeaders) {
