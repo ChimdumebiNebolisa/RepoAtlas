@@ -18,16 +18,21 @@ const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[
 
 type InputMode = "zip" | "github";
 
-const ANALYSIS_INTENT_OPTIONS: Array<{
+const PRIMARY_ANALYSIS_INTENT: {
+  value: AnalysisIntent;
+  label: string;
+  description: string;
+} = {
+  value: "interview",
+  label: "Interview walkthrough",
+  description: "Explain the whole repository clearly.",
+};
+
+const SECONDARY_ANALYSIS_INTENTS: Array<{
   value: AnalysisIntent;
   label: string;
   description: string;
 }> = [
-  {
-    value: "interview",
-    label: "Interview walkthrough",
-    description: "Explain the whole repository clearly.",
-  },
   {
     value: "bug",
     label: "Investigate a bug",
@@ -122,6 +127,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   const [githubUrl, setGithubUrl] = useState("");
   const [githubRef, setGithubRef] = useState("");
   const [analysisIntent, setAnalysisIntent] = useState<AnalysisIntent>("interview");
+  const [secondaryIntentsOpen, setSecondaryIntentsOpen] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -289,32 +295,75 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   };
 
   const hasFieldError = fieldError !== null;
+  const selectedSecondaryIntent = SECONDARY_ANALYSIS_INTENTS.find(
+    (option) => option.value === analysisIntent
+  );
 
   return (
     <form onSubmit={handleSubmit} className="input-form" aria-busy={loading}>
       <fieldset className="analysis-intent-fieldset" disabled={loading}>
         <legend>Focus this Candidate Brief</legend>
-        <p>Choose the conversation you need to prepare for.</p>
-        <div className="analysis-intent-grid">
-          {ANALYSIS_INTENT_OPTIONS.map((option) => (
-            <label
-              key={option.value}
-              className={`analysis-intent-option ${analysisIntent === option.value ? "is-selected" : ""}`}
-            >
-              <input
-                type="radio"
-                name="analysis-intent"
-                value={option.value}
-                checked={analysisIntent === option.value}
-                onChange={() => setAnalysisIntent(option.value)}
-              />
-              <span>
-                <strong>{option.label}</strong>
-                <small>{option.description}</small>
+        <p>Start with the whole-repository interview walkthrough.</p>
+        <div className="analysis-intent-primary">
+          <label
+            className={`analysis-intent-option ${analysisIntent === PRIMARY_ANALYSIS_INTENT.value ? "is-selected" : ""}`}
+          >
+            <input
+              type="radio"
+              name="analysis-intent"
+              value={PRIMARY_ANALYSIS_INTENT.value}
+              checked={analysisIntent === PRIMARY_ANALYSIS_INTENT.value}
+              onChange={() => {
+                setAnalysisIntent(PRIMARY_ANALYSIS_INTENT.value);
+                setSecondaryIntentsOpen(false);
+              }}
+            />
+            <span>
+              <span className="analysis-intent-label-row">
+                <strong>{PRIMARY_ANALYSIS_INTENT.label}</strong>
+                <small className="analysis-intent-primary-tag">Start here</small>
               </span>
-            </label>
-          ))}
+              <small>{PRIMARY_ANALYSIS_INTENT.description}</small>
+            </span>
+          </label>
         </div>
+
+        <details
+          className="secondary-intents"
+          open={secondaryIntentsOpen}
+          onToggle={(event) => setSecondaryIntentsOpen(event.currentTarget.open)}
+        >
+          <summary>
+            <span>
+              <strong>Use a different conversation focus</strong>
+              <small>
+                {selectedSecondaryIntent
+                  ? `Selected: ${selectedSecondaryIntent.label}`
+                  : "Bug, planned change, or pull-request discussion"}
+              </small>
+            </span>
+          </summary>
+          <div className="analysis-intent-grid">
+            {SECONDARY_ANALYSIS_INTENTS.map((option) => (
+              <label
+                key={option.value}
+                className={`analysis-intent-option ${analysisIntent === option.value ? "is-selected" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="analysis-intent"
+                  value={option.value}
+                  checked={analysisIntent === option.value}
+                  onChange={() => setAnalysisIntent(option.value)}
+                />
+                <span>
+                  <strong>{option.label}</strong>
+                  <small>{option.description}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </details>
       </fieldset>
 
       <div className="quick-start">

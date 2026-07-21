@@ -57,9 +57,30 @@ test.describe("Repository input modes", () => {
     await expect(page.getByLabel("Public GitHub repository URL")).toBeVisible();
     await expect(page.getByLabel(/Branch or tag/i)).toBeVisible();
     await expect(page.getByRole("radio", { name: /Interview walkthrough/i })).toBeChecked();
+    await expect(
+      page.getByRole("radio", { name: /Investigate a bug/i, includeHidden: true })
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole("radio", { name: /Plan a change/i, includeHidden: true })
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole("radio", { name: /Discuss a pull request/i, includeHidden: true })
+    ).not.toBeVisible();
+
+    const disclosure = page.locator("summary").filter({
+      hasText: "Use a different conversation focus",
+    });
+    await disclosure.focus();
+    await expect(disclosure).toBeFocused();
+    await page.keyboard.press("Enter");
+
     await expect(page.getByRole("radio", { name: /Investigate a bug/i })).toBeVisible();
     await expect(page.getByRole("radio", { name: /Plan a change/i })).toBeVisible();
     await expect(page.getByRole("radio", { name: /Discuss a pull request/i })).toBeVisible();
+    await page.getByRole("radio", { name: /Investigate a bug/i }).check();
+    await expect(disclosure).toContainText("Selected: Investigate a bug");
+    await page.getByRole("radio", { name: /Interview walkthrough/i }).check();
+    await expect(disclosure.locator("xpath=..")).not.toHaveAttribute("open", "");
   });
 
   test("shows a client-side validation error for a non-canonical GitHub URL", async ({ page }) => {
@@ -73,6 +94,10 @@ test.describe("Repository input modes", () => {
   test("analyzes a valid GitHub URL (server mocked at the network boundary)", async ({ page }) => {
     // Mock the API so the e2e never depends on live GitHub.
     await page.route("**/api/analyze", async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        githubUrl: "https://github.com/octocat/demo",
+        analysisIntent: "planned_change",
+      });
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -104,6 +129,11 @@ test.describe("Repository input modes", () => {
     });
 
     await page.goto("/");
+    await page
+      .locator("summary")
+      .filter({ hasText: "Use a different conversation focus" })
+      .click();
+    await page.getByRole("radio", { name: /Plan a change/i }).check();
     await page.getByRole("tab", { name: "Public GitHub URL" }).click();
     await page.getByLabel("Public GitHub repository URL").fill("https://github.com/octocat/demo");
     await page.getByRole("button", { name: /Analyze public GitHub repository/i }).click();
