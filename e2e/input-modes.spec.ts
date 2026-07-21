@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { VALID_UUID } from "./helpers";
+import { expectCompletedReportInViewport, VALID_UUID } from "./helpers";
 
 interface RepositoryFailure {
   name: string;
@@ -108,9 +108,7 @@ test.describe("Repository input modes", () => {
     await page.getByLabel("Public GitHub repository URL").fill("https://github.com/octocat/demo");
     await page.getByRole("button", { name: /Analyze public GitHub repository/i }).click();
 
-    await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expectCompletedReportInViewport(page);
   });
 
   for (const failure of repositoryFailures) {

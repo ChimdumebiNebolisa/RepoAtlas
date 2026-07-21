@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { InputForm, type InputFormHandle } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
 import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
@@ -60,17 +60,28 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const [reportId, setReportId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showViewReportButton, setShowViewReportButton] = useState(false);
   const [showSampleReport, setShowSampleReport] = useState(false);
   const reportSectionRef = useRef<HTMLElement | null>(null);
+  const reportHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const inputFormRef = useRef<InputFormHandle | null>(null);
   const sampleButtonRef = useRef<HTMLButtonElement | null>(null);
   const sampleSectionRef = useRef<HTMLElement | null>(null);
 
-  const scrollToReport = () => {
-    reportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setShowViewReportButton(false);
-  };
+  useEffect(() => {
+    if (!report) return;
+
+    const frame = requestAnimationFrame(() => {
+      const documentElement = document.documentElement;
+      const previousScrollBehavior = documentElement.style.scrollBehavior;
+
+      documentElement.style.scrollBehavior = "auto";
+      reportSectionRef.current?.scrollIntoView({ block: "start" });
+      reportHeadingRef.current?.focus({ preventScroll: true });
+      documentElement.style.scrollBehavior = previousScrollBehavior;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [report]);
 
   const openSampleReport = () => {
     setShowSampleReport(true);
@@ -91,7 +102,6 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     setReportId(id);
     setLoading(false);
     setError(null);
-    setShowViewReportButton(true);
   };
 
   return (
@@ -188,7 +198,10 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         </div>
       </section>
 
-      <section id="analyze" className="action-section page-container">
+      <section
+        id="analyze"
+        className={`action-section page-container ${report ? "action-section-complete" : ""}`}
+      >
         <article className="analyze-card">
           <p className="section-kicker">Your first Candidate Brief</p>
           <h2>Start with the sample or a public GitHub repository.</h2>
@@ -214,11 +227,6 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             <span>{clientMaxZipMbLabel()}MB maximum zip</span>
             <span>Analysis up to 2 minutes</span>
           </div>
-          {showViewReportButton && report && (
-            <button type="button" onClick={scrollToReport} className="btn btn-secondary">
-              View report <Arrow />
-            </button>
-          )}
           {error && <div role="alert" className="form-error">{error}</div>}
         </article>
 
@@ -237,6 +245,34 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           </button>
         </aside>
       </section>
+
+      {report && (
+        <section
+          ref={reportSectionRef}
+          className="generated-report page-container"
+          aria-labelledby="completed-report-heading"
+          data-testid="generated-report"
+        >
+          <div className="section-heading compact">
+            <h2
+              ref={reportHeadingRef}
+              id="completed-report-heading"
+              tabIndex={-1}
+              data-testid="completed-report-heading"
+            >
+              Your Candidate Brief is ready
+            </h2>
+            <p>
+              {report.candidate_brief?.analysis_focus
+                ? `Your ${report.candidate_brief.analysis_focus.label.toLowerCase()} brief is complete and tied to repository evidence.`
+                : reportId
+                  ? "Start with the summary and walkthrough, then inspect, export, or share the evidence-linked report."
+                  : "Start with the summary and walkthrough, then inspect or export the evidence-linked report as PDF or PNG."}
+            </p>
+          </div>
+          <ReportTabs report={report} reportId={reportId} />
+        </section>
+      )}
 
       <section className="project-types page-container">
         <div className="section-heading">
@@ -405,26 +441,6 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           ))}
         </div>
       </section>
-
-      {report && (
-        <section ref={reportSectionRef} className="generated-report page-container">
-          <div className="section-heading compact">
-            <h2>
-              {report.candidate_brief?.analysis_focus
-                ? `Your ${report.candidate_brief.analysis_focus.label} Brief`
-                : "Your Candidate Brief"}
-            </h2>
-            <p>
-              {report.candidate_brief?.analysis_focus
-                ? "The completed brief is adapted to your selected issue focus and tied to repository evidence."
-                : reportId
-                  ? "The generated report is ready to inspect, export, or share with a read-only link."
-                  : "The generated report is ready to inspect and export as PDF or PNG."}
-            </p>
-          </div>
-          <ReportTabs report={report} reportId={reportId} />
-        </section>
-      )}
 
       <section className="closing-section">
         <div className="page-container closing-content">

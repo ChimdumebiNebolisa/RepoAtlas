@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
-import type { APIRequestContext } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import type { Report } from "../src/types/report";
 
 export const REPORTS_DIR = path.join(process.cwd(), ".playwright-reports");
@@ -58,14 +58,28 @@ export async function analyzeSample(request: APIRequestContext): Promise<string>
   return body.reportId;
 }
 
-export async function runSampleAnalyzeOnPage(page: import("@playwright/test").Page): Promise<void> {
+export async function expectCompletedReportInViewport(page: Page): Promise<void> {
+  const heading = page.getByTestId("completed-report-heading");
+  await expect(heading).toBeVisible({ timeout: 90_000 });
+  await expect(heading).toBeFocused();
+
+  const position = await heading.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight };
+  });
+  // WebKit can report a fractional edge just outside zero after layout rounding.
+  expect(position.top).toBeGreaterThanOrEqual(-1);
+  expect(position.bottom).toBeLessThanOrEqual(position.viewportHeight + 1);
+  await expect(page.getByRole("tab", { name: "Candidate Brief" }).last()).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+}
+
+export async function runSampleAnalyzeOnPage(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
-  await page.getByRole("button", { name: /View report/i }).waitFor({
-    state: "visible",
-    timeout: 90_000,
-  });
-  await page.getByRole("button", { name: /View report/i }).click();
+  await expectCompletedReportInViewport(page);
 }
 
 export function sharesDir(): string {

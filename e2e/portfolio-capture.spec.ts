@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { test, expect } from "@playwright/test";
+import { expectCompletedReportInViewport } from "./helpers";
 
 const IMAGES_DIR = path.join(process.cwd(), "docs", "images");
 
@@ -13,10 +14,7 @@ test.describe("Portfolio capture", () => {
     await page.screenshot({ path: path.join(IMAGES_DIR, "landing.png"), fullPage: true });
 
     await page.getByRole("button", { name: /Try sample Candidate Brief/i }).click();
-    await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
-      timeout: 90_000,
-    });
-    await page.getByRole("button", { name: /View report/i }).click();
+    await expectCompletedReportInViewport(page);
     await expect(page.getByRole("heading", { name: "Repo Summary" }).last()).toBeVisible();
 
     await page.screenshot({
