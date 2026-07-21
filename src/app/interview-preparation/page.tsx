@@ -3,18 +3,17 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
+import { interviewPreparationMetadata } from "@/lib/interviewPreparationContent";
 
 export const metadata: Metadata = {
-  title: "Code Interview Preparation with a Candidate Brief | RepoAtlas",
-  description:
-    "Turn a repository into an evidence-linked Candidate Brief with a reading path, architecture map, risk signals, and technical talking points.",
+  title: interviewPreparationMetadata.title,
+  description: interviewPreparationMetadata.description,
   alternates: {
     canonical: "https://repo-atlas-phi.vercel.app/interview-preparation",
   },
   openGraph: {
-    title: "Code Interview Preparation with a Candidate Brief | RepoAtlas",
-    description:
-      "Prepare to explain a repository with a file-backed reading path, architecture map, risk signals, and technical talking points.",
+    title: interviewPreparationMetadata.title,
+    description: interviewPreparationMetadata.openGraphDescription,
     type: "website",
     url: "https://repo-atlas-phi.vercel.app/interview-preparation",
   },
