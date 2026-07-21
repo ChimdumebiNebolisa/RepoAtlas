@@ -65,6 +65,7 @@ jobs:
         run: >-
           npx playwright test e2e/report-ui.spec.ts
           --project=mobile
+          --no-deps
           --retries=0
           --repeat-each=5
           --workers=1
