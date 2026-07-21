@@ -1,9 +1,11 @@
 import { CLIENT_MAX_ZIP_MB_VERCEL } from "@/lib/ingestLimitsClient";
+import { REPORT_CAPABILITY_RULES } from "@/lib/reportCapabilities";
+
+const dependableExportFormats = REPORT_CAPABILITY_RULES.alwaysAvailableExports.join(" and ");
 
 export const homepageMetadata = {
-  title: "Candidate Briefs for Code Interview Preparation | RepoAtlas",
-  description:
-    "Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief for interview preparation, without running the code.",
+  title: "Repository Walkthroughs for Code Interviews | RepoAtlas",
+  description: `Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief with ${dependableExportFormats} exports, without running code.`,
 } as const;
 
 export const siteIdentity = {

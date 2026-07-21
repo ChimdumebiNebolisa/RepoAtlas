@@ -8,18 +8,32 @@ import {
   homepageStructuredData,
   serializeJsonLd,
 } from "@/lib/homepageStructuredData";
+import { interviewPreparationMetadata } from "@/lib/interviewPreparationContent";
+import { REPORT_CAPABILITY_RULES } from "@/lib/reportCapabilities";
 
 describe("homepage structured data", () => {
   it("keeps candidate-focused search metadata within standard result lengths", () => {
     expect(homepageMetadata.title).toBe(
-      "Candidate Briefs for Code Interview Preparation | RepoAtlas",
+      "Repository Walkthroughs for Code Interviews | RepoAtlas",
     );
     expect(homepageMetadata.title.length).toBeLessThanOrEqual(60);
     expect(homepageMetadata.description).toBe(
-      "Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief for interview preparation, without running the code.",
+      "Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief with PDF and PNG exports, without running code.",
     );
     expect(homepageMetadata.description.length).toBeGreaterThanOrEqual(120);
     expect(homepageMetadata.description.length).toBeLessThanOrEqual(160);
+
+    for (const format of REPORT_CAPABILITY_RULES.alwaysAvailableExports) {
+      expect(homepageMetadata.description).toContain(format);
+    }
+    for (const capability of REPORT_CAPABILITY_RULES.storageDependent) {
+      expect(homepageMetadata.description).not.toContain(capability);
+    }
+  });
+
+  it("keeps homepage metadata distinct from the focused interview page", () => {
+    expect(homepageMetadata.title).not.toBe(interviewPreparationMetadata.title);
+    expect(homepageMetadata.description).not.toBe(interviewPreparationMetadata.description);
   });
 
   it("describes RepoAtlas without commercial or unsupported claims", () => {
