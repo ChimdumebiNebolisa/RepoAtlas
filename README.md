@@ -466,7 +466,7 @@ flaky-test summary:
 
 ```bash
 rm -rf .playwright-reports test-results
-PLAYWRIGHT_PORT=3100 npm run test:e2e
+PLAYWRIGHT_PORT=3100 npx playwright test --retries=0 --workers=2
 ```
 
 ---
