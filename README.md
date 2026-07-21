@@ -450,7 +450,7 @@ available (`npx playwright install --with-deps webkit`).
 
 ```bash
 rm -rf .playwright-reports test-results
-PLAYWRIGHT_PORT=3100 npx playwright test e2e/input-modes.spec.ts e2e/report-ui.spec.ts --project=mobile --no-deps --retries=0 --repeat-each=10 --grep 'shows a clear recovery action for (GitHub rate limit|private or missing repository|invalid ref)|completed brief shares a stored private link'
+PLAYWRIGHT_PORT=3100 npx playwright test e2e/input-modes.spec.ts e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=10 --grep 'shows a clear recovery action for (GitHub rate limit|private or missing repository|invalid ref)|completed brief shares a stored private link'
 ```
 
 Expect 40 passes on the first attempt: four checks repeated 10 times, with no
@@ -458,7 +458,7 @@ retry. The separate native-share contract should pass five of five runs:
 
 ```bash
 rm -rf .playwright-reports test-results
-PLAYWRIGHT_PORT=3100 npx playwright test e2e/report-ui.spec.ts --project=mobile --no-deps --retries=0 --repeat-each=5 --workers=1 --grep 'completed brief uses native sharing when the browser provides it'
+PLAYWRIGHT_PORT=3100 npx playwright test e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=5 --workers=1 --grep 'completed brief uses native sharing when the browser provides it'
 ```
 
 Then run the complete browser gate. It should finish with 126 passes and no
