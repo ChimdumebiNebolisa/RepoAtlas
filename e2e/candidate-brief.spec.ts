@@ -32,7 +32,7 @@ test.describe("Candidate Brief smoke", () => {
   });
 
   test("homepage shows the four Candidate Brief outputs before analysis", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
 
     const outcomes = page.getByTestId("walkthrough-outcomes");
@@ -52,6 +52,27 @@ test.describe("Candidate Brief smoke", () => {
       );
     });
     expect(isBeforeAnalysis).toBe(true);
+
+    await expect(page.locator("main > section")).toHaveCount(5);
+    await expect(
+      page.getByRole("heading", { name: "Start with the sample or your repository." })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "See the evidence before you add a repository." })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "The useful boundaries stay visible." })
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Works across project types." })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Built for the questions interviewers ask." })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "A simple pipeline. A defensible output." })).toHaveCount(0);
+
+    const pageShape = await page.evaluate(() => ({
+      height: document.documentElement.scrollHeight,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }));
+    expect(pageShape.height).toBeLessThanOrEqual(5_178);
+    expect(pageShape.overflow).toBeLessThanOrEqual(0);
   });
 
   test("brief output summary stays compact at 390px", async ({ page }) => {
@@ -63,10 +84,26 @@ test.describe("Candidate Brief smoke", () => {
     await expect(outcomes.getByRole("article")).toHaveCount(4);
 
     const dimensions = await page.evaluate(() => ({
+      height: document.documentElement.scrollHeight,
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
+      analysisTop:
+        document.querySelector("#analyze")?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY,
+      primaryActions: Array.from(document.querySelectorAll<HTMLElement>("main .btn-primary")).map(
+        (element) => ({
+          top: element.getBoundingClientRect().top,
+          bottom: element.getBoundingClientRect().bottom,
+        })
+      ),
     }));
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(dimensions.height).toBeLessThanOrEqual(8_300);
+    expect(dimensions.analysisTop).toBeLessThanOrEqual(844 * 2);
+    expect(dimensions.primaryActions).toHaveLength(2);
+    expect(dimensions.primaryActions[1].top - dimensions.primaryActions[0].bottom).toBeGreaterThanOrEqual(
+      844
+    );
+    await expect(page.locator("main > section")).toHaveCount(5);
   });
 
   test("sample analyze renders Candidate Brief tab", async ({ page }) => {
