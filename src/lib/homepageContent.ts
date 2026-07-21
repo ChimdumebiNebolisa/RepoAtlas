@@ -4,14 +4,14 @@ import { REPORT_CAPABILITY_RULES } from "@/lib/reportCapabilities";
 const dependableExportFormats = REPORT_CAPABILITY_RULES.alwaysAvailableExports.join(" and ");
 
 export const homepageMetadata = {
-  title: "Repository Walkthroughs for Code Interviews | RepoAtlas",
-  description: `Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief with ${dependableExportFormats} exports, without running code.`,
+  title: "Repository Context Briefs for Unfamiliar Codebases | RepoAtlas",
+  description: `Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked brief for interviews, code review, first contributions, and change planning, with ${dependableExportFormats} exports and no code execution.`,
 } as const;
 
 export const siteIdentity = {
   name: "RepoAtlas",
   description:
-    "Generate evidence-backed Candidate Briefs and repository analysis from ZIP uploads. No AI required.",
+    "Generate evidence-backed repository context briefs from a public GitHub URL or ZIP. No code execution required.",
   url: "https://repo-atlas-phi.vercel.app/",
 } as const;
 
