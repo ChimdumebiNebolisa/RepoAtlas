@@ -458,10 +458,10 @@ retry. The separate native-share contract should pass five of five runs:
 
 ```bash
 rm -rf .playwright-reports test-results
-PLAYWRIGHT_PORT=3100 npx playwright test e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=5 --grep 'completed brief uses native sharing when the browser provides it'
+PLAYWRIGHT_PORT=3100 npx playwright test e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=5 --workers=1 --grep 'completed brief uses native sharing when the browser provides it'
 ```
 
-Then run the complete browser gate. It should finish with 122 passes and no
+Then run the complete browser gate. It should finish with 126 passes and no
 flaky-test summary:
 
 ```bash

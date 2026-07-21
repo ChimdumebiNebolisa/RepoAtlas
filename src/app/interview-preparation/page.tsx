@@ -3,7 +3,12 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
+import {
+  candidateBriefLanguageCoverage,
+  candidateBriefWalkthroughOutputs,
+} from "@/lib/candidateBriefContent";
 import { interviewPreparationMetadata } from "@/lib/interviewPreparationContent";
+import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 
 export const metadata: Metadata = {
   title: interviewPreparationMetadata.title,
@@ -19,24 +24,6 @@ export const metadata: Metadata = {
   },
 };
 
-const briefSections = [
-  {
-    number: "01",
-    title: "A reading path",
-    description: "Start with the files most connected to entry points, imports, and repository signals.",
-  },
-  {
-    number: "02",
-    title: "A walkthrough script",
-    description: "Move from the repository shape to architecture, risk areas, and the first change you would make.",
-  },
-  {
-    number: "03",
-    title: "Evidence-linked talking points",
-    description: "Trace each conclusion back to a file, path, snippet, or detected command.",
-  },
-] as const;
-
 export default function InterviewPreparationPage() {
   return (
     <main className="site-shell interview-page">
@@ -48,8 +35,9 @@ export default function InterviewPreparationPage() {
           <p className="eyebrow">Repository interview preparation</p>
           <h1>Prepare to explain your code, file by file.</h1>
           <p className="interview-hero-description">
-            When the conversation turns to your repository, use a Candidate Brief to find the
-            reading path, architecture, risk signals, and talking points the code can support.
+            When the conversation turns to your repository, use a Candidate Brief to find likely
+            entry points, follow a reading order, map the architecture, and inspect risk signals
+            with file-backed talking points.
           </p>
           <Suspense
             fallback={
@@ -92,21 +80,22 @@ export default function InterviewPreparationPage() {
           <p className="section-kicker">What you take into the conversation</p>
           <h2>A technical story you can point back to.</h2>
           <p>
-            RepoAtlas organizes detected repository signals. It does not invent business logic,
-            assert bugs, or promise what the code cannot prove.
+            RepoAtlas turns detected repository signals into 30-second and 2-minute walkthroughs.
+            It does not invent business logic, assert bugs, or claim what the code cannot prove.
           </p>
         </header>
 
         <div className="interview-brief-list">
-          {briefSections.map((section) => (
-            <article key={section.number}>
-              <span>{section.number}</span>
+          {candidateBriefWalkthroughOutputs.map((section, index) => (
+            <article key={section.title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
               <div>
                 <h3>{section.title}</h3>
                 <p>{section.description}</p>
               </div>
             </article>
           ))}
+          <p className="interview-capability-note">{reportCapabilityCopy.homepageStorageNote}</p>
         </div>
       </section>
 
@@ -115,7 +104,7 @@ export default function InterviewPreparationPage() {
           <p>Built for a high-pressure code conversation.</p>
           <ul aria-label="Candidate Brief safeguards">
             <li>Deterministic static analysis</li>
-            <li>TS/JS, Python, and Java</li>
+            <li>Deeper {candidateBriefLanguageCoverage} analysis</li>
             <li>Confidence gaps stay visible</li>
           </ul>
         </div>

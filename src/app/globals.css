@@ -1279,6 +1279,17 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-size: 0.84rem;
   line-height: 1.7;
 }
+.interview-brief-list .interview-capability-note {
+  max-width: 42rem;
+  margin: 1.25rem 0 0;
+  padding: 1rem 1.1rem;
+  border-radius: 0.7rem;
+  color: #315d4b;
+  background: rgba(218, 242, 230, 0.58);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
 .interview-proof-band { color: #eaf8f1; background: var(--slate); }
 .interview-proof-layout {
   display: grid;
