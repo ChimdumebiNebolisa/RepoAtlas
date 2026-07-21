@@ -1,7 +1,7 @@
-import { buildSampleReport } from "@/lib/buildSampleReport";
 import { HomePage } from "@/components/HomePage";
+import { analyzeBundledSample } from "@/lib/bundledSample";
 
-export default function Page() {
-  const sampleReport = buildSampleReport();
-  return <HomePage sampleReport={sampleReport} />;
+export default async function Page() {
+  const { report } = await analyzeBundledSample();
+  return <HomePage sampleReport={report} />;
 }
