@@ -25,5 +25,7 @@ test("interview-preparation page leads to the measurable analysis start", async 
   await primaryAction.click();
 
   await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
-  await expect(page.getByRole("heading", { name: "Start with the sample or a public GitHub repository." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Start with the sample or your repository." })
+  ).toBeVisible();
 });

@@ -908,7 +908,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
   outline: 3px solid rgba(8, 122, 85, 0.25);
   outline-offset: 3px;
 }
-.faq-list { border-top: 1px solid #bdcfc6; }
+.faq-list {
+  border-top: 1px solid #bdcfc6;
+  counter-reset: faq-item;
+}
 .trust-boundary-list {
   display: grid;
   gap: 0.7rem;
@@ -933,7 +936,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: var(--accent);
   content: "";
 }
-.faq-list details { border-bottom: 1px solid #bdcfc6; }
+.faq-list details {
+  border-bottom: 1px solid #bdcfc6;
+  counter-increment: faq-item;
+}
 .faq-list summary {
   position: relative;
   padding: 1.2rem 2.5rem 1.2rem 0;
@@ -967,9 +973,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
   line-height: 1.25;
   text-wrap: balance;
 }
-.faq-list h3 span {
+.faq-list h3::before {
   padding-top: 0.18rem;
   color: #617b6f;
+  content: counter(faq-item, decimal-leading-zero);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.65rem;
   font-weight: 500;

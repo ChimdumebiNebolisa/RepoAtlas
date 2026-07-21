@@ -63,9 +63,15 @@ test.describe("Candidate Brief smoke", () => {
     await expect(
       page.getByRole("heading", { name: "The useful boundaries stay visible." })
     ).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Works across project types." })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Built for the questions interviewers ask." })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "A simple pipeline. A defensible output." })).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Works across project types." })
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Built for the questions interviewers ask." })
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "A simple pipeline. A defensible output." })
+    ).toHaveCount(0);
 
     const pageShape = await page.evaluate(() => ({
       height: document.documentElement.scrollHeight,
@@ -100,9 +106,9 @@ test.describe("Candidate Brief smoke", () => {
     expect(dimensions.height).toBeLessThanOrEqual(8_300);
     expect(dimensions.analysisTop).toBeLessThanOrEqual(844 * 2);
     expect(dimensions.primaryActions).toHaveLength(2);
-    expect(dimensions.primaryActions[1].top - dimensions.primaryActions[0].bottom).toBeGreaterThanOrEqual(
-      844
-    );
+    expect(
+      dimensions.primaryActions[1].top - dimensions.primaryActions[0].bottom
+    ).toBeGreaterThanOrEqual(844);
     await expect(page.locator("main > section")).toHaveCount(5);
   });
 

@@ -24,10 +24,10 @@ test("homepage exposes synchronized Product and FAQPage JSON-LD in the head", as
   const faqPage = structuredData["@graph"].find((item) => item["@type"] === "FAQPage") as {
     mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }>;
   };
-  const visibleFaq = await page.locator("#faq article").evaluateAll((articles) =>
-    articles.map((article) => ({
-      name: article.querySelector("h3")?.textContent?.trim(),
-      text: article.querySelector("p")?.textContent?.trim(),
+  const visibleFaq = await page.getByTestId("homepage-faq-item").evaluateAll((items) =>
+    items.map((item) => ({
+      name: item.querySelector("h3")?.textContent?.trim(),
+      text: item.querySelector("p")?.textContent?.trim(),
     })),
   );
 

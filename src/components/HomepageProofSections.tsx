@@ -179,13 +179,10 @@ export function HomepageTrustAndFaq() {
           </a>
         </header>
         <div className="faq-list">
-          {homepageFaqItems.map(({ question, answer }, index) => (
-            <details key={question}>
+          {homepageFaqItems.map(({ question, answer }) => (
+            <details key={question} data-testid="homepage-faq-item">
               <summary>
-                <h3>
-                  <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-                  {question}
-                </h3>
+                <h3>{question}</h3>
               </summary>
               <p>{answer}</p>
             </details>
