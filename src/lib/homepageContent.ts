@@ -41,3 +41,10 @@ export const homepageFaqItems = [
       "The bundled sample includes a complete read-only Candidate Brief with a repo summary, reading path, architecture map, risk signals, run commands, interview talking points, and evidence references. You can also preview PDF and PNG exports without uploading a repository.",
   },
 ] as const;
+
+export const homepageTrustBoundaries = [
+  "Reads files as text. It does not execute repository code or call AI.",
+  "Deeper analysis covers TypeScript/JavaScript, Python, and Java.",
+  "Risk signals identify structural hotspots, not confirmed bugs or vulnerabilities.",
+  "PDF and PNG remain available when saved report storage is unavailable.",
+] as const;
