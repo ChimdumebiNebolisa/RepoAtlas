@@ -66,6 +66,7 @@ jobs:
           --project=mobile
           --retries=0
           --repeat-each=5
+          --workers=1
           --grep 'completed brief uses native sharing when the browser provides it'
         env:
           CI: true
