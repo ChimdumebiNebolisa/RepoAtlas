@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 interface CopyButtonProps {
   text: string;
   label?: string;
+  onCopySuccess?: () => void;
 }
 
-export function CopyButton({ text, label = "Copy" }: CopyButtonProps) {
+export function CopyButton({ text, label = "Copy", onCopySuccess }: CopyButtonProps) {
   const [feedback, setFeedback] = useState<"idle" | "success" | "error">("idle");
   const resetTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -42,12 +43,18 @@ export function CopyButton({ text, label = "Copy" }: CopyButtonProps) {
   }
 
   async function handleCopy() {
+    let copied = false;
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
       await navigator.clipboard.writeText(text);
-      showFeedback("success");
+      copied = true;
     } catch {
-      showFeedback(copyWithBrowserFallback() ? "success" : "error");
+      copied = copyWithBrowserFallback();
+    }
+
+    showFeedback(copied ? "success" : "error");
+    if (copied) {
+      onCopySuccess?.();
     }
   }
 

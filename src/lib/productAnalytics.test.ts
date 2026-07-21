@@ -12,6 +12,8 @@ import {
   captureAnalysisEvent,
   captureReportExportFailure,
   captureReportShared,
+  captureReportViewed,
+  captureWalkthroughCopied,
   initializeProductAnalytics,
   stableRouteName,
 } from "./productAnalytics";
@@ -81,6 +83,25 @@ describe("captureReportShared", () => {
     expect(posthog.capture).toHaveBeenLastCalledWith("report_shared", {
       share_method: "clipboard",
       share_type: "portable_link",
+    });
+  });
+});
+
+describe("walkthrough value signals", () => {
+  it("records report views with only the bounded report variant", () => {
+    captureReportViewed("shared");
+
+    expect(posthog.capture).toHaveBeenLastCalledWith("report_viewed", {
+      report_variant: "shared",
+    });
+  });
+
+  it("records confirmed walkthrough copies with only bounded dimensions", () => {
+    captureWalkthroughCopied("preview", "2_minute");
+
+    expect(posthog.capture).toHaveBeenLastCalledWith("walkthrough_copied", {
+      report_variant: "preview",
+      format: "2_minute",
     });
   });
 });

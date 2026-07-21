@@ -17,6 +17,7 @@ import {
   captureProductEvent,
   captureReportExportFailure,
   captureReportShared,
+  captureReportViewed,
   type ReportShareMethod,
   type ReportShareType,
 } from "@/lib/productAnalytics";
@@ -126,6 +127,32 @@ export function ReportTabs({
   );
   const exportRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const candidateBriefRef = useRef<HTMLDivElement>(null);
+  const viewedReportRef = useRef<Report | null>(null);
+
+  useEffect(() => {
+    if (
+      activeTab !== "Candidate Brief" ||
+      !report.candidate_brief ||
+      viewedReportRef.current === report ||
+      typeof IntersectionObserver === "undefined"
+    ) {
+      return;
+    }
+
+    const candidateBrief = candidateBriefRef.current;
+    if (!candidateBrief) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      viewedReportRef.current = report;
+      captureReportViewed(variant);
+      observer.disconnect();
+    });
+
+    observer.observe(candidateBrief);
+    return () => observer.disconnect();
+  }, [activeTab, report, variant]);
 
   const activateTab = (index: number) => {
     const nextTab = TABS[index];
@@ -579,8 +606,12 @@ export function ReportTabs({
         className="py-4"
       >
         {activeTab === "Candidate Brief" && (
-          <div className="space-y-6">
-            <CandidateBriefPanel candidateBrief={report.candidate_brief} demoMode={demoMode} />
+          <div ref={candidateBriefRef} className="space-y-6">
+            <CandidateBriefPanel
+              candidateBrief={report.candidate_brief}
+              demoMode={demoMode}
+              reportVariant={variant}
+            />
             {variant === "live" && report.candidate_brief && (
               <aside className="report-share-prompt" aria-labelledby={`${tabsId}-share-heading`}>
                 <div>
