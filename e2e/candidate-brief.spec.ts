@@ -3,6 +3,7 @@ import fs from "fs";
 import { randomUUID } from "crypto";
 import {
   REPORTS_DIR,
+  expectCompletedReportInViewport,
   legacyReportWithoutBrief,
   runSampleAnalyzeOnPage,
   writeReport,
@@ -27,9 +28,7 @@ test.describe("Candidate Brief smoke", () => {
     );
 
     await hero.getByRole("button", { name: /Try bundled sample/i }).click();
-    await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
-      timeout: 90_000,
-    });
+    await expectCompletedReportInViewport(page);
   });
 
   test("homepage shows the four Candidate Brief outputs before analysis", async ({ page }) => {
@@ -72,21 +71,21 @@ test.describe("Candidate Brief smoke", () => {
 
   test("sample analyze renders Candidate Brief tab", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
+    const generatedReport = page.getByTestId("generated-report");
     const walkthrough = page.getByTestId("walkthrough-script").last();
-    const walkthroughOrder = await walkthrough.evaluate((section) => {
-      const headings = ["Repo Summary", "Reading Path", "Interview Talking Points"];
-      return headings.every((label) => {
-        const detailHeading = Array.from(document.querySelectorAll("h3")).find(
-          (heading) => heading.textContent === label && section.parentElement?.contains(heading)
-        );
-        return Boolean(
-          detailHeading &&
-            (section.compareDocumentPosition(detailHeading) & Node.DOCUMENT_POSITION_FOLLOWING)
-        );
-      });
-    });
-
-    expect(walkthroughOrder).toBe(true);
+    const headingOrder = await generatedReport.locator("h3, h4").allTextContents();
+    const requiredOrder = [
+      "Repo Summary",
+      "Walkthrough Script",
+      "30-second",
+      "2-minute",
+      "Reading Path",
+      "System Flow",
+      "Interview Talking Points",
+    ];
+    const positions = requiredOrder.map((heading) => headingOrder.indexOf(heading));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((left, right) => left - right));
     await expect(walkthrough.getByTestId("walkthrough-30-second")).toBeVisible();
     await expect(walkthrough.getByTestId("walkthrough-2-minute")).toBeVisible();
     await expect(walkthrough.getByText(/quick introduction/i)).toBeVisible();
@@ -100,6 +99,7 @@ test.describe("Candidate Brief smoke", () => {
     expect(hasHorizontalOverflow).toBe(false);
     await expect(page.getByRole("heading", { name: "Repo Summary" }).last()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Reading Path" }).last()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "System Flow" }).last()).toBeVisible();
     const talkingPoints = page
       .getByRole("heading", { name: "Interview Talking Points" })
       .last()

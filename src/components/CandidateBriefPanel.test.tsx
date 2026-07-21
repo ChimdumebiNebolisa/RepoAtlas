@@ -70,19 +70,25 @@ describe("CandidateBriefPanel tradeoff answer", () => {
 });
 
 describe("CandidateBriefPanel walkthrough hierarchy", () => {
-  it("leads with both walkthrough formats before the detailed brief sections", () => {
+  it("opens with the required interview sequence", () => {
     const brief = buildSampleReport().candidate_brief;
     expect(brief).toBeDefined();
 
     render(<CandidateBriefPanel candidateBrief={brief} />);
 
     const walkthrough = screen.getByTestId("walkthrough-script");
-    const detailedHeadings = ["Repo Summary", "Reading Path", "Interview Talking Points"];
+    const requiredOrder = [
+      "Repo Summary",
+      "Walkthrough Script",
+      "30-second",
+      "2-minute",
+      "Reading Path",
+      "System Flow",
+      "Interview Talking Points",
+    ].map((name) => screen.getByRole("heading", { name }));
 
-    for (const heading of detailedHeadings) {
-      const detailSection = screen.getByRole("heading", { name: heading }).closest("section");
-      expect(detailSection).not.toBeNull();
-      expect(walkthrough.compareDocumentPosition(detailSection!)).toBe(
+    for (let index = 1; index < requiredOrder.length; index += 1) {
+      expect(requiredOrder[index - 1].compareDocumentPosition(requiredOrder[index])).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING
       );
     }
@@ -91,5 +97,29 @@ describe("CandidateBriefPanel walkthrough hierarchy", () => {
     expect(within(walkthrough).getByText(/explain the reading path/i)).toBeInTheDocument();
     expect(within(walkthrough).getByRole("button", { name: "Copy 30s" })).toBeInTheDocument();
     expect(within(walkthrough).getByRole("button", { name: "Copy 2min" })).toBeInTheDocument();
+  });
+
+  it("states when the repository cannot support a system-flow claim", () => {
+    const brief = buildSampleReport().candidate_brief;
+    expect(brief).toBeDefined();
+
+    render(
+      <CandidateBriefPanel
+        candidateBrief={{
+          ...brief!,
+          walkthrough_script: brief!.walkthrough_script
+            ? {
+                ...brief!.walkthrough_script,
+                deep_technical: "Not enough evidence to describe the system flow.",
+                evidence_refs: [],
+              }
+            : undefined,
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText(/does not provide enough evidence for a system flow/i)
+    ).toBeInTheDocument();
   });
 });

@@ -530,6 +530,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   gap: 1rem;
   margin-bottom: 8rem;
 }
+.action-section.action-section-complete { margin-bottom: 2rem; }
 .analyze-card, .sample-card { border-radius: var(--radius-card); }
 .analyze-card {
   padding: clamp(1.5rem, 3vw, 2.5rem);
@@ -1455,6 +1456,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .brief-sheet-footer { display: none; }
   .evidence-card { width: 82%; }
   .action-section, .project-types, .brief-section { margin-bottom: 0; padding-bottom: 5.5rem; }
+  .action-section.action-section-complete { padding-bottom: 2rem; }
   .action-section { grid-template-columns: 1fr; }
   .analyze-limits { display: grid; }
   .analyze-limits span::after { display: none; }

@@ -7,6 +7,7 @@ import {
   REPORTS_DIR,
   REPORT_TABS,
   analyzeSample,
+  expectCompletedReportInViewport,
   minimalReport,
   runSampleAnalyzeOnPage,
   writeReport,
@@ -30,7 +31,7 @@ async function openControlledInlineReport(page: Page, report = buildSampleReport
 
   await page.goto("/");
   await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
-  await page.getByRole("button", { name: /View report/i }).click();
+  await expectCompletedReportInViewport(page);
   await expect(page.getByRole("button", { name: "Share Candidate Brief" })).toBeVisible();
 }
 
@@ -301,7 +302,7 @@ test.describe("Report UI flows", () => {
     await page.goto("/");
     await expect(page.getByRole("button", { name: /Share Candidate Brief/i })).toHaveCount(0);
     await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
-    await page.getByRole("button", { name: /View report/i }).click();
+    await expectCompletedReportInViewport(page);
 
     const exportSummary = page.getByText(
       /Generated report ready for PDF and PNG export and 7-day encrypted browser sharing\. Markdown and saved server links require saved report storage, which is currently unavailable\./i
@@ -389,10 +390,7 @@ test.describe("Report UI flows", () => {
     await page.locator('input[type="file"]').setInputFiles(zipPath);
     await page.getByRole("button", { name: /Analyze uploaded ZIP/i }).first().click();
 
-    await expect(page.getByRole("button", { name: /View report/i })).toBeVisible({
-      timeout: 90_000,
-    });
-    await page.getByRole("button", { name: /View report/i }).click();
+    await expectCompletedReportInViewport(page);
     await expect(page.getByRole("heading", { name: "Repo Summary" }).last()).toBeVisible();
     await expect(page.getByRole("heading", { name: "First PR Plan" }).last()).toBeVisible();
   });

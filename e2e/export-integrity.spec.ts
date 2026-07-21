@@ -7,6 +7,7 @@ import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { Report } from "../src/types/report";
 import { buildSampleReport } from "../src/lib/buildSampleReport";
 import { MAX_PNG_CANVAS_DIMENSION } from "../src/components/ReportTabs";
+import { expectCompletedReportInViewport } from "./helpers";
 
 const PDF_SIGNATURE = Buffer.from("%PDF-");
 const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
@@ -71,11 +72,7 @@ async function openControlledInlineReport(page: Page, controlledReport?: Report)
 
   await page.goto("/");
   await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
-  await page.getByRole("button", { name: /View report/i }).waitFor({
-    state: "visible",
-    timeout: 90_000,
-  });
-  await page.getByRole("button", { name: /View report/i }).click();
+  await expectCompletedReportInViewport(page);
   await expect(
     page.getByText(
       /Markdown and saved server links require saved report storage, which is currently unavailable/i
