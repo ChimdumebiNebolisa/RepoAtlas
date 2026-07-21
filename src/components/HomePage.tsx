@@ -71,8 +71,13 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     if (!report) return;
 
     const frame = requestAnimationFrame(() => {
-      reportHeadingRef.current?.focus({ preventScroll: true });
+      const documentElement = document.documentElement;
+      const previousScrollBehavior = documentElement.style.scrollBehavior;
+
+      documentElement.style.scrollBehavior = "auto";
       reportSectionRef.current?.scrollIntoView({ block: "start" });
+      reportHeadingRef.current?.focus({ preventScroll: true });
+      documentElement.style.scrollBehavior = previousScrollBehavior;
     });
 
     return () => cancelAnimationFrame(frame);
