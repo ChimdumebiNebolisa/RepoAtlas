@@ -10,6 +10,9 @@ import {
   computeComplexitySignals,
   computeTestProximityScore,
 } from "./python";
+import { buildReducedArchitecture } from "./python/architecture";
+import { detectEntrypoints } from "./python/entrypoints";
+import { detectTestFiles } from "./python/signals";
 import type { IndexingPipelineResult } from "../pipeline";
 
 const relKey = (...segments: string[]) => path.join(...segments);
@@ -105,6 +108,21 @@ from collections.abc import Mapping
       fs.rmSync(workspace, { recursive: true, force: true });
     }
   });
+
+  it("deduplicates aliases, ignores wildcard imports, and skips parenthesized imports", () => {
+    const content = [
+      "import alpha as first, beta as second",
+      "import alpha",
+      "import (gamma, delta)",
+      "from .pkg import useful as renamed, *",
+    ].join("\n");
+    expect(extractImportSpecifiers(content)).toEqual([
+      "alpha",
+      "beta",
+      ".pkg",
+      ".pkg.useful",
+    ]);
+  });
 });
 
 describe("nested test directory detection", () => {
@@ -155,6 +173,22 @@ describe("detectPackageRoots", () => {
       fs.rmSync(workspace, { recursive: true, force: true });
     }
   });
+
+  it("detects src layouts from setup.py and nested package files", () => {
+    const setupWorkspace = writeWorkspace({
+      "setup.py": "setup(packages=find_packages('src'))",
+    });
+    const nestedWorkspace = writeWorkspace({
+      "src/deep/pkg/__init__.py": "",
+    });
+    try {
+      expect(detectPackageRoots(setupWorkspace)).toEqual(["src/", ""]);
+      expect(detectPackageRoots(nestedWorkspace)).toEqual(["src/", ""]);
+    } finally {
+      fs.rmSync(setupWorkspace, { recursive: true, force: true });
+      fs.rmSync(nestedWorkspace, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("resolveImport", () => {
@@ -195,6 +229,44 @@ describe("resolveImport", () => {
         fileSet
       );
       expect(normalizeKey(resolved!)).toBe("src/app/models.py");
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves package imports and returns null for external modules", () => {
+    const workspace = writeWorkspace({
+      "src/pkg/__init__.py": "",
+      "src/pkg/child.py": "",
+    });
+    const fileSet = new Set(["src/pkg/__init__.py", "src/pkg/child.py"]);
+    try {
+      expect(resolveImport("src/pkg/child.py", "pkg", workspace, ["src/"], fileSet)).toBe(
+        "src/pkg/__init__.py"
+      );
+      expect(resolveImport("src/pkg/child.py", "external", workspace, ["src/"], fileSet)).toBeNull();
+      expect(resolveImport("src/pkg/child.py", "..missing", workspace, ["src/"], fileSet)).toBeNull();
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("detectEntrypoints", () => {
+  it("combines conventional, pyproject, and setup entrypoints", () => {
+    const workspace = writeWorkspace({
+      "main.py": "",
+      "src/pkg/cli.py": "",
+      "pkg/tool.py": "",
+      "pyproject.toml": "[project.scripts]\nrun = 'pkg.cli:start'",
+      "setup.py": "entry_points={'console_scripts': ['tool=pkg.tool:main']}",
+    });
+    try {
+      expect(
+        Array.from(
+          detectEntrypoints(["main.py", "src/pkg/cli.py", "pkg/tool.py"], workspace)
+        )
+      ).toEqual(["main.py", "src/pkg/cli.py", "pkg/tool.py"]);
     } finally {
       fs.rmSync(workspace, { recursive: true, force: true });
     }
@@ -242,9 +314,74 @@ describe("computeTestProximityScore", () => {
     const score = computeTestProximityScore("lib/helper.py", new Set(["tests/test_other.py"]));
     expect(score).toBe(0);
   });
+
+  it("recognizes same-folder and __tests__ proximity", () => {
+    expect(computeTestProximityScore("pkg/service.py", new Set(["pkg/test_other.py"]))).toBe(100);
+    expect(
+      computeTestProximityScore("pkg/service.py", new Set(["pkg/__tests__/test_other.py"]))
+    ).toBe(90);
+    expect(detectTestFiles(["pkg/test_one.py", "pkg/two_test.py", "pkg/code.py"])).toEqual(
+      new Set(["pkg/test_one.py", "pkg/two_test.py"])
+    );
+  });
+});
+
+describe("buildReducedArchitecture", () => {
+  it("caps large graphs while keeping deterministic warnings and order", () => {
+    const files = Array.from({ length: 55 }, (_, index) => `folder-${index}/file.py`);
+    const imports = new Map<string, Set<string>>();
+    for (let from = 0; from < files.length; from += 1) {
+      imports.set(
+        files[from],
+        new Set(files.filter((_, to) => to !== from))
+      );
+    }
+    const result = buildReducedArchitecture(files, imports);
+    expect(result.architecture.nodes).toHaveLength(50);
+    expect(result.architecture.edges).toHaveLength(200);
+    expect(result.warnings).toEqual([
+      "Architecture nodes capped at 50 folders (from 55).",
+      "Architecture reduced from file-level (55 files) to folder-level (50 folders).",
+      "Architecture edges capped at 200 links (from 2450).",
+    ]);
+  });
+});
+
+describe("Python pack boundaries", () => {
+  it("keeps every production module at or below 350 lines", () => {
+    const modulePaths = [
+      path.join(__dirname, "python.ts"),
+      ...fs
+        .readdirSync(path.join(__dirname, "python"))
+        .filter((file) => file.endsWith(".ts"))
+        .map((file) => path.join(__dirname, "python", file)),
+    ];
+    for (const modulePath of modulePaths) {
+      const lineCount = fs.readFileSync(modulePath, "utf-8").split(/\r?\n/).length;
+      expect(lineCount, path.relative(__dirname, modulePath)).toBeLessThanOrEqual(350);
+    }
+  });
 });
 
 describe("runPythonPack", () => {
+  it("returns empty deterministic maps when the repository has no Python files", () => {
+    const result = runPythonPack("/missing", buildPipeline(["README.md"]));
+    expect(result.architecture).toEqual({ nodes: [], edges: [] });
+    expect(result.imports.size).toBe(0);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("keeps unreadable indexed files in the result with zeroed signals", () => {
+    const workspace = writeWorkspace({});
+    try {
+      const result = runPythonPack(workspace, buildPipeline(["missing.py"]));
+      expect(result.imports.get("missing.py")).toEqual(new Set());
+      expect(result.fanOut.get("missing.py")).toBe(0);
+      expect(result.complexity.get("missing.py")).toBe(0);
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
   it("builds import graph and fan-in/fan-out", () => {
     const workspace = writeWorkspace({
       "myapp/__init__.py": "",
