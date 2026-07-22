@@ -90,6 +90,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/components/ReportActionViews.tsx": {
+          branches: 80,
+          lines: 85,
+        },
         "src/analyzer/packs/python{,/**}.ts": {
           branches: 80,
           lines: 85,

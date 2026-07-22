@@ -18,6 +18,8 @@ export function ReportToolbar({
   tabsId: string;
   variant: ReportVariant;
 }) {
+  const markdownCheckPending =
+    actions.markdownSupport === "unknown" && actions.markdownNote?.startsWith("Checking");
   const summary =
     variant === "preview"
       ? reportCapabilityCopy.previewReport
@@ -57,7 +59,10 @@ export function ReportToolbar({
           type="button"
           onClick={actions.handleExportMarkdown}
           disabled={
-            actions.exporting !== null || !reportId || actions.markdownSupport === "unavailable"
+            actions.exporting !== null ||
+            !reportId ||
+            actions.markdownSupport === "unavailable" ||
+            markdownCheckPending
           }
           className="report-action report-action-accent report-action-compact"
           title={actions.markdownNote ?? undefined}
@@ -122,7 +127,7 @@ export function CandidateBriefSharePrompt({
             </button>
           </div>
         )}
-        {actions.shareExpiresAt && (
+        {actions.shareMessage && actions.shareExpiresAt && (
           <p className="report-share-expiry">
             Expires {new Date(actions.shareExpiresAt).toLocaleString()}
           </p>
@@ -139,6 +144,9 @@ export function ReportExportPanel({
   actions: ReportActionsState;
   reportId?: string | null;
 }) {
+  const markdownCheckPending =
+    actions.markdownSupport === "unknown" && actions.markdownNote?.startsWith("Checking");
+
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <h2 className="text-lg font-semibold text-slate-900">Export Report</h2>
@@ -167,7 +175,10 @@ export function ReportExportPanel({
         type="button"
         onClick={actions.handleExportMarkdown}
         disabled={
-          actions.exporting !== null || !reportId || actions.markdownSupport === "unavailable"
+          actions.exporting !== null ||
+          !reportId ||
+          actions.markdownSupport === "unavailable" ||
+          markdownCheckPending
         }
         className="report-action report-action-accent"
         title={actions.markdownNote ?? undefined}
