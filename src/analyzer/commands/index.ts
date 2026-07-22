@@ -27,7 +27,8 @@ export function extractPackageJsonCommands(workspacePath: string): RunCommand[] 
   if (!fs.existsSync(pkgPath)) return [];
   try {
     const pkg = JSON.parse(readText(pkgPath) ?? "{}");
-    const scripts = pkg.scripts ?? {};
+    const scripts = pkg.scripts;
+    if (!scripts || typeof scripts !== "object" || Array.isArray(scripts)) return [];
     return Object.entries(scripts)
       .filter(([, v]) => typeof v === "string")
       .map(([name]) => ({
@@ -66,7 +67,9 @@ export function extractPythonCommands(workspacePath: string): RunCommand[] {
   const pyproject = path.join(workspacePath, "pyproject.toml");
   if (fs.existsSync(pyproject)) {
     const content = readText(pyproject) ?? "";
-    const scriptMatches = content.matchAll(/\[project\.scripts\]\s*([\s\S]*?)(?:\n\[|$)/g);
+    const scriptMatches = content.matchAll(
+      /\[(?:project|tool\.poetry)\.scripts\][^\S\r\n]*\r?\n([\s\S]*?)(?=\r?\n\[|$)/g
+    );
     for (const match of scriptMatches) {
       const block = match[1];
       for (const line of block.split("\n")) {
@@ -120,7 +123,7 @@ export function extractJavaCommands(workspacePath: string): RunCommand[] {
 }
 
 export function extractDockerCommands(workspacePath: string): RunCommand[] {
-  const files = ["docker-compose.yml", "docker-compose.yaml", "compose.yml"];
+  const files = ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"];
   const found = files.find((f) => fs.existsSync(path.join(workspacePath, f)));
   if (!found) return [];
   return [
@@ -135,13 +138,13 @@ export function extractReadmeCommands(workspacePath: string, keyDocs: string[]):
   const readmePath = path.join(workspacePath, readme);
   if (!fs.existsSync(readmePath)) return [];
   const content = readText(readmePath) ?? "";
-  const fenceRe = /```(?:bash|sh|shell)?\s*([\s\S]*?)```/gi;
+  const fenceRe = /```(?:bash|sh|shell)?[ \t]*\r?\n([\s\S]*?)```/gi;
   let match;
   while ((match = fenceRe.exec(content)) !== null) {
     for (const line of match[1].split("\n")) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
-      if (/^(npm|yarn|pnpm|make|python|pip|docker|mvn|gradle|pytest)/i.test(trimmed)) {
+      if (/^(npm|yarn|pnpm|make|python|pip|pipenv|poetry|docker|mvn|gradle|\.\/gradlew|pytest)/i.test(trimmed)) {
         commands.push({ source: "README", command: trimmed, description: "from readme" });
       }
     }
