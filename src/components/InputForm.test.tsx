@@ -1,8 +1,9 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
+import { act, render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Report } from "@/types/report";
+import { clientMaxZipBytes } from "@/lib/ingestLimitsClient";
 
 const captureAnalysisEvent = vi.hoisted(() => vi.fn());
 
@@ -58,6 +59,26 @@ describe("InputForm", () => {
     expect(await within(form).findByRole("alert")).toHaveTextContent(/zip/i);
   });
 
+  it("rejects non-ZIP and oversized files before analysis", async () => {
+    const user = userEvent.setup();
+    const { form } = renderForm();
+    await user.click(within(form).getByRole("tab", { name: /upload zip/i }));
+    const input = within(form).getByLabelText(/choose repository zip file/i);
+
+    fireEvent.change(input, {
+      target: { files: [new File(["text"], "repository.txt", { type: "text/plain" })] },
+    });
+    expect(within(form).getByRole("alert")).toHaveTextContent("Please select a .zip file.");
+
+    const oversized = new File(["zip"], "repository.zip", { type: "application/zip" });
+    Object.defineProperty(oversized, "size", { value: clientMaxZipBytes() + 1 });
+    fireEvent.change(input, { target: { files: [oversized] } });
+    expect(within(form).getByRole("alert")).toHaveTextContent(/MB or smaller/i);
+
+    fireEvent.change(input, { target: { files: [] } });
+    expect(within(form).queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("shows GitHub first and validates the public URL", async () => {
     const user = userEvent.setup();
     const { form } = renderForm();
@@ -72,6 +93,55 @@ describe("InputForm", () => {
     expect(
       within(form).getByRole("button", { name: /generate sample candidate brief/i })
     ).toBeInTheDocument();
+  });
+
+  it("supports the existing imperative sample trigger", async () => {
+    const ref = React.createRef<React.ElementRef<typeof InputForm>>();
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    render(
+      <InputForm
+        ref={ref}
+        onAnalyzeStart={noop}
+        onAnalyzeComplete={noop}
+        onAnalyzeError={noop}
+        loading={false}
+      />
+    );
+    act(() => ref.current?.generateSample());
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+  });
+
+  it("ignores imperative and form submissions while analysis is loading", () => {
+    const ref = React.createRef<React.ElementRef<typeof InputForm>>();
+    const fetchMock = vi.spyOn(global, "fetch");
+    const view = render(
+      <InputForm
+        ref={ref}
+        onAnalyzeStart={noop}
+        onAnalyzeComplete={noop}
+        onAnalyzeError={noop}
+        loading
+      />
+    );
+    const form = view.container.querySelector("form.input-form");
+    if (!form) throw new Error("form not found");
+
+    act(() => ref.current?.generateSample());
+    fireEvent.submit(form);
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("keeps the interview walkthrough prominent and reveals other focuses on demand", async () => {

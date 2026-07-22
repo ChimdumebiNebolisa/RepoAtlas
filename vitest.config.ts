@@ -67,6 +67,14 @@ export default defineConfig({
           branches: 80,
           functions: 80,
         },
+        "src/components/{InputForm,AnalysisIntentSelector,RepositoryInputControls,useAnalysisRequest,inputFormSupport}.{ts,tsx}": {
+          branches: 80,
+          lines: 90,
+        },
+        "src/components/InputForm.tsx": {
+          branches: 80,
+          lines: 90,
+        },
       },
     },
   },

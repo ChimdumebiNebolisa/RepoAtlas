@@ -2,53 +2,23 @@
 
 import { forwardRef, useImperativeHandle, useRef, useState, type RefObject } from "react";
 import type { AnalysisIntent, Report } from "@/types/report";
-import { ERROR_CODES } from "@/lib/errors";
-import { parseGithubRepoUrl, isValidGitRef } from "@/lib/github";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
-import { clientFailureDiagnostic } from "@/lib/clientFailureDiagnostics";
+import { AnalysisIntentSelector } from "./AnalysisIntentSelector";
 import {
-  analysisEntrySource,
-  captureAnalysisEvent,
-  type AnalysisInputType,
-} from "@/lib/productAnalytics";
+  formatApiError,
+  formatReportFetchError,
+  type InputMode,
+  validateGithubInput,
+} from "./inputFormSupport";
+import { RepositoryInputControls } from "./RepositoryInputControls";
+import { useAnalysisRequest } from "./useAnalysisRequest";
 
-const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
-
-const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-type InputMode = "zip" | "github";
-
-const PRIMARY_ANALYSIS_INTENT: {
-  value: AnalysisIntent;
-  label: string;
-  description: string;
-} = {
-  value: "interview",
-  label: "Interview walkthrough",
-  description: "Explain the whole repository clearly.",
-};
-
-const SECONDARY_ANALYSIS_INTENTS: Array<{
-  value: AnalysisIntent;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: "bug",
-    label: "Investigate a bug",
-    description: "Trace likely entry points and risk signals.",
-  },
-  {
-    value: "planned_change",
-    label: "Plan a change",
-    description: "Map boundaries, impact, and validation.",
-  },
-  {
-    value: "pull_request",
-    label: "Discuss a pull request",
-    description: "Prepare a file-backed review path.",
-  },
-];
+export {
+  formatApiError,
+  formatReportFetchError,
+  isValidReportId,
+  validateGithubInput,
+} from "./inputFormSupport";
 
 interface InputFormProps {
   onAnalyzeStart: () => void;
@@ -60,56 +30,6 @@ interface InputFormProps {
 
 export interface InputFormHandle {
   generateSample: () => void;
-}
-
-interface ApiErrorLike {
-  code?: string;
-  message?: string;
-}
-
-export function formatApiError(
-  payload: ApiErrorLike | null | undefined,
-  fallback: string,
-  retryAfter?: string | null
-) {
-  if (!payload) return fallback;
-  const base = payload.code && payload.message
-    ? `${payload.code}: ${payload.message}`
-    : payload.message || payload.code || fallback;
-  if (
-    (payload.code === ERROR_CODES.RATE_LIMITED ||
-      payload.code === ERROR_CODES.RATE_LIMIT_EXCEEDED) &&
-    retryAfter &&
-    /^\d+$/.test(retryAfter)
-  ) {
-    return `${base} Retry in ${retryAfter} seconds.`;
-  }
-  return base;
-}
-
-export function formatReportFetchError(
-  payload: ApiErrorLike | null | undefined,
-  status: number,
-  reportId: string
-) {
-  const base = formatApiError(payload, FALLBACK_ANALYSIS_MESSAGE);
-  return `Failed to load analysis report (${reportId}, HTTP ${status}). ${base}`;
-}
-
-/** Client-side validation mirroring the server's canonical URL rules. */
-export function validateGithubInput(url: string, ref: string): string | null {
-  if (!url.trim()) return "Enter a public GitHub repository URL.";
-  if (!parseGithubRepoUrl(url)) {
-    return "Enter a canonical URL like https://github.com/owner/repository.";
-  }
-  if (ref.trim() && !isValidGitRef(ref)) {
-    return "Enter a valid branch or tag name (letters, numbers, ., _, -, /).";
-  }
-  return null;
-}
-
-export function isValidReportId(id: unknown): id is string {
-  return typeof id === "string" && UUID_LIKE.test(id.trim());
 }
 
 export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function InputForm(
@@ -132,82 +52,14 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   const inputRef = useRef<HTMLInputElement>(null);
   const githubUrlInputRef = useRef<HTMLInputElement>(null);
   const githubRefInputRef = useRef<HTMLInputElement>(null);
+  const runAnalysis = useAnalysisRequest({
+    analysisIntent,
+    onAnalyzeComplete,
+    onAnalyzeError,
+  });
 
-  // Runs the analyze request and validates the reportId in every flow.
-  const runAnalysis = async (init: RequestInit, inputType: AnalysisInputType) => {
-    const entrySource = analysisEntrySource(window.location.search);
-    const entryProperties = entrySource ? { entry_source: entrySource } : {};
-    captureAnalysisEvent("analysis_started", inputType, analysisIntent, entryProperties);
-    try {
-      const res = await fetch("/api/analyze", init);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
-          ...entryProperties,
-          stage: "analysis",
-          status_code: res.status,
-          error_code: data.code ?? ERROR_CODES.ANALYSIS_FAILED,
-        });
-        onAnalyzeError(
-          formatApiError(data, FALLBACK_ANALYSIS_MESSAGE, res.headers.get("retry-after"))
-        );
-        return;
-      }
-      const { reportId, report: inlineReport, persisted } = data as {
-        reportId?: unknown;
-        report?: Report;
-        persisted?: boolean;
-      };
-      if (!isValidReportId(reportId)) {
-        captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
-          ...entryProperties,
-          stage: "analysis_response",
-          error_code: "INVALID_REPORT_ID",
-        });
-        onAnalyzeError("Invalid response: missing or malformed reportId.");
-        return;
-      }
-
-      if (persisted === false && inlineReport) {
-        captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
-        onAnalyzeComplete(inlineReport, null);
-        return;
-      }
-
-      const reportRes = await fetch(`/api/reports/${reportId}`);
-      const reportPayload = await reportRes.json().catch(() => ({}));
-      if (!reportRes.ok) {
-        const diagnostic = clientFailureDiagnostic(
-          "report_load",
-          reportPayload.code,
-          reportRes.status
-        );
-        captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
-          ...entryProperties,
-          stage: "report_load",
-          status_code: reportRes.status,
-          error_code: diagnostic.errorCode,
-        });
-        console.error(JSON.stringify(diagnostic));
-        onAnalyzeError(formatReportFetchError(reportPayload, reportRes.status, reportId));
-        return;
-      }
-      captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
-      onAnalyzeComplete(reportPayload as Report, reportId);
-    } catch {
-      const diagnostic = clientFailureDiagnostic("network");
-      captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
-        ...entryProperties,
-        stage: "network",
-        error_code: diagnostic.errorCode,
-      });
-      console.error(JSON.stringify(diagnostic));
-      onAnalyzeError("Network error. Please try again.");
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (loading) return;
     setFieldError(null);
 
@@ -252,9 +104,9 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
     );
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFieldError(null);
-    const chosen = e.target.files?.[0];
+    const chosen = event.target.files?.[0];
     if (!chosen) {
       setFile(null);
       return;
@@ -300,77 +152,25 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
     setFieldError(null);
   };
 
-  const hasFieldError = fieldError !== null;
-  const selectedSecondaryIntent = SECONDARY_ANALYSIS_INTENTS.find(
-    (option) => option.value === analysisIntent
-  );
+  const clearGithubUrlError = (value: string) => {
+    setGithubUrl(value);
+    setFieldError(null);
+  };
+
+  const clearGithubRefError = (value: string) => {
+    setGithubRef(value);
+    setFieldError(null);
+  };
 
   return (
     <form onSubmit={handleSubmit} className="input-form" aria-busy={loading}>
-      <fieldset className="analysis-intent-fieldset" disabled={loading}>
-        <legend>Focus this Candidate Brief</legend>
-        <p>Start with the whole-repository interview walkthrough.</p>
-        <div className="analysis-intent-primary">
-          <label
-            className={`analysis-intent-option ${analysisIntent === PRIMARY_ANALYSIS_INTENT.value ? "is-selected" : ""}`}
-          >
-            <input
-              type="radio"
-              name="analysis-intent"
-              value={PRIMARY_ANALYSIS_INTENT.value}
-              checked={analysisIntent === PRIMARY_ANALYSIS_INTENT.value}
-              onChange={() => {
-                setAnalysisIntent(PRIMARY_ANALYSIS_INTENT.value);
-                setSecondaryIntentsOpen(false);
-              }}
-            />
-            <span>
-              <span className="analysis-intent-label-row">
-                <strong>{PRIMARY_ANALYSIS_INTENT.label}</strong>
-                <small className="analysis-intent-primary-tag">Start here</small>
-              </span>
-              <small>{PRIMARY_ANALYSIS_INTENT.description}</small>
-            </span>
-          </label>
-        </div>
-
-        <details
-          className="secondary-intents"
-          open={secondaryIntentsOpen}
-          onToggle={(event) => setSecondaryIntentsOpen(event.currentTarget.open)}
-        >
-          <summary>
-            <span>
-              <strong>Use a different conversation focus</strong>
-              <small>
-                {selectedSecondaryIntent
-                  ? `Selected: ${selectedSecondaryIntent.label}`
-                  : "Bug, planned change, or pull-request discussion"}
-              </small>
-            </span>
-          </summary>
-          <div className="analysis-intent-grid">
-            {SECONDARY_ANALYSIS_INTENTS.map((option) => (
-              <label
-                key={option.value}
-                className={`analysis-intent-option ${analysisIntent === option.value ? "is-selected" : ""}`}
-              >
-                <input
-                  type="radio"
-                  name="analysis-intent"
-                  value={option.value}
-                  checked={analysisIntent === option.value}
-                  onChange={() => setAnalysisIntent(option.value)}
-                />
-                <span>
-                  <strong>{option.label}</strong>
-                  <small>{option.description}</small>
-                </span>
-              </label>
-            ))}
-          </div>
-        </details>
-      </fieldset>
+      <AnalysisIntentSelector
+        analysisIntent={analysisIntent}
+        disabled={loading}
+        secondaryIntentsOpen={secondaryIntentsOpen}
+        onAnalysisIntentChange={setAnalysisIntent}
+        onSecondaryIntentsOpenChange={setSecondaryIntentsOpen}
+      />
 
       <div className="quick-start">
         <div className="quick-start-copy">
@@ -392,105 +192,21 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
 
       <div className="input-divider"><span>or analyze your repository</span></div>
 
-      <div
-        role="tablist"
-        aria-label="Repository input method"
-        className="input-mode-toggle"
-      >
-        <button
-          type="button"
-          role="tab"
-          id="input-mode-github"
-          aria-selected={mode === "github"}
-          aria-controls="input-panel-github"
-          className={mode === "github" ? "input-mode-tab is-active" : "input-mode-tab"}
-          onClick={() => switchMode("github")}
-          disabled={loading}
-        >
-          Public GitHub URL
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="input-mode-zip"
-          aria-selected={mode === "zip"}
-          aria-controls="input-panel-zip"
-          className={mode === "zip" ? "input-mode-tab is-active" : "input-mode-tab"}
-          onClick={() => switchMode("zip")}
-          disabled={loading}
-        >
-          Upload ZIP
-        </button>
-      </div>
-
-      {mode === "zip" ? (
-        <div id="input-panel-zip" role="tabpanel" aria-labelledby="input-mode-zip">
-          <label htmlFor="zipFile" className="input-label">
-            Repository zip file
-          </label>
-          <div className="file-picker">
-            <input
-              ref={inputRef}
-              id="zipFile"
-              type="file"
-              accept=".zip"
-              onChange={handleFileChange}
-              className="absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-not-allowed"
-              disabled={loading}
-              aria-label="Choose repository zip file"
-              aria-invalid={hasFieldError && mode === "zip"}
-              aria-describedby={hasFieldError && mode === "zip" ? "input-form-error" : undefined}
-            />
-            <span className="file-name">{file ? file.name : "No file chosen"}</span>
-            <span className="file-action">Choose file</span>
-          </div>
-        </div>
-      ) : (
-        <div id="input-panel-github" role="tabpanel" aria-labelledby="input-mode-github">
-          <label htmlFor="githubUrl" className="input-label">
-            Public GitHub repository URL
-          </label>
-          <input
-            ref={githubUrlInputRef}
-            id="githubUrl"
-            type="url"
-            inputMode="url"
-            placeholder="https://github.com/owner/repository"
-            value={githubUrl}
-            onChange={(e) => {
-              setGithubUrl(e.target.value);
-              setFieldError(null);
-            }}
-            className="text-input"
-            disabled={loading}
-            autoComplete="off"
-            aria-describedby="githubUrl-help"
-            aria-invalid={hasFieldError && mode === "github"}
-          />
-          <p id="githubUrl-help" className="input-help">
-            Canonical HTTPS github.com URLs only. Public repositories only — private
-            repositories are never accessed.
-          </p>
-          <label htmlFor="githubRef" className="input-label">
-            Branch or tag (optional)
-          </label>
-          <input
-            ref={githubRefInputRef}
-            id="githubRef"
-            type="text"
-            placeholder="Defaults to the repository default branch"
-            value={githubRef}
-            onChange={(e) => {
-              setGithubRef(e.target.value);
-              setFieldError(null);
-            }}
-            className="text-input"
-            disabled={loading}
-            autoComplete="off"
-            aria-invalid={hasFieldError && mode === "github"}
-          />
-        </div>
-      )}
+      <RepositoryInputControls
+        mode={mode}
+        loading={loading}
+        file={file}
+        githubUrl={githubUrl}
+        githubRef={githubRef}
+        hasFieldError={fieldError !== null}
+        inputRef={inputRef}
+        githubUrlInputRef={githubUrlInputRef}
+        githubRefInputRef={githubRefInputRef}
+        onModeChange={switchMode}
+        onFileChange={handleFileChange}
+        onGithubUrlChange={clearGithubUrlError}
+        onGithubRefChange={clearGithubRefError}
+      />
 
       {fieldError && (
         <p id="input-form-error" role="alert" className="form-error">
