@@ -5,6 +5,8 @@
 
 import { randomUUID } from "crypto";
 import { ingestRepo } from "@/lib/ingest";
+import { parseGithubRepoUrl } from "@/lib/github";
+import { getCachedAnalysis, putCachedAnalysis } from "@/lib/analysisCache";
 import { analyzeCommitInsights } from "./gitHistory";
 import { discoverDocuments } from "./docs";
 import { runIndexingPipeline } from "./pipeline";
@@ -46,8 +48,37 @@ export async function analyzeRepository(
       options.requestId
     );
 
+  const githubCoords =
+    workspace.cloneHash && workspace.url
+      ? parseGithubRepoUrl(workspace.url)
+      : input.kind === "github"
+        ? parseGithubRepoUrl(input.githubUrl)
+        : null;
+
   try {
     deadline.throwIfAborted();
+
+    if (githubCoords && workspace.cloneHash) {
+      const cached = await getCachedAnalysis(
+        githubCoords.owner,
+        githubCoords.repo,
+        workspace.cloneHash,
+        options.analysisIntent
+      );
+      if (cached) {
+        return finish({
+          ...cached,
+          analysis_intent: options.analysisIntent ?? cached.analysis_intent,
+          repo_metadata: {
+            ...cached.repo_metadata,
+            analyzed_at: new Date().toISOString(),
+            clone_hash: workspace.cloneHash,
+            branch: workspace.branch ?? cached.repo_metadata.branch,
+          },
+        });
+      }
+    }
+
     const pipeline = await runIndexingPipeline(workspace.path);
     const documentInventory = discoverDocuments(
       workspace.path,
@@ -87,6 +118,8 @@ export async function analyzeRepository(
 
     const commitInsights = await analyzeCommitInsights(workspace.path, {
       githubUrl: githubUrlOf(input),
+      sha: workspace.cloneHash,
+      ref: workspace.branch ?? (input.kind === "github" ? input.ref : undefined),
     });
     const startHere = computeStartHere(pipeline, packs.tsjs, packs.python, packs.java);
     const dangerZones = computeDangerZones(
@@ -114,7 +147,7 @@ export async function analyzeRepository(
       );
     }
 
-    return finish(
+    const result = await finish(
       buildCompleteReport({
         analyzeInput: input,
         analysisIntent: options.analysisIntent,
@@ -128,6 +161,18 @@ export async function analyzeRepository(
         dangerZones,
       })
     );
+
+    if (githubCoords && workspace.cloneHash && !result.report.partial) {
+      await putCachedAnalysis(
+        githubCoords.owner,
+        githubCoords.repo,
+        workspace.cloneHash,
+        result.report,
+        options.analysisIntent
+      ).catch(() => undefined);
+    }
+
+    return result;
   } finally {
     await workspace.cleanup?.();
   }

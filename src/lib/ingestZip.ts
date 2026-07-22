@@ -57,7 +57,7 @@ export async function ingestFromZip(
   const tempDir = createTemporaryWorkspace("-extract");
   try {
     try {
-      safeExtractZipFromFile(fullPath, tempDir);
+      await safeExtractZipFromFile(fullPath, tempDir);
     } catch (error) {
       if (error instanceof AppError) throw error;
       const message = error instanceof Error ? error.message : "Unknown error";

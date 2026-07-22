@@ -60,7 +60,7 @@ export async function ingestFromGithub(
     const extractDir = path.join(tempDir, "extracted");
     fs.mkdirSync(extractDir, { recursive: true });
     try {
-      safeExtractZipFromFile(archivePath, extractDir);
+      await safeExtractZipFromFile(archivePath, extractDir);
       await fs.promises.unlink(archivePath).catch(() => undefined);
     } catch (error) {
       if (error instanceof AppError) throw error;

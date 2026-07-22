@@ -6,21 +6,34 @@ import { maxCompressedBytesForZipUpload } from "@/lib/ingestLimits";
 
 const mocks = vi.hoisted(() => ({
   analyzeRepository: vi.fn(),
+  runIsolatedAnalysis: vi.fn(),
   canPersistReports: vi.fn(),
   checkRateLimit: vi.fn(),
   clientKeyFromHeaders: vi.fn(),
   getMaxConcurrentAnalyses: vi.fn(),
   releaseSlot: vi.fn(),
   tryAcquireAnalysisSlot: vi.fn(),
+  setRateLimiter: vi.fn(),
+  InMemoryRateLimiter: class {
+    check = vi.fn();
+  },
 }));
 
 vi.mock("@/analyzer", () => ({ analyzeRepository: mocks.analyzeRepository }));
+vi.mock("@/analyzer/runIsolatedAnalysis", () => ({
+  runIsolatedAnalysis: mocks.runIsolatedAnalysis,
+}));
+vi.mock("@/lib/configureAbuseControls", () => ({
+  configureAbuseControls: vi.fn(),
+}));
 vi.mock("@/lib/storageConfig", () => ({ canPersistReports: mocks.canPersistReports }));
 vi.mock("@/lib/rateLimit", () => ({
   clientKeyFromHeaders: mocks.clientKeyFromHeaders,
   getMaxConcurrentAnalyses: mocks.getMaxConcurrentAnalyses,
   getRateLimiter: () => ({ check: mocks.checkRateLimit }),
   tryAcquireAnalysisSlot: mocks.tryAcquireAnalysisSlot,
+  setRateLimiter: mocks.setRateLimiter,
+  InMemoryRateLimiter: mocks.InMemoryRateLimiter,
 }));
 
 import { POST } from "./route";
@@ -55,7 +68,7 @@ function multipartRequest(entries: Record<string, string | Blob>) {
 }
 
 function mockSuccess(persisted = false) {
-  mocks.analyzeRepository.mockResolvedValueOnce({
+  mocks.runIsolatedAnalysis.mockResolvedValueOnce({
     reportId: "report-123",
     report: inlineReport,
     persisted,
@@ -69,12 +82,20 @@ async function expectInvalid(request: NextRequest, message: string, status = 400
     code: status === 413 ? ERROR_CODES.REPO_TOO_LARGE : ERROR_CODES.INVALID_INPUT,
     message,
   });
-  expect(mocks.analyzeRepository).not.toHaveBeenCalled();
+  expect(mocks.runIsolatedAnalysis).not.toHaveBeenCalled();
   expect(mocks.releaseSlot).toHaveBeenCalledOnce();
 }
 
 beforeEach(() => {
-  for (const mock of Object.values(mocks)) mock.mockReset();
+  mocks.analyzeRepository.mockReset();
+  mocks.runIsolatedAnalysis.mockReset();
+  mocks.canPersistReports.mockReset();
+  mocks.checkRateLimit.mockReset();
+  mocks.clientKeyFromHeaders.mockReset();
+  mocks.getMaxConcurrentAnalyses.mockReset();
+  mocks.releaseSlot.mockReset();
+  mocks.tryAcquireAnalysisSlot.mockReset();
+  mocks.setRateLimiter.mockReset();
   mocks.canPersistReports.mockReturnValue(false);
   mocks.checkRateLimit.mockResolvedValue({ allowed: true, bestEffort: true });
   mocks.clientKeyFromHeaders.mockReturnValue("bounded-test-client");
@@ -94,7 +115,7 @@ describe("POST /api/analyze request boundary", () => {
       report: inlineReport,
       persisted: false,
     });
-    expect(mocks.analyzeRepository).toHaveBeenCalledWith(
+    expect(mocks.runIsolatedAnalysis).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "zip", zipName: "repo-ts" }),
       expect.objectContaining({
         analysisIntent: "interview",
@@ -113,7 +134,7 @@ describe("POST /api/analyze request boundary", () => {
     const response = await POST(jsonRequest({ sample: true }));
 
     await expect(response.json()).resolves.toEqual({ reportId: "report-123", persisted: true });
-    expect(mocks.analyzeRepository).toHaveBeenCalledWith(
+    expect(mocks.runIsolatedAnalysis).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ persist: true })
     );
@@ -130,7 +151,7 @@ describe("POST /api/analyze request boundary", () => {
       })
     );
 
-    expect(mocks.analyzeRepository).toHaveBeenCalledWith(
+    expect(mocks.runIsolatedAnalysis).toHaveBeenCalledWith(
       {
         kind: "github",
         githubUrl: "https://github.com/owner/repository",
@@ -145,7 +166,7 @@ describe("POST /api/analyze request boundary", () => {
 
     await POST(jsonRequest({ githubUrl: "https://github.com/owner/repository", ref: "  " }));
 
-    expect(mocks.analyzeRepository).toHaveBeenCalledWith(
+    expect(mocks.runIsolatedAnalysis).toHaveBeenCalledWith(
       { kind: "github", githubUrl: "https://github.com/owner/repository", ref: undefined },
       expect.anything()
     );
@@ -158,7 +179,7 @@ describe("POST /api/analyze request boundary", () => {
 
       await POST(jsonRequest({ sample: true, analysisIntent }));
 
-      expect(mocks.analyzeRepository).toHaveBeenCalledWith(
+      expect(mocks.runIsolatedAnalysis).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ analysisIntent })
       );
@@ -167,7 +188,7 @@ describe("POST /api/analyze request boundary", () => {
 
   it("accepts a multipart ZIP and removes the temporary file after success", async () => {
     let uploadedPath = "";
-    mocks.analyzeRepository.mockImplementationOnce(async (input) => {
+    mocks.runIsolatedAnalysis.mockImplementationOnce(async (input) => {
       uploadedPath = input.zipRef;
       expect(fs.existsSync(uploadedPath)).toBe(true);
       return { reportId: "report-123", report: inlineReport, persisted: false };
@@ -183,7 +204,7 @@ describe("POST /api/analyze request boundary", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mocks.analyzeRepository).toHaveBeenCalledWith(
+    expect(mocks.runIsolatedAnalysis).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "zip", zipName: "candidate.zip" }),
       expect.objectContaining({ analysisIntent: "bug" })
     );
@@ -197,7 +218,7 @@ describe("POST /api/analyze request boundary", () => {
 
     await POST(multipartRequest({ zip: new Blob(["PK\u0003\u0004fixture"]) }));
 
-    expect(mocks.analyzeRepository).toHaveBeenCalledWith(
+    expect(mocks.runIsolatedAnalysis).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "zip", zipName: "blob" }),
       expect.anything()
     );
@@ -205,7 +226,7 @@ describe("POST /api/analyze request boundary", () => {
 
   it("removes the uploaded temporary file when analysis fails", async () => {
     let uploadedPath = "";
-    mocks.analyzeRepository.mockImplementationOnce(async (input) => {
+    mocks.runIsolatedAnalysis.mockImplementationOnce(async (input) => {
       uploadedPath = input.zipRef;
       throw new AppError({
         code: ERROR_CODES.ZIP_INVALID,
@@ -244,12 +265,12 @@ describe("POST /api/analyze request boundary", () => {
 
     expect(response.status).toBe(413);
     await expect(response.json()).resolves.toMatchObject({ code: ERROR_CODES.REPO_TOO_LARGE });
-    expect(mocks.analyzeRepository).not.toHaveBeenCalled();
+    expect(mocks.runIsolatedAnalysis).not.toHaveBeenCalled();
     expect(mocks.releaseSlot).toHaveBeenCalledOnce();
   });
 
   it("returns a bounded error when analysis produces no report id", async () => {
-    mocks.analyzeRepository.mockResolvedValueOnce({
+    mocks.runIsolatedAnalysis.mockResolvedValueOnce({
       reportId: "",
       report: inlineReport,
       persisted: false,
@@ -268,7 +289,7 @@ describe("POST /api/analyze request boundary", () => {
 
   it("forwards a request abort to the analyzer and still releases its slot", async () => {
     const requestController = new AbortController();
-    mocks.analyzeRepository.mockImplementationOnce(async (_input, options) => {
+    mocks.runIsolatedAnalysis.mockImplementationOnce(async (_input, options) => {
       return await new Promise((_resolve, reject) => {
         options.signal.addEventListener(
           "abort",
@@ -289,7 +310,7 @@ describe("POST /api/analyze request boundary", () => {
     const responsePromise = POST(
       jsonRequest({ sample: true }, { signal: requestController.signal })
     );
-    await vi.waitFor(() => expect(mocks.analyzeRepository).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(mocks.runIsolatedAnalysis).toHaveBeenCalledOnce());
     requestController.abort();
     const response = await responsePromise;
 
@@ -302,7 +323,7 @@ describe("POST /api/analyze request boundary", () => {
     const requestController = new AbortController();
     const request = jsonRequest({ sample: true }, { signal: requestController.signal });
     requestController.abort();
-    mocks.analyzeRepository.mockImplementationOnce(async (_input, options) => {
+    mocks.runIsolatedAnalysis.mockImplementationOnce(async (_input, options) => {
       expect(options.signal.aborted).toBe(true);
       throw new AppError({
         code: ERROR_CODES.TIMEOUT,
@@ -419,7 +440,7 @@ describe("POST /api/analyze capacity boundary", () => {
       message: "Server is busy (max 4 concurrent analyses). Please retry shortly.",
       requestId: expect.any(String),
     });
-    expect(mocks.analyzeRepository).not.toHaveBeenCalled();
+    expect(mocks.runIsolatedAnalysis).not.toHaveBeenCalled();
     expect(mocks.releaseSlot).not.toHaveBeenCalled();
   });
 });
@@ -472,7 +493,7 @@ const failures: FailureCase[] = [
 describe("POST /api/analyze failure states", () => {
   for (const failure of failures) {
     it(`returns a bounded response for ${failure.label}`, async () => {
-      mocks.analyzeRepository.mockRejectedValueOnce(
+      mocks.runIsolatedAnalysis.mockRejectedValueOnce(
         new AppError({
           code: failure.code,
           status: failure.status,
@@ -502,7 +523,7 @@ describe("POST /api/analyze failure states", () => {
       expect(body.requestId).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       );
-      expect(mocks.analyzeRepository).toHaveBeenCalledWith(
+      expect(mocks.runIsolatedAnalysis).toHaveBeenCalledWith(
         expect.objectContaining({ kind: "github" }),
         expect.objectContaining({ requestId: body.requestId })
       );

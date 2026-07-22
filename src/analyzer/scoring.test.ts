@@ -148,6 +148,17 @@ describe("computeStartHere", () => {
     expect(result[1].explanation).toBe("contribution guide");
     expect(result[2].explanation).toBe("key project documentation; project docs reference");
     expect(result[2].score).toBe(result[3].score);
+    // Tied raw scores must not all inflate to 100.
+    expect(result.every((item) => item.score === 100)).toBe(false);
+  });
+
+  it("maps equal Start Here raw scores to a neutral 50 instead of 100", () => {
+    const pipeline = mockPipeline({
+      key_docs: ["docs/a.md", "docs/b.md"],
+    });
+    const result = computeStartHere(pipeline);
+    expect(result.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(result.map((item) => item.score))).toEqual(new Set([50]));
   });
 
   it("recognizes root App Router files and bounded TypeScript graph signals", () => {
@@ -297,7 +308,7 @@ describe("computeStartHere", () => {
 
     expect(result).toHaveLength(12);
     expect(result.map((item) => item.path)).toEqual([...keyDocs].sort().slice(0, 12));
-    expect(result.every((item) => item.score === 100)).toBe(true);
+    expect(result.every((item) => item.score === 50)).toBe(true);
   });
 });
 

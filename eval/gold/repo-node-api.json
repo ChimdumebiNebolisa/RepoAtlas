@@ -1,0 +1,12 @@
+{
+  "fixture": "repo-node-api",
+  "entrypoints": ["src/index.js"],
+  "internal_edges": [],
+  "run_commands": ["npm run start", "npm run dev", "npm run test"],
+  "onboarding_files": ["README.md", "src/index.js"],
+  "high_coupling_files": ["src/index.js"],
+  "unresolved_imports": [],
+  "known_gaps": [
+    "express is an external package; unresolved external edges are out of scope for this gold file"
+  ]
+}

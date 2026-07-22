@@ -18,6 +18,14 @@ const UNAVAILABLE: CommitInsights = {
 // repositories only.
 const GITHUB_JSON_HEADERS = { Accept: "application/vnd.github+json" } as const;
 
+export interface CommitInsightsOptions {
+  githubUrl?: string;
+  /** Exact commit SHA of the ingested archive tip (preferred history tip). */
+  sha?: string | null;
+  /** Branch or tag that was resolved for ingestion (fallback history tip). */
+  ref?: string | null;
+}
+
 function buildInsightsFromFileCounts(
   fileCounts: Map<string, number>,
   mode: "local_git" | "github_api"
@@ -65,12 +73,27 @@ function analyzeLocalGit(workspacePath: string): CommitInsights {
   }
 }
 
-async function analyzeGithubApi(githubUrl: string): Promise<CommitInsights> {
+function historyTip(opts?: Pick<CommitInsightsOptions, "sha" | "ref">): string | undefined {
+  const sha = opts?.sha?.trim();
+  if (sha) return sha;
+  const ref = opts?.ref?.trim();
+  return ref || undefined;
+}
+
+async function analyzeGithubApi(
+  githubUrl: string,
+  opts?: Pick<CommitInsightsOptions, "sha" | "ref">
+): Promise<CommitInsights> {
   const parsed = validateGithubUrl(githubUrl);
   if (!parsed) return UNAVAILABLE;
 
   const { owner, repo } = parsed;
-  const commitsUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=15`;
+  const tip = historyTip(opts);
+  // Scope history to the ingested tip so churn matches the analyzed tree
+  // (selected branch/tag/SHA), not the repository default branch.
+  const commitsUrl = tip
+    ? `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?sha=${encodeURIComponent(tip)}&per_page=15`
+    : `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=15`;
 
   try {
     const res = await fetch(commitsUrl, {
@@ -108,14 +131,14 @@ async function analyzeGithubApi(githubUrl: string): Promise<CommitInsights> {
 
 export async function analyzeCommitInsights(
   workspacePath: string,
-  opts?: { githubUrl?: string }
+  opts?: CommitInsightsOptions
 ): Promise<CommitInsights> {
   const local = analyzeLocalGit(workspacePath);
   if (local.mode !== "unavailable") return local;
 
   const githubUrl = opts?.githubUrl?.trim();
   if (githubUrl && githubUrl !== "zip" && githubUrl.includes("github.com")) {
-    return analyzeGithubApi(githubUrl);
+    return analyzeGithubApi(githubUrl, { sha: opts?.sha, ref: opts?.ref });
   }
 
   return UNAVAILABLE;

@@ -370,6 +370,66 @@ import static com.example.util.Utils.helper;
     expect(specs).toContain("java.util.List");
     expect(specs).toContain("com.example.util.Utils.helper");
   });
+
+  it("resolves static member imports and static star imports to the owning type", () => {
+    const content = `package com.example;
+import static com.example.util.Utils.helper;
+import static com.example.util.Utils.*;
+`;
+    const specs = extractImportSpecifiers(content);
+    expect(specs).toContain("com.example.util.Utils.helper");
+    expect(specs).toContain("com.example.util.Utils");
+    expect(specs).not.toContain("com.example.util.Utils.*");
+  });
+});
+
+describe("same-package references", () => {
+  it("links default-package siblings without import statements", () => {
+    const workspace = writeWorkspace({
+      [relKey("src", "Main.java")]: `public class Main {
+    public static void main(String[] args) {
+        System.out.println(Utils.greet("world"));
+    }
+}
+`,
+      [relKey("src", "Utils.java")]: `public class Utils {
+    public static String greet(String name) { return name; }
+}
+`,
+    });
+    const mainFile = normalizeKey(relKey("src", "Main.java"));
+    const utilsFile = normalizeKey(relKey("src", "Utils.java"));
+    const pipeline = buildPipeline([mainFile, utilsFile]);
+    try {
+      const result = runJavaPack(workspace, pipeline);
+      expect(result.imports.get(mainFile)?.has(utilsFile)).toBe(true);
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves static member imports to the owning type file", () => {
+    const workspace = writeWorkspace({
+      [relKey("src", "main", "java", "com", "example", "App.java")]: `package com.example;
+import static com.example.util.Utils.helper;
+public class App { public static void main(String[] args) { helper(); } }
+`,
+      [relKey("src", "main", "java", "com", "example", "util", "Utils.java")]: `package com.example.util;
+public class Utils { public static void helper() {} }
+`,
+    });
+    const app = normalizeKey(relKey("src", "main", "java", "com", "example", "App.java"));
+    const utils = normalizeKey(
+      relKey("src", "main", "java", "com", "example", "util", "Utils.java")
+    );
+    const pipeline = buildPipeline([app, utils]);
+    try {
+      const result = runJavaPack(workspace, pipeline);
+      expect(result.imports.get(app)?.has(utils)).toBe(true);
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("runJavaPack architecture", () => {

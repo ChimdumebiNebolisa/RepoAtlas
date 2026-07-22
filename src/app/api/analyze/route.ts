@@ -3,7 +3,10 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { analyzeRepository, type AnalyzeInput } from "@/analyzer";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
+import type { AnalyzeInput } from "@/analyzer";
+import { runIsolatedAnalysis } from "@/analyzer/runIsolatedAnalysis";
 import {
   ERROR_CODES,
   toApiErrorPayload,
@@ -12,6 +15,7 @@ import { analyzeErrorLogPayload } from "@/lib/analyzeErrorLog";
 import { bundledSampleInput } from "@/lib/bundledSample";
 import { MAX_ANALYSIS_TIME_MS, maxCompressedBytesForZipUpload, maxZipUploadMb } from "@/lib/ingestLimits";
 import { canPersistReports } from "@/lib/storageConfig";
+import { configureAbuseControls } from "@/lib/configureAbuseControls";
 import {
   clientKeyFromHeaders,
   getMaxConcurrentAnalyses,
@@ -19,6 +23,8 @@ import {
   tryAcquireAnalysisSlot,
 } from "@/lib/rateLimit";
 import { ANALYSIS_INTENTS, type AnalysisIntent } from "@/types/report";
+
+configureAbuseControls();
 
 // Discriminated input model:
 //   - multipart upload  -> { kind: "zip" }   (server-created temp path)
@@ -125,9 +131,18 @@ export async function POST(request: NextRequest) {
           requestId
         );
       }
-      const buffer = Buffer.from(await blob.arrayBuffer());
       tempZipPath = path.join(os.tmpdir(), `repoatlas-${randomUUID()}.zip`);
-      await fs.promises.writeFile(tempZipPath, buffer);
+      // Stream the upload to disk instead of buffering the whole zip in memory.
+      if (typeof blob.stream === "function") {
+        const nodeStream = Readable.fromWeb(
+          blob.stream() as import("stream/web").ReadableStream
+        );
+        await pipeline(nodeStream, fs.createWriteStream(tempZipPath), {
+          signal: abortSignal,
+        });
+      } else {
+        await fs.promises.writeFile(tempZipPath, Buffer.from(await blob.arrayBuffer()));
+      }
       analyzeInput = { kind: "zip", zipRef: tempZipPath, zipName };
     } else if (contentType.includes("application/json")) {
       let body: Record<string, unknown>;
@@ -175,7 +190,7 @@ export async function POST(request: NextRequest) {
     }
 
     const persistenceAvailable = canPersistReports();
-    const report = await analyzeRepository(analyzeInput, {
+    const report = await runIsolatedAnalysis(analyzeInput, {
       requestId,
       deadlineMs: MAX_ANALYSIS_TIME_MS,
       signal: abortSignal,

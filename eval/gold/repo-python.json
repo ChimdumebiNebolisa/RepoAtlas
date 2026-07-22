@@ -1,0 +1,14 @@
+{
+  "fixture": "repo-python",
+  "entrypoints": ["main.py", "myapp/cli.py"],
+  "internal_edges": [
+    { "from": "main.py", "to": "utils.py" },
+    { "from": "myapp/cli.py", "to": "myapp/models.py" },
+    { "from": "myapp/cli.py", "to": "myapp/utils.py" },
+    { "from": "myapp/models.py", "to": "myapp/utils.py" }
+  ],
+  "run_commands": ["myapp"],
+  "onboarding_files": ["README.md", "main.py", "myapp/cli.py"],
+  "high_coupling_files": ["myapp/models.py", "utils.py"],
+  "unresolved_imports": []
+}

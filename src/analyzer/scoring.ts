@@ -35,9 +35,13 @@ function normalizeScores(values: number[]): number[] {
   if (!values.length) return [];
   const min = Math.min(...values);
   const max = Math.max(...values);
-  if (max === min) return values.map(() => 100);
+  // Equal raw scores must not all become 100 — that overstates absolute rank.
+  // Use a neutral mid-scale so ties stay ties without looking like a perfect score.
+  if (max === min) return values.map(() => 50);
   return values.map((v) => Math.round(((v - min) / (max - min)) * 100));
 }
+
+const SMALL_SAMPLE_FILE_COUNT = 5;
 
 function percentileRank(values: number[], value: number): number {
   if (!values.length) return 0;
@@ -50,6 +54,25 @@ function percentileRank(values: number[], value: number): number {
   }
   const rank = ((below + equal * 0.5) / sorted.length) * 100;
   return Math.max(0, Math.min(100, rank));
+}
+
+/**
+ * Absolute 0–100 scaling against the observed max (or a soft floor) so tiny repos
+ * do not turn one large-among-four file into an extreme percentile spike.
+ */
+function absoluteRank(values: number[], value: number): number {
+  if (!values.length) return 0;
+  const max = Math.max(...values, 1);
+  return Math.max(0, Math.min(100, (value / max) * 100));
+}
+
+function blendedMetricRank(values: number[], value: number, sampleSize: number): number {
+  const percentile = percentileRank(values, value);
+  if (sampleSize >= SMALL_SAMPLE_FILE_COUNT) return percentile;
+  // Shrinkage prior: blend percentile with absolute scale when n is tiny.
+  const absolute = absoluteRank(values, value);
+  const weight = sampleSize / SMALL_SAMPLE_FILE_COUNT;
+  return weight * percentile + (1 - weight) * absolute;
 }
 
 function computeEntrypointDistance(
@@ -350,12 +373,12 @@ export function computeDangerZones(
     const testProximity = pack(f).testProximity?.get(f) ?? 0;
     const churn = commitInsights ? churnScoreForFile(f, commitInsights) : 0;
 
-    const sizeP = percentileRank(sizeValues, size);
-    const fanInP = percentileRank(fanInValues, fanIn);
-    const fanOutP = percentileRank(fanOutValues, fanOut);
-    const complexityP = percentileRank(complexityValues, complexity);
-    const weakTestP = 100 - percentileRank(testProximityValues, testProximity);
-    const churnP = hasChurn ? percentileRank(churnValues, churn) : 0;
+    const sizeP = blendedMetricRank(sizeValues, size, files.length);
+    const fanInP = blendedMetricRank(fanInValues, fanIn, files.length);
+    const fanOutP = blendedMetricRank(fanOutValues, fanOut, files.length);
+    const complexityP = blendedMetricRank(complexityValues, complexity, files.length);
+    const weakTestP = 100 - blendedMetricRank(testProximityValues, testProximity, files.length);
+    const churnP = hasChurn ? blendedMetricRank(churnValues, churn, files.length) : 0;
 
     const weightedRisk = hasChurn
       ? 0.18 * sizeP +

@@ -68,11 +68,12 @@ from collections.abc import Mapping
     expect(result).toContain("collections.abc");
   });
 
-  it("extracts from ... import (module spec only)", () => {
+  it("extracts from ... import including imported submodule names", () => {
     const content = "from myapp.models import get_value\nfrom myapp import utils\n";
     const result = extractImportSpecifiers(content);
     expect(result).toContain("myapp.models");
     expect(result).toContain("myapp");
+    expect(result).toContain("myapp.utils");
   });
 
   it("extracts relative imports", () => {
@@ -109,7 +110,7 @@ from collections.abc import Mapping
     }
   });
 
-  it("deduplicates aliases, ignores wildcard imports, and skips parenthesized imports", () => {
+  it("deduplicates aliases, ignores wildcards, and reads parenthesized imports", () => {
     const content = [
       "import alpha as first, beta as second",
       "import alpha",
@@ -119,8 +120,22 @@ from collections.abc import Mapping
     expect(extractImportSpecifiers(content)).toEqual([
       "alpha",
       "beta",
+      "gamma",
+      "delta",
       ".pkg",
       ".pkg.useful",
+    ]);
+  });
+
+  it("handles parenthesized imports with comments", () => {
+    const content = "from pkg import (\n  # note\n  foo,\n  bar,\n)\n";
+    expect(extractImportSpecifiers(content)).toEqual(["pkg", "pkg.foo", "pkg.bar"]);
+  });
+
+  it("follows line-continued from/import forms", () => {
+    expect(extractImportSpecifiers("from pkg \\\nimport name\n")).toEqual([
+      "pkg",
+      "pkg.name",
     ]);
   });
 });

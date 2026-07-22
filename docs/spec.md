@@ -27,7 +27,7 @@ Engineers preparing to discuss a repository need to find entrypoints, understand
 ### What RepoAtlas Is
 
 - A **static analysis tool** that ingests repositories and produces structured briefs.
-- Supports **language packs** (TS/JS, Python, Java) for deeper analysis.
+- Supports **language packs** (TS/JS, Python, Java). Depth is uneven: TS/JS is AST-backed via the TypeScript Compiler API; Python and Java are structured heuristics. Do not describe the three packs as equivalent “deep analysis.”
 - Works for **any repo** at a basic level; provides richer signals for supported languages.
 
 ### What RepoAtlas Is Not
@@ -375,7 +375,7 @@ StartHereScore = (
 | Fan-out | Number of files this file imports | Import graph |
 | Complexity | Complexity proxy value | Language pack |
 | Test proximity penalty | 0 if nearby test else 1 | Test proximity |
-| Churn (optional) | Commit count in last N commits | Git log or GitHub API when available (`src/analyzer/gitHistory.ts`) |
+| Churn (optional) | Commit count in last N commits reachable from the ingested tip | Local `git log` when `.git` exists; otherwise GitHub commits API scoped with `sha=<clone_hash|ref>` (`src/analyzer/gitHistory.ts`) so churn matches the analyzed tree, not the default branch |
 
 **Normalization**: For each metric, compute percentile rank (0–100) within repo.
 

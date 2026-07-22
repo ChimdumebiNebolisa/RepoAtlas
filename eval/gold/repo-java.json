@@ -1,0 +1,11 @@
+{
+  "fixture": "repo-java",
+  "entrypoints": ["src/Main.java"],
+  "internal_edges": [
+    { "from": "src/Main.java", "to": "src/Utils.java" }
+  ],
+  "run_commands": [],
+  "onboarding_files": ["README.md", "src/Main.java"],
+  "high_coupling_files": ["src/Utils.java", "src/Main.java"],
+  "unresolved_imports": []
+}

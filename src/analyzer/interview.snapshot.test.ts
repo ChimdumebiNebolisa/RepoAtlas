@@ -74,22 +74,22 @@ describe("Candidate Brief byte stability", () => {
     [
       "TypeScript",
       "repo-node-api",
-      "29e9652183aec67f9ba97587b6b52acf5713551c0fcba50d0d35928762a701f5",
+      "a08e16ba95ec31c2305586b681a765c06f79dc67f802bf1120353833f011c750",
     ],
     [
       "Python",
       "repo-python",
-      "3622edcd6a0f5f7da7c7b32ce77c84aa1cc14827e018f2dbc3e5629d6549dcb2",
+      "0a1a840405e262ccaa577127c6a72b29cd9c23ba576dba417abd9ca980184b48",
     ],
     [
       "Java",
       "repo-java-maven",
-      "05115caac7a30e25926f41d124c0ff04067e28eaac71d9f28c677041c6588209",
+      "1ab1e49d911d52ad045daa83bdba38deab6632f13823e4d44fa8b30c9af67140",
     ],
     [
       "monorepo",
       "repo-monorepo",
-      "d4a05a0ea128e464af80f1d876a97df1a5bda4ff4a7ff8153597b5e06e346efd",
+      "c7d953ca53c60cd9c464928d9f2c393c8b171a308494837072e56fb0d444b448",
     ],
   ])("preserves the %s fixture byte-for-byte", async (_label, fixture, expected) => {
     const fixturePath = path.resolve(__dirname, `../../fixtures/${fixture}`);

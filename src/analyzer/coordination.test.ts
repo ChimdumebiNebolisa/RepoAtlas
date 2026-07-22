@@ -156,6 +156,29 @@ describe("analysis coordination checkpoints", () => {
     expect(mocks.cleanup).toHaveBeenCalledOnce();
   });
 
+  it("passes ingested SHA and branch tip into commit history analysis", async () => {
+    mocks.ingestRepo.mockResolvedValueOnce({
+      path: "/tmp/repo",
+      name: "repo",
+      url: "https://github.com/example/sample-repo",
+      branch: "feature/experiment",
+      cloneHash: "deadbeefcafebabe",
+      cleanup: mocks.cleanup,
+    });
+
+    await analyzeRepository({
+      kind: "github",
+      githubUrl: "https://github.com/example/sample-repo",
+      ref: "feature/experiment",
+    });
+
+    expect(mocks.analyzeCommitInsights).toHaveBeenCalledWith("/tmp/repo", {
+      githubUrl: "https://github.com/example/sample-repo",
+      sha: "deadbeefcafebabe",
+      ref: "feature/experiment",
+    });
+  });
+
   it("cleans up when cancellation is observed after ingestion", async () => {
     mocks.throwIfAborted.mockImplementationOnce(() => {
       throw new AppError({
