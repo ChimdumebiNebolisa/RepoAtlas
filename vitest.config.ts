@@ -86,6 +86,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/{index,analysisTypes,analysisDeadline,languagePacks,partialReport,reportAssembly,reportPersistence}.ts": {
+          branches: 80,
+          lines: 85,
+        },
       },
     },
   },
