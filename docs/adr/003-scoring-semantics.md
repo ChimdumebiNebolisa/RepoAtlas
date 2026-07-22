@@ -34,11 +34,8 @@ Start Here and Danger Zones must be deterministic, explainable, and honest. User
   where `weak_test = 100 − test_proximity_percentile`.
 
 - Breakdown strings show percentile and raw values (e.g. `fan-in p85 (12)`), plus plain-language notes when test proximity is low.
-- Results are capped at `MAX_DANGER_ZONE_ITEMS` (200) stored in the report.
-
-### What we do not claim
-
-Danger zones reflect structural signals (size, coupling, complexity, test proximity, optional churn). They do **not** assert defects, security issues, or production readiness. Percentile weights are manually chosen for intra-repo ranking; scores are not calibrated absolute risk.
+- **Equal raw Start Here scores** normalize to **50** (not 100) so ties do not look like a perfect score.
+- Danger Zone percentiles use **shrinkage** toward absolute scale when fewer than 5 files are scored.
 
 ## Consequences
 

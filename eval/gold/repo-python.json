@@ -10,8 +10,5 @@
   "run_commands": ["myapp"],
   "onboarding_files": ["README.md", "main.py", "myapp/cli.py"],
   "high_coupling_files": ["myapp/models.py", "utils.py"],
-  "unresolved_imports": [],
-  "known_gaps": [
-    "from myapp import utils may resolve to myapp/__init__.py instead of myapp/utils.py under regex extraction"
-  ]
+  "unresolved_imports": []
 }

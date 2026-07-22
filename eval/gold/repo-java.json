@@ -7,8 +7,5 @@
   "run_commands": [],
   "onboarding_files": ["README.md", "src/Main.java"],
   "high_coupling_files": ["src/Utils.java", "src/Main.java"],
-  "unresolved_imports": [],
-  "known_gaps": [
-    "Same-package Java references without import statements are not recovered by the regex pack"
-  ]
+  "unresolved_imports": []
 }

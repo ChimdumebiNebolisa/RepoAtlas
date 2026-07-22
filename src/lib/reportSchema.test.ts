@@ -101,4 +101,46 @@ describe("reportSchema", () => {
     });
     expect(result).toEqual({ ok: false, reason: "corrupt" });
   });
+
+  it("rejects malformed start_here / danger_zones / architecture entries", () => {
+    expect(
+      validateReport({
+        ...minimalReport,
+        start_here: [{ path: "a.ts", score: "bad", explanation: "x" }],
+      }).ok
+    ).toBe(false);
+    expect(
+      validateReport({
+        ...minimalReport,
+        danger_zones: [{ path: "a.ts", score: 1, breakdown: "x", metrics: "nope" }],
+      }).ok
+    ).toBe(false);
+    expect(
+      validateReport({
+        ...minimalReport,
+        architecture: { nodes: [{ id: 1, label: "x" }], edges: [] },
+      }).ok
+    ).toBe(false);
+    expect(
+      validateReport({
+        ...minimalReport,
+        contribute_signals: { key_docs: "README.md", ci_configs: [] },
+      }).ok
+    ).toBe(false);
+  });
+
+  it("rejects corrupt candidate_brief and commit_insights when present", () => {
+    expect(
+      validateReport({
+        ...minimalReport,
+        candidate_brief: { repo_summary: { headline: "x" } },
+      }).ok
+    ).toBe(false);
+    expect(
+      validateReport({
+        ...minimalReport,
+        commit_insights: { mode: "mystery", recent_work_areas: [], high_churn_files: [], co_changed_pairs: [], evidence_refs: [] },
+      }).ok
+    ).toBe(false);
+  });
 });

@@ -41,6 +41,19 @@ export function detectEntrypoints(files: string[], workspacePath: string): Set<s
     }
   }
 
+  for (const file of files) {
+    if (entrypoints.has(file)) continue;
+    try {
+      const content = fs.readFileSync(path.join(workspacePath, file), "utf-8");
+      // Spec acceptance: treat scripts with an explicit main guard as entrypoints.
+      if (/if\s+__name__\s*==\s*["']__main__["']\s*:/.test(content)) {
+        entrypoints.add(file);
+      }
+    } catch {
+      // Unreadable files are skipped for entrypoint heuristics.
+    }
+  }
+
   addConfiguredEntrypoints(
     path.join(workspacePath, "pyproject.toml"),
     PYPROJECT_SCRIPTS_RE,

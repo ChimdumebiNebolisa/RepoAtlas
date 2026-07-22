@@ -1,70 +1,11 @@
 import fs from "fs";
 import path from "path";
 import { normalizeRelPath } from "./shared";
-
-const IMPORT_RE = /^\s*import\s+([\w.]+)(?:\s+as\s+\w+)?/gm;
-const IMPORT_MULTI_RE = /^\s*import\s+([\s\S]+?)(?=\s*$|\s*#)/gm;
-const FROM_IMPORT_RE = /^\s*from\s+([\w.]+)\s+import\s+/gm;
-const FROM_RELATIVE_IMPORT_RE = /^\s*from\s+(\.+)([\w.]*)\s+import\s+([^#\n]+)/gm;
+import { extractImportSpecifiers as scanImportSpecifiers } from "./extract";
 
 /** Extract module specs from Python source (absolute and relative). */
 export function extractImportSpecifiers(content: string): string[] {
-  const specs: string[] = [];
-  const seen = new Set<string>();
-
-  let match: RegExpExecArray | null;
-  IMPORT_RE.lastIndex = 0;
-  while ((match = IMPORT_RE.exec(content))) {
-    const spec = match[1].trim();
-    if (spec && !seen.has(spec)) {
-      seen.add(spec);
-      specs.push(spec);
-    }
-  }
-
-  IMPORT_MULTI_RE.lastIndex = 0;
-  while ((match = IMPORT_MULTI_RE.exec(content))) {
-    const rest = match[1].trim();
-    if (rest.startsWith("(")) continue;
-    const parts = rest.split(",").map((part) => part.replace(/\s+as\s+\w+$/, "").trim());
-    for (const part of parts) {
-      const spec = part.split(/\s/)[0];
-      if (spec && !seen.has(spec)) {
-        seen.add(spec);
-        specs.push(spec);
-      }
-    }
-  }
-
-  FROM_IMPORT_RE.lastIndex = 0;
-  while ((match = FROM_IMPORT_RE.exec(content))) {
-    const spec = match[1].trim();
-    if (spec && !seen.has(spec)) {
-      seen.add(spec);
-      specs.push(spec);
-    }
-  }
-
-  FROM_RELATIVE_IMPORT_RE.lastIndex = 0;
-  while ((match = FROM_RELATIVE_IMPORT_RE.exec(content))) {
-    const dots = match[1];
-    const packageRest = (match[2] ?? "").trim();
-    const importList = (match[3] ?? "").trim();
-    const base = dots + (packageRest ? packageRest.replace(/^\.+/, "") : "");
-    const names = importList
-      .split(",")
-      .map((name) => name.replace(/\s+as\s+\S+$/, "").trim().split(/\s/)[0])
-      .filter((name) => name && name !== "*");
-    for (const name of names) {
-      const spec = packageRest ? `${base}.${name}` : `${base}${name}`;
-      if (!seen.has(spec)) {
-        seen.add(spec);
-        specs.push(spec);
-      }
-    }
-  }
-
-  return specs;
+  return scanImportSpecifiers(content);
 }
 
 function containsPackageInit(dir: string): boolean {

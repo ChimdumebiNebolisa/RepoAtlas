@@ -46,11 +46,12 @@ Details: [CHANGELOG.md](../CHANGELOG.md). ADRs: [001](./adr/001-capability-acces
 
 | Item | Goal | Key files |
 |------|------|-----------|
+| **Streaming ZIP extraction** | Path-based extract via `yauzl` (shipped); buffer path remains for unit tests | `src/lib/safeZipExtract.ts` |
+| **Durable rate limiting** | Upstash Redis REST when configured (shipped); process-local fallback | `src/lib/upstashRateLimit.ts`, `src/lib/configureAbuseControls.ts` |
+| **Report schema validation** | Deep versioned validators for nested report fields (shipped) | `src/lib/reportSchema.ts` |
+| **Isolated analysis worker** | `worker_threads` host with in-process fallback (shipped) | `src/analyzer/runIsolatedAnalysis.ts`, `scripts/analysis-worker.cjs` |
+| **Same-SHA result cache** | Reuse analysis for `owner/repo@sha` within TTL (shipped) | `src/lib/analysisCache.ts` |
 | **AbortSignal end-to-end** | One deadline propagated through download, extract, index, and storage | `src/analyzer/index.ts`, `src/lib/ingest.ts` |
-| **Streaming ZIP extraction** | Avoid whole-buffer reads; account bytes during extract | `src/lib/safeZipExtract.ts` |
-| **Durable rate limiting** | Replace process-local window with Redis/KV via `setRateLimiter()` | `src/lib/rateLimit.ts` |
-| **Report schema migration** | Versioned upgrade path for stored JSON beyond validate-or-reject | `src/lib/reportSchema.ts`, `src/types/report.ts` |
-| **Isolated analysis worker** | Move extract/analyze off the request isolate | analyzer runtime |
 
 ### Evidence and interview content
 

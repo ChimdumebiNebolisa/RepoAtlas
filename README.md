@@ -70,8 +70,8 @@ See [docs/roadmap.md](docs/roadmap.md) and [CHANGELOG.md](CHANGELOG.md).
 ## Architecture
 
 - Flow: ZIP or GitHub URL → ingest → analyzer → best-effort storage → saved fetch or inline UI
-- Analyzer: in-process TypeScript module (not an isolated worker)
-- Storage: filesystem `reports/` or Vercel Blob
+- Analyzer: `worker_threads` isolation by default (in-process under Vitest / `ANALYZE_INLINE=1`), with fallback if the worker cannot start
+- Storage: filesystem `reports/` or Vercel Blob; same-SHA GitHub analysis cache under `reports/analysis-cache/` (or Blob)
 - Temp workspace: OS temp directory per run
 - API: `POST /api/analyze`, report/share/export routes, `GET|POST /api/cron/cleanup`
 - Pages: `/`, `/interview-preparation`, `/privacy`, `/terms`, `/contact`, `/share/:token`, legacy `/report/:id`
