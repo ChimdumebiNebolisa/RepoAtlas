@@ -52,6 +52,8 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   const inputRef = useRef<HTMLInputElement>(null);
   const githubUrlInputRef = useRef<HTMLInputElement>(null);
   const githubRefInputRef = useRef<HTMLInputElement>(null);
+  const latestGithubUrlRef = useRef<string | null>(null);
+  const latestGithubRefRef = useRef<string | null>(null);
   const runAnalysis = useAnalysisRequest({
     analysisIntent,
     onAnalyzeComplete,
@@ -82,8 +84,10 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
 
     // Read the submitted controls directly so an immediate click cannot race the
     // controlled-state update produced by the final input event.
-    const submittedGithubUrl = githubUrlInputRef.current?.value ?? githubUrl;
-    const submittedGithubRef = githubRefInputRef.current?.value ?? githubRef;
+    const submittedGithubUrl =
+      latestGithubUrlRef.current ?? githubUrlInputRef.current?.value ?? githubUrl;
+    const submittedGithubRef =
+      latestGithubRefRef.current ?? githubRefInputRef.current?.value ?? githubRef;
     const validationError = validateGithubInput(submittedGithubUrl, submittedGithubRef);
     if (validationError) {
       setFieldError(validationError);
@@ -153,11 +157,13 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   };
 
   const clearGithubUrlError = (value: string) => {
+    latestGithubUrlRef.current = value;
     setGithubUrl(value);
     setFieldError(null);
   };
 
   const clearGithubRefError = (value: string) => {
+    latestGithubRefRef.current = value;
     setGithubRef(value);
     setFieldError(null);
   };

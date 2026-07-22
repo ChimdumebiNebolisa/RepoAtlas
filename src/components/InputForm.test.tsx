@@ -279,6 +279,45 @@ describe("InputForm", () => {
     });
   });
 
+  it("retains the latest GitHub values when a controlled input rerenders stale", async () => {
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const { form } = renderForm();
+    const githubUrlInput = within(form).getByLabelText(
+      /Public GitHub repository URL/i
+    ) as HTMLInputElement;
+    const githubRefInput = within(form).getByLabelText(/Branch or tag/i) as HTMLInputElement;
+    fireEvent.change(githubUrlInput, {
+      target: { value: "https://github.com/octocat/demo" },
+    });
+    fireEvent.change(githubRefInput, { target: { value: "release/v1" } });
+
+    const setNativeValue = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value"
+    )?.set;
+    setNativeValue?.call(githubUrlInput, "");
+    fireEvent.submit(form);
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    const request = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(String(request?.body))).toEqual({
+      githubUrl: "https://github.com/octocat/demo",
+      analysisIntent: "interview",
+      ref: "release/v1",
+    });
+  });
+
   it("sends the selected bounded intent with a ZIP analysis", async () => {
     const user = userEvent.setup();
     const inlineReport = { report_version: 3 } as unknown as Report;
