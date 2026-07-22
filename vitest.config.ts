@@ -7,6 +7,9 @@ export default defineConfig({
   },
   test: {
     setupFiles: ["./src/test/setup.ts"],
+    // Keep CPU-heavy archive fixtures and jsdom suites from oversubscribing
+    // four-core CI runners and starving Vitest's worker RPC channel.
+    maxWorkers: 2,
     projects: [
       {
         extends: true,
