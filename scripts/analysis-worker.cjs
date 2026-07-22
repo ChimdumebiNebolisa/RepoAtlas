@@ -1,5 +1,6 @@
 /**
  * Analysis worker thread entry (CJS + jiti for path aliases / TypeScript).
+ * Serializes AppError fields so the host can preserve HTTP status codes.
  */
 const { parentPort, workerData } = require("node:worker_threads");
 const path = require("node:path");
@@ -32,10 +33,26 @@ async function main() {
     });
     parentPort.postMessage({ ok: true, result });
   } catch (error) {
-    parentPort.postMessage({
+    const payload = {
       ok: false,
       error: error instanceof Error ? error.message : String(error),
-    });
+    };
+    // Duck-type AppError: jiti can break `instanceof` across realms.
+    if (
+      error &&
+      typeof error === "object" &&
+      typeof error.code === "string" &&
+      typeof error.status === "number" &&
+      typeof error.message === "string"
+    ) {
+      payload.appError = {
+        code: error.code,
+        status: error.status,
+        message: error.message,
+        expose: error.expose !== false,
+      };
+    }
+    parentPort.postMessage(payload);
   } finally {
     if (timer) clearTimeout(timer);
   }

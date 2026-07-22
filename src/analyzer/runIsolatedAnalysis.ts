@@ -7,6 +7,7 @@
 import { Worker } from "node:worker_threads";
 import fs from "fs";
 import path from "path";
+import { AppError, ERROR_CODES, type ErrorCode } from "@/lib/errors";
 import {
   analyzeRepository,
   type AnalyzeInput,
@@ -17,6 +18,20 @@ import {
 export type IsolatedAnalyzeOptions = AnalyzeOptions & {
   /** Force in-process execution (also default under Vitest). */
   inline?: boolean;
+};
+
+type WorkerAppErrorPayload = {
+  code: ErrorCode;
+  status: number;
+  message: string;
+  expose?: boolean;
+};
+
+type WorkerMessage = {
+  ok: boolean;
+  result?: AnalyzeResult;
+  error?: string;
+  appError?: WorkerAppErrorPayload;
 };
 
 function shouldRunInline(options?: IsolatedAnalyzeOptions): boolean {
@@ -40,6 +55,21 @@ function isSpawnFailure(error: unknown): boolean {
     code === "MODULE_NOT_FOUND" ||
     /Cannot find module|not a valid Worker|Worker terminated/i.test(error.message)
   );
+}
+
+function errorFromWorkerMessage(message: WorkerMessage): Error {
+  if (message.appError && typeof message.appError.code === "string") {
+    const code = (Object.values(ERROR_CODES) as string[]).includes(message.appError.code)
+      ? (message.appError.code as ErrorCode)
+      : ERROR_CODES.ANALYSIS_FAILED;
+    return new AppError({
+      code,
+      status: message.appError.status || 500,
+      message: message.appError.message || message.error || "Worker analysis failed",
+      expose: message.appError.expose ?? true,
+    });
+  }
+  return new Error(message.error ?? "Worker analysis failed");
 }
 
 export async function runIsolatedAnalysis(
@@ -88,7 +118,13 @@ export async function runIsolatedAnalysis(
       const onAbort = () => {
         settle(() => {
           void worker.terminate().finally(() => {
-            reject(new Error("Analysis worker aborted"));
+            reject(
+              new AppError({
+                code: ERROR_CODES.TIMEOUT,
+                status: 504,
+                message: "Analysis timed out.",
+              })
+            );
           });
         });
       };
@@ -102,17 +138,23 @@ export async function runIsolatedAnalysis(
       const hardTimer = setTimeout(() => {
         settle(() => {
           void worker.terminate().finally(() => {
-            reject(new Error("Analysis worker exceeded hard deadline"));
+            reject(
+              new AppError({
+                code: ERROR_CODES.TIMEOUT,
+                status: 504,
+                message: "Analysis timed out.",
+              })
+            );
           });
         });
       }, hardDeadlineMs);
 
-      worker.on("message", (message: { ok: boolean; result?: AnalyzeResult; error?: string }) => {
+      worker.on("message", (message: WorkerMessage) => {
         clearTimeout(hardTimer);
         options.signal?.removeEventListener("abort", onAbort);
         settle(() => {
           if (message.ok && message.result) resolve(message.result);
-          else reject(new Error(message.error ?? "Worker analysis failed"));
+          else reject(errorFromWorkerMessage(message));
         });
       });
       worker.on("error", (error) => {
