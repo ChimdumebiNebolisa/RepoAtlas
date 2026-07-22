@@ -1,0 +1,22 @@
+{
+  "fixture": "repo-java-maven",
+  "entrypoints": ["src/main/java/com/example/App.java"],
+  "internal_edges": [
+    {
+      "from": "src/main/java/com/example/App.java",
+      "to": "src/main/java/com/example/service/UserService.java"
+    },
+    {
+      "from": "src/main/java/com/example/controller/UserController.java",
+      "to": "src/main/java/com/example/service/UserService.java"
+    },
+    {
+      "from": "src/main/java/com/example/service/UserService.java",
+      "to": "src/main/java/com/example/util/StringUtils.java"
+    }
+  ],
+  "run_commands": ["mvn test", "mvn package"],
+  "onboarding_files": ["README.md", "src/main/java/com/example/App.java", "pom.xml"],
+  "high_coupling_files": ["src/main/java/com/example/service/UserService.java"],
+  "unresolved_imports": []
+}

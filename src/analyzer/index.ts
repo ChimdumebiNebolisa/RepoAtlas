@@ -87,6 +87,8 @@ export async function analyzeRepository(
 
     const commitInsights = await analyzeCommitInsights(workspace.path, {
       githubUrl: githubUrlOf(input),
+      sha: workspace.cloneHash,
+      ref: workspace.branch ?? (input.kind === "github" ? input.ref : undefined),
     });
     const startHere = computeStartHere(pipeline, packs.tsjs, packs.python, packs.java);
     const dangerZones = computeDangerZones(

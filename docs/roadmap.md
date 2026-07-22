@@ -31,7 +31,16 @@ Details: [CHANGELOG.md](../CHANGELOG.md). ADRs: [001](./adr/001-capability-acces
 
 ---
 
-## Now (next 1–2 milestones)
+## Now (next milestones)
+
+### Analyzer trust (priority)
+
+| Item | Goal | Key files |
+|------|------|-----------|
+| **Evaluation gold set** | Expand `eval/gold` beyond seeded fixtures; measure entrypoint/edge/command/ranking agreement | `eval/`, `src/analyzer/eval/` |
+| **Branch-aware commit history** | Churn/history uses the ingested SHA/ref tip (shipped) | `src/analyzer/gitHistory.ts` |
+| **AST-backed Python / Java** | Close the depth gap vs TS/JS Compiler API pack | `src/analyzer/packs/` |
+| **Calibrated small-sample risk** | Stable percentiles on tiny repos (fewer than ~5 scored files) | `src/analyzer/scoring.ts` |
 
 ### Platform and limits
 
@@ -41,6 +50,7 @@ Details: [CHANGELOG.md](../CHANGELOG.md). ADRs: [001](./adr/001-capability-acces
 | **Streaming ZIP extraction** | Avoid whole-buffer reads; account bytes during extract | `src/lib/safeZipExtract.ts` |
 | **Durable rate limiting** | Replace process-local window with Redis/KV via `setRateLimiter()` | `src/lib/rateLimit.ts` |
 | **Report schema migration** | Versioned upgrade path for stored JSON beyond validate-or-reject | `src/lib/reportSchema.ts`, `src/types/report.ts` |
+| **Isolated analysis worker** | Move extract/analyze off the request isolate | analyzer runtime |
 
 ### Evidence and interview content
 
@@ -75,8 +85,8 @@ Details: [CHANGELOG.md](../CHANGELOG.md). ADRs: [001](./adr/001-capability-acces
 
 - **Python / Java semantic adapters** — implement the same language-neutral `semantic_graph` contract beyond the TS/JS vertical slice.
 - **Combined multi-language architecture** — single reduced graph when monorepo mixes languages (packs already prefix-merge today).
-- **Calibrated small-sample risk** — stable percentiles on tiny repos (fewer than ~5 scored files).
 - **Manifest-accurate detection** — framework and test tooling from lockfiles/deps, not filename guesses only.
+- **Same-SHA result caching** — reuse analysis for `owner/repo@sha` within TTL.
 
 ### Export and sharing
 
@@ -124,10 +134,11 @@ Details: [CHANGELOG.md](../CHANGELOG.md). ADRs: [001](./adr/001-capability-acces
 
 When choosing what to build next:
 
-1. **Security and correctness** before new brief templates (limits, validation, sanitization).
-2. **Evidence depth** before marketing claims (snippets, commit refs, decision evidence).
-3. **Platform honesty** before UX polish (deployment limits must match UI and API).
-4. **One PR per concern** — e.g. do not mix Next.js upgrades with scoring changes.
+1. **Security and correctness** before new brief templates (limits, validation, sanitization, branch-aligned history).
+2. **Analyzer evaluation evidence** before marketing depth claims (gold labels, precision/recall floors).
+3. **Evidence depth** before chrome (snippets, commit refs, decision evidence).
+4. **Platform honesty** before UX polish (deployment limits must match UI and API).
+5. **One PR per concern** — e.g. do not mix Next.js upgrades with scoring changes.
 
 Large items (Next.js major upgrades, OAuth for private GitHub) deserve dedicated branches with full `typecheck`, `test`, `test:coverage`, and `test:e2e` green.
 
@@ -143,4 +154,4 @@ Large items (Next.js major upgrades, OAuth for private GitHub) deserve dedicated
 | [SECURITY.md](../SECURITY.md) | Vulnerability reporting and security model |
 | [adr/](./adr/) | Architecture decision records |
 
-*Last updated: 2026-07-14*
+*Last updated: 2026-07-22*

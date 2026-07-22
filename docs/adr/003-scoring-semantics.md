@@ -38,7 +38,7 @@ Start Here and Danger Zones must be deterministic, explainable, and honest. User
 
 ### What we do not claim
 
-Danger zones reflect structural signals (size, coupling, complexity, test proximity, optional churn). They do **not** assert defects, security issues, or production readiness.
+Danger zones reflect structural signals (size, coupling, complexity, test proximity, optional churn). They do **not** assert defects, security issues, or production readiness. Percentile weights are manually chosen for intra-repo ranking; scores are not calibrated absolute risk.
 
 ## Consequences
 

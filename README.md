@@ -2,24 +2,16 @@
 
 **Deterministic, no-AI repository analysis** — upload a repo zip or paste a **public GitHub URL** and get an evidence-backed **Candidate Brief** for an interview walkthrough, bug investigation, planned change, or pull-request discussion.
 
-RepoAtlas reads repository files as text only (never executes them) and produces:
+RepoAtlas reads repository files as text only (never executes them). Primary output is a **Candidate Brief** (reading path, talking points, first PR ideas, resume bullets, walkthrough script, evidence index). Supporting tabs: Folder Map, Architecture Map, Start Here, Danger Zones, Run and Contribute, and Export (PDF/PNG always; Markdown when report storage is available).
 
-- **Candidate Brief** (primary tab): reading path, interview talking points, first PR ideas, resume bullets, walkthrough script, and evidence index
-- Folder Map: recursive directory tree
-- Architecture Map: interactive ELK-based dependency graph with pan and zoom
-- Start Here: ranked reading path with signal-based explanations
-- Danger Zones: risk-ranked hotspots with metric breakdowns (including churn when git metadata is present)
-- Run and Contribute: extracted run commands from package.json, Makefile, Docker, README, and more
-- Export: full report as PDF or PNG in every completed session; Markdown when saved report storage is available (`repoatlas-candidate-brief-{repo}-{date}.md`)
+**Language depth is uneven by design of the current packs:** TypeScript/JavaScript uses the TypeScript Compiler API (AST-backed imports and evidence). Python and Java use structured heuristics (mostly regex/text). Rankings are repository-relative structural signals, not calibrated defect or risk probabilities — see [docs/adr/003-scoring-semantics.md](docs/adr/003-scoring-semantics.md) and [eval/README.md](eval/README.md).
 
-Deep analysis is currently implemented for TypeScript/JavaScript, Python, and Java repositories.
+Two input modes:
 
-Two input modes are supported through the web UI:
+- **Upload ZIP** — local snapshots; up to **100 MB** compressed locally, **4 MB** on Vercel. Prefer GitHub URL for larger public repos when deployed.
+- **Public GitHub URL** — `https://github.com/owner/repo` with optional branch/tag; archive streamed up to 100 MB compressed.
 
-- **Upload ZIP** — best for local snapshots; up to **100 MB** compressed locally, **4 MB** on Vercel (platform body limit). Use GitHub URL mode for larger public repos when deployed.
-- **Public GitHub URL** — canonical `https://github.com/owner/repo` with optional branch/tag ref; server streams the public archive (up to 100 MB compressed).
-
-RepoAtlas extracts or downloads the archive and analyzes the repository. When report storage is available, it saves the report and returns a read-only report ID. When storage is unavailable or a save fails, it returns the completed report inline so the UI can still show it and export PDF or PNG. Markdown downloads and saved report URLs require successful persistence.
+When storage is available, the server saves the report and returns a report ID. When storage is unavailable or save fails, the completed report is returned inline so the UI can still render and export PDF/PNG. Markdown downloads and saved report URLs require persistence.
 
 ---
 
@@ -39,7 +31,7 @@ RepoAtlas extracts or downloads the archive and analyzes the repository. When re
 - [Project Structure](#project-structure)
 - [Development](#development)
 - [Testing](#testing)
-- [Fixtures](#fixtures)
+- [Fixtures and evaluation](#fixtures-and-evaluation)
 - [Limits and Behavior](#limits-and-behavior)
 - [Security Notes](#security-notes)
 - [Libraries and Licenses](#libraries-and-licenses)
@@ -49,73 +41,46 @@ RepoAtlas extracts or downloads the archive and analyzes the repository. When re
 
 ## Features
 
-- Dual input: upload a zip **or** paste a public GitHub URL (or try the sample Candidate Brief)
-- Deterministic scoring: Start Here and Danger Zones are derived from measurable repo signals — no LLM calls
-- Multi-language packs: TS/JS, Python, and Java packs provide deeper static analysis
-- Interactive visualization: pan and zoom dependency view with ELK layout
-- Portable exports:
-  - Client-side full report export to PDF and PNG for saved and inline reports
-  - Server-side Markdown export via `GET /api/reports/:id/export/md` for saved reports only
-- Best-effort report persistence: report JSON on disk (`reports/`) for local use or in a connected private Vercel Blob store using OIDC or `BLOB_READ_WRITE_TOKEN`
-- Private sharing after a completed brief:
-  - Saved reports use a server-stored, 7-day token at `/share/:token`
-  - Inline reports use a compressed, AES-GCM-encrypted URL fragment at `/share/portable#…`; the recipient's browser decrypts it without fetching report data from the API
-- Legacy saved-report view: `/report/:id` (prefer token sharing for recipients)
+- Dual input: ZIP upload, public GitHub URL, or bundled sample brief
+- Deterministic Start Here / Danger Zones from measurable repo signals (no LLM)
+- Language packs: TS/JS (AST), Python and Java (heuristic) — see depth note above
+- Interactive ELK architecture graph with pan/zoom
+- Exports: client PDF/PNG; server Markdown for saved reports
+- Best-effort persistence (`reports/` or Vercel Blob via OIDC / `BLOB_READ_WRITE_TOKEN`)
+- Private sharing: 7-day saved-report tokens at `/share/:token`, or encrypted portable fragment at `/share/portable#…`
 
-See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANGELOG.md) for shipped changes.
+See [docs/roadmap.md](docs/roadmap.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
 ## How It Works
 
-1. A user chooses **Upload ZIP** or **Public GitHub URL** in the web UI.
-2. `POST /api/analyze` receives a multipart zip, JSON `{ githubUrl, ref? }`, or `{ sample: true }`.
-3. Repo ingest extracts the upload or downloads the public GitHub archive to a temporary workspace.
-4. The indexing pipeline collects:
-   - folder tree
-   - file metadata and language hints
-   - key docs and CI config signals
-   - runnable commands from `package.json` scripts
-5. Language packs for TS/JS, Python, and Java compute imports, entrypoints, complexity, and proximity. The TS/JS pack builds a parser-backed `semantic_graph` (TypeScript Compiler API) and derives the folder architecture graph from resolved internal edges; see [docs/semantic-graph.md](docs/semantic-graph.md).
-6. Scoring computes `start_here` ranking and `danger_zones` risk score (with optional churn dimension).
-7. The interview builder assembles the **Candidate Brief** from extracted signals and evidence refs (including line-bounded semantic import evidence when present).
-8. Optional commit insights run when git metadata or GitHub URL context is available.
-9. The report is validated and the server attempts to save it when storage is configured.
-10. A saved result returns `{ reportId, persisted: true }`, which the UI loads by ID. An unsaved result returns `{ reportId, report, persisted: false }`, which the UI renders inline.
-11. The UI supports PDF and PNG for either result. Markdown and saved-report routes require persistence; inline results can still create a 7-day encrypted browser-only share link.
+1. User chooses **Upload ZIP** or **Public GitHub URL**.
+2. `POST /api/analyze` receives multipart zip, JSON `{ githubUrl, ref? }`, or `{ sample: true }`.
+3. Ingest extracts the upload or downloads the public archive (GitHub refs resolve to an immutable commit SHA first).
+4. Indexing builds folder tree, file metadata, docs/CI signals, and run commands.
+5. Language packs compute imports, entrypoints, complexity, and proximity. TS/JS builds a parser-backed `semantic_graph`; see [docs/semantic-graph.md](docs/semantic-graph.md).
+6. Scoring produces `start_here` and `danger_zones` (optional churn when commit history is available for the **same** ingested tip).
+7. Interview builder assembles the Candidate Brief from signals and evidence refs.
+8. Report is validated; the server attempts to save it when storage is configured.
+9. Saved results return `{ reportId, persisted: true }`; unsaved results return `{ reportId, report, persisted: false }` for inline UI.
 
 ---
 
 ## Architecture
 
-- Flow: ZIP upload or public GitHub URL -> ingest -> analyzer -> best-effort storage -> saved report fetch or inline response -> report UI
-- Runtime Architecture Map UI: interactive dependency graph using ELK layout with pan and zoom controls; when `semantic_graph` is present, the UI shows unresolved-edge counts without dumping every unresolved edge into the main graph
-- Markdown artifact rendering: Mermaid syntax is used only in exported markdown artifacts, not as the runtime graph renderer
-- Frontend: Next.js App Router, React, Tailwind CSS
-- API routes:
-  - `POST /api/analyze`
-  - `GET /api/reports/:id`
-  - `GET /api/reports/:id/export/md`
-  - `POST /api/reports/:id/share`
-  - `GET /api/share/:token`
-  - `GET` / `POST /api/cron/cleanup`
-- Public pages: `/`, `/interview-preparation`, `/privacy`, `/terms`, and `/contact`
-- Share page: `/share/:token` (read-only UI)
-- Legacy report page: `/report/:id`
-- Analyzer: in-process TypeScript module
-- Storage: report JSON on filesystem (`reports/`) or a connected Vercel Blob store using OIDC or `BLOB_READ_WRITE_TOKEN`
-- Temp workspace: OS temp directory per analysis run
+- Flow: ZIP or GitHub URL → ingest → analyzer → best-effort storage → saved fetch or inline UI
+- Analyzer: in-process TypeScript module (not an isolated worker)
+- Storage: filesystem `reports/` or Vercel Blob
+- Temp workspace: OS temp directory per run
+- API: `POST /api/analyze`, report/share/export routes, `GET|POST /api/cron/cleanup`
+- Pages: `/`, `/interview-preparation`, `/privacy`, `/terms`, `/contact`, `/share/:token`, legacy `/report/:id`
 
 ---
 
 ## Tech Stack
 
-- Application framework: Next.js 16, React 19, TypeScript 5
-- Styling: Tailwind CSS, PostCSS, Autoprefixer
-- Graph and layout: `elkjs`, `react-zoom-pan-pinch`
-- Export: `html2canvas`, `jspdf`, Markdown formatter
-- Testing: Vitest
-- Linting: ESLint via `npm run lint`
+Next.js 16, React 19, TypeScript 5, Tailwind CSS, `elkjs`, `react-zoom-pan-pinch`, `html2canvas`, `jspdf`, Vitest, Playwright, ESLint.
 
 ---
 
@@ -123,7 +88,7 @@ See [docs/roadmap.md](docs/roadmap.md) for planned work and [CHANGELOG.md](CHANG
 
 - Node.js 20+ (`package.json` `engines`)
 - npm 9+
-- Windows, macOS, or Linux with local filesystem and temp directory access
+- Local filesystem and temp directory access
 
 ---
 
@@ -152,8 +117,6 @@ Open `http://localhost:3000`, upload a zip or paste a public GitHub URL, and cli
 
 ![Upload → Candidate Brief → export flow](docs/demo.gif)
 
-Regenerate assets after UI changes:
-
 ```bash
 npm run capture:portfolio
 ```
@@ -162,9 +125,7 @@ npm run capture:portfolio
 
 ## Example Candidate Brief
 
-Bundled sample output (not from a live deployment): [docs/examples/repoatlas-candidate-brief.md](docs/examples/repoatlas-candidate-brief.md)
-
-You can also click **Try sample Candidate Brief** on the homepage to analyze `fixtures/repo-ts` without uploading a zip.
+Bundled sample: [docs/examples/repoatlas-candidate-brief.md](docs/examples/repoatlas-candidate-brief.md). Homepage **Try sample Candidate Brief** analyzes `fixtures/repo-ts` without uploading.
 
 ---
 
@@ -172,57 +133,25 @@ You can also click **Try sample Candidate Brief** on the homepage to analyze `fi
 
 ### Web UI
 
-- Open the homepage
-- **Upload ZIP:** download from GitHub (`Code → Download ZIP`) or zip your tree locally
-- **GitHub URL:** paste `https://github.com/owner/repo` (public repos only; optional ref field for branch/tag)
-- View generated tabs:
-  - **Candidate Brief** (default)
-  - Overview
-  - Folder Map
-  - Architecture Map
-  - Start Here
-  - Danger Zones
-  - Run and Contribute
-  - Export
-- Click **Try sample Candidate Brief** for a zero-upload demo
+- **Upload ZIP** or **GitHub URL** (`https://github.com/owner/repo`, optional branch/tag)
+- Tabs: Candidate Brief (default), Overview, Folder Map, Architecture Map, Start Here, Danger Zones, Run and Contribute, Export
+- PDF/PNG for saved and inline reports; Markdown only when the report was saved
 
-### Export options
-
-- PDF: full report snapshot export for saved and inline reports
-- PNG: full report snapshot export for saved and inline reports
-- Markdown: available from the UI and `GET /api/reports/:id/export/md` only when the report was saved; inline reports explain that saved storage is required
-
-### API: multipart upload or public GitHub URL
-
-Primary upload flow (multipart ZIP):
+### API examples
 
 ```bash
 curl -X POST http://localhost:3000/api/analyze \
   -F "file=@/path/to/repo.zip"
-```
 
-Public GitHub URL flow (JSON):
-
-```bash
 curl -X POST http://localhost:3000/api/analyze \
   -H "Content-Type: application/json" \
   -d '{"githubUrl":"https://github.com/owner/repo"}'
 ```
 
-> The public API accepts only multipart ZIP uploads and public `githubUrl`
-> values. A caller-controlled `zipRef` path is intentionally **rejected** with
-> `400 INVALID_INPUT` — the server never reads arbitrary local paths supplied by
-> a request.
-
-If the analysis response has `persisted: true`, fetch the saved report JSON:
+Caller-controlled `zipRef` paths are rejected (`400 INVALID_INPUT`).
 
 ```bash
 curl http://localhost:3000/api/reports/<report-id>
-```
-
-The same saved report can be exported as Markdown:
-
-```bash
 curl -OJ http://localhost:3000/api/reports/<report-id>/export/md
 ```
 
@@ -231,8 +160,6 @@ curl -OJ http://localhost:3000/api/reports/<report-id>/export/md
 ## API Reference
 
 ### Source-of-truth route table
-
-These routes are implemented from the files in `src/app/api/**/route.ts`:
 
 | Route file | Methods | Public endpoint |
 | --- | --- | --- |
@@ -245,317 +172,142 @@ These routes are implemented from the files in `src/app/api/**/route.ts`:
 
 ### `POST /api/analyze`
 
-- Accepts `multipart/form-data` with a single zip file in `file` or `zip`
-- Also accepts JSON with a public `githubUrl` (canonical `https://github.com/owner/repo`, optional `ref`)
-- A caller-supplied `zipRef` path is rejected with `400 INVALID_INPUT`
+- Multipart zip in `file` or `zip`, or JSON `{ githubUrl, ref? }`
+- `zipRef` rejected with `400 INVALID_INPUT`
 
-Example JSON body:
+Saved success: `{ "reportId": "uuid", "persisted": true }`  
+Inline success: `{ "reportId": "uuid", "persisted": false, "report": { ... } }`
 
-```json
-{
-  "githubUrl": "https://github.com/owner/repo"
-}
-```
+Common errors: `INVALID_INPUT`, `ZIP_NOT_FOUND`, `REPO_TOO_LARGE`, `TIMEOUT`, `ANALYSIS_FAILED`.  
+Statuses: `200`, `400`, `413`, `500`, `504`.
 
-Success response when the report was saved:
-
-```json
-{
-  "reportId": "uuid",
-  "persisted": true
-}
-```
-
-Success response when storage is unavailable or a save fails:
-
-```json
-{
-  "reportId": "uuid",
-  "persisted": false,
-  "report": {
-    "report_version": 3
-  }
-}
-```
-
-The inline response contains the complete validated report. The browser renders it directly and does not treat the generated `reportId` as a saved capability.
-
-Common error codes exposed by the current route:
-
-- `INVALID_INPUT`
-- `ZIP_NOT_FOUND`
-- `REPO_TOO_LARGE`
-- `TIMEOUT`
-- `ANALYSIS_FAILED`
-
-Common statuses:
-
-- `200` on success
-- `400` for malformed payloads, unsupported content type, or a non-canonical/private GitHub URL
-- `413` when the upload exceeds the configured size limit
-- `500` for unexpected failures
-- `504` when analysis exceeds the deadline
-
-Report `GET`, share, and Markdown export responses are served with
-`Cache-Control: no-store` so untrusted repository data is never cached by
-browsers or shared CDNs. A baseline set of security headers (`nosniff`,
-`SAMEORIGIN`, referrer and permissions policy, plus HSTS in production) is
-applied to all responses via `next.config.js`. Production pages additionally
-send the tested CSP in `securityHeaders.js`: same-origin scripts/connections,
-no objects or frames, and only `data:`/`blob:` capabilities needed for report
-exports. It deliberately omits `unsafe-eval` and third-party origins.
+Report GET/share/export use `Cache-Control: no-store`. Security headers (including production CSP) come from `next.config.js` / `securityHeaders.js`.
 
 ### `GET /api/reports/:id`
 
-Returns a previously generated report by ID.
-
-Common statuses:
-
-- `200` with full report JSON
-- `400` for invalid report IDs
-- `404` when the report does not exist
+`200` report JSON; `400` invalid id; `404` missing.
 
 ### `POST /api/reports/:id/share`
 
-Creates an opt-in, token-gated share link for a saved report (7-day expiry). Returns:
-
-```json
-{
-  "token": "…",
-  "sharePath": "/share/…",
-  "expiresAt": "ISO-8601"
-}
-```
+Returns `{ token, sharePath, expiresAt }` (7-day token).
 
 ### `GET /api/share/:token`
 
-Returns `{ report, share: { expiresAt, createdAt } }` for valid, non-expired tokens.
-
-Inline reports do not use these API routes. The browser compresses and encrypts the report into a `/share/portable#…` URL fragment with an encoded 7-day expiry. The fragment does not reach the server in the HTTP request; the recipient's browser decrypts and validates the report locally. Links over 24,000 characters are rejected with guidance to share a PDF instead.
+Returns `{ report, share }` for valid tokens. Inline reports use `/share/portable#…` in the browser instead (no server fetch of report bytes).
 
 ### `GET /api/reports/:id/export/md`
 
-Returns the report as downloadable Markdown with `text/markdown` content type.
+Downloadable Markdown for saved reports only.
 
-Common statuses:
+> **No public delete endpoint.** Retention is the server-side TTL sweep via cron cleanup.
 
-- `200` with markdown body and download headers
-- `400` for invalid report IDs
-- `404` when the report does not exist
+### Cron cleanup
 
-> **No public delete endpoint.** RepoAtlas has no user/ownership model, so a
-> guessable report id must not be able to destroy stored reports. Report
-> retention is handled server-side by the TTL sweep (see cron cleanup below),
-> which calls the storage library internally.
-
-### `GET /api/cron/cleanup`
-
-Health check when `CRON_SECRET` is set (or in non-production). Returns instructions to POST for sweep.
-
-### `POST /api/cron/cleanup`
-
-Runs TTL sweeps for expired reports (filesystem and Blob) and share tokens. In production, **fails closed** (`503 MISCONFIGURED`) when `CRON_SECRET` is unset. When set, requires `Authorization: Bearer <CRON_SECRET>`.
+- `GET /api/cron/cleanup` — health/instructions when configured
+- `POST /api/cron/cleanup` — TTL sweeps; production fails closed without `CRON_SECRET`
 
 ---
 
 ## Configuration
 
-See [`.env.example`](.env.example) for the full list and [SECURITY.md](SECURITY.md) for the security model. Highlights:
+See [`.env.example`](.env.example) and [SECURITY.md](SECURITY.md). Highlights:
 
-- Vercel production: connect a private Blob store; current connections inject short-lived OIDC credentials automatically
-- Vercel production without usable Blob credentials: analysis still completes through the inline response, while saved report URLs, stored-token sharing, Markdown downloads, and retention cleanup are unavailable
-- Local development: `REPORTS_DIR` is optional when not using Blob storage and defaults to `<project-root>/reports`
-- Local Blob testing: set `BLOB_READ_WRITE_TOKEN` if you want to exercise Blob storage outside Vercel
-- Report retention: `REPORT_TTL_DAYS` (default 7 with Blob storage credentials, otherwise 30), `REPORT_MAX_COUNT` (default 100)
-- Cron cleanup auth: optional `CRON_SECRET` for `POST /api/cron/cleanup`
-- Rate limiting: optional `ANALYZE_RATE_LIMIT_PER_MIN`, `MAX_CONCURRENT_ANALYSES`
+- Vercel: private Blob store (OIDC) for saved reports; without Blob, analysis still completes inline
+- Local: `REPORTS_DIR` defaults to `<project-root>/reports`
+- Retention: `REPORT_TTL_DAYS`, `REPORT_MAX_COUNT`; cron auth via `CRON_SECRET`
+- Rate limiting: process-local `ANALYZE_RATE_LIMIT_PER_MIN`, `MAX_CONCURRENT_ANALYSES` (not distributed across serverless isolates)
 
-> **Security note:** RepoAtlas analyzes only public GitHub repositories and
-> **never attaches a server-owned GitHub token** to a user-supplied repository
-> request. Public GitHub API access is unauthenticated and rate-limited per
-> server IP; commit-history insights degrade gracefully when unavailable.
-
-No `.env` file is required for local development by default.
+RepoAtlas analyzes only public GitHub repositories and never attaches a server-owned GitHub token to user-supplied requests.
 
 ---
 
 ## Project Structure
 
 ```text
-src/
-  app/
-    api/
-      analyze/route.ts
-      reports/[id]/route.ts
-      reports/[id]/share/route.ts
-      reports/[id]/export/md/route.ts
-      share/[token]/route.ts
-      cron/cleanup/route.ts
-  analyzer/
-    packs/
-    index.ts
-    pipeline.ts
-    scoring.ts
-  components/
-  lib/
-    ingest.ts
-    storage.ts
-    export.ts
-    errors.ts
-  types/
-    report.ts
-fixtures/
-reports/
+src/app/api/          # analyze, reports, share, cron
+src/analyzer/         # pipeline, packs, scoring, interview, eval harness
+src/components/       # report UI
+src/lib/              # ingest, storage, export, validation
+fixtures/             # regression repositories
+eval/gold/            # human-labeled analyzer expectations
+reports/              # runtime filesystem storage (gitignored)
 ```
-
-`reports/` is created at runtime when filesystem storage is used.
 
 ---
 
 ## Development
 
 ```bash
-npm run dev            # Start Next.js dev server
-npm run build          # Build for production
-npm run start          # Run production build
-npm run lint           # Run ESLint
-npm run typecheck      # Type-check with tsc --noEmit
-npm run test           # Run Vitest once
-npm run test:coverage  # Run Vitest with coverage thresholds
-npm run test:watch     # Run Vitest in watch mode
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run typecheck
+npm run test
+npm run test:coverage
+npm run test:e2e
 ```
 
 ---
 
 ## Testing
 
-- Unit and integration-style tests: Vitest, with coverage collected via `npm run test:coverage` (production `src/**` scope; non-regression thresholds enforced in `vitest.config.ts`)
-- End-to-end tests: Playwright — API edge cases, full UI flows, share/export/upload, legacy report fallback
-- Portfolio capture is separate: `npm run capture:portfolio` (not run during default `npm run test:e2e`)
+- Unit/integration: Vitest (`npm run test`, coverage via `npm run test:coverage`)
+- E2E: Playwright (`npm run test:e2e`). If a dev server already owns port 3000, use `PLAYWRIGHT_PORT=3100 npm run test:e2e` so Playwright starts its own server (see `AGENTS.md`)
+- Analyzer accuracy floors: `npm test -- src/analyzer/eval/eval.test.ts`
+- Portfolio capture (separate from default e2e): `npm run capture:portfolio`
 
-Run:
-
-```bash
-npm run test
-npm run test:e2e
-npm run capture:portfolio
-```
-
-To repeat the mobile checks that previously needed a retry, start from clean
-Playwright state and keep retries disabled. The four checks cover GitHub
-rate-limit recovery, private-or-missing repository recovery, invalid-ref
-recovery, and stored private-link sharing. The mobile project uses WebKit, so
-install its browser and system dependencies first if they are not already
-available (`npx playwright install --with-deps webkit`).
-
-```bash
-rm -rf .playwright-reports test-results
-PLAYWRIGHT_PORT=3100 npx playwright test e2e/input-modes.spec.ts e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=10 --grep 'shows a clear recovery action for (GitHub rate limit|private or missing repository|invalid ref)|completed brief shares a stored private link'
-```
-
-Expect 40 passes on the first attempt: four checks repeated 10 times, with no
-retry. The separate native-share contract should pass five of five runs:
-
-```bash
-rm -rf .playwright-reports test-results
-PLAYWRIGHT_PORT=3100 npx playwright test e2e/report-ui.spec.ts --project=mobile --retries=0 --repeat-each=5 --workers=1 --grep 'completed brief uses native sharing when the browser provides it'
-```
-
-Then run the complete browser gate. It should finish with 126 passes and no
-flaky-test summary:
-
-```bash
-rm -rf .playwright-reports test-results
-PLAYWRIGHT_PORT=3100 npx playwright test --retries=0 --workers=2
-```
+Stale `.playwright-reports/` can contaminate share/report tests — delete it (and `test-results/`) if e2e fails unexpectedly.
 
 ---
 
-## Fixtures
+## Fixtures and evaluation
 
-Fixture repositories in `fixtures/`:
+Regression fixtures live under `fixtures/` (`repo-ts`, `repo-python`, `repo-java`, `repo-java-maven`, `repo-fastapi`, `repo-node-api`, `repo-monorepo`, and smaller edge cases).
 
-- `fixtures/repo-ts`
-- `fixtures/repo-python`
-- `fixtures/repo-java`
-- `fixtures/repo-java-maven`
-- `fixtures/repo-fastapi`
-- `fixtures/repo-node-api`
-- `fixtures/repo-monorepo`
-- `fixtures/repo-docs-only`
-- `fixtures/repo-no-readme`
-
-These are used for local regression checks and analyzer test coverage.
+Human-labeled gold expectations and metrics live under [`eval/`](eval/README.md). Expanding that gold set is the preferred path to improving analyzer trust — ahead of new UI surface area.
 
 ---
 
 ## Limits and Behavior
 
-Centralized in `src/lib/ingestLimits.ts` (see [docs/adr/002-zip-limits.md](docs/adr/002-zip-limits.md)):
+Centralized in `src/lib/ingestLimits.ts` ([docs/adr/002-zip-limits.md](docs/adr/002-zip-limits.md)):
 
 | Limit | Local dev | Vercel deploy |
 |-------|-----------|---------------|
-| ZIP upload (compressed) | 100 MB | **4 MB** — use GitHub URL for larger public repos |
+| ZIP upload (compressed) | 100 MB | **4 MB** (use GitHub URL for larger public repos) |
 | GitHub archive download | 100 MB | 100 MB |
 | Uncompressed extract total | 50 MB | 50 MB |
 | Analysis timeout | 120 s | 120 s |
 | Indexed files | 10,000 | 10,000 |
 | Folder map depth | 10 | 10 |
 
-When analysis cannot perform a deep language pass, warnings are added to the report output.
+When a deep language pass cannot run, warnings are added to the report.
 
 ---
 
 ## Security Notes
 
-See [SECURITY.md](SECURITY.md) for the full policy. Summary:
+See [SECURITY.md](SECURITY.md). Summary:
 
-- Static file analysis only — never executes target repository code
-- **Capability-link model:** report UUIDs are read-only; no public `DELETE` (retention via server-side TTL sweep)
-- **No caller-controlled paths:** JSON `zipRef` is rejected on `POST /api/analyze`
-- **Public GitHub only:** no server-owned `GITHUB_TOKEN` on user-supplied repo requests
-- Hardened zip extraction: magic-byte validation, path traversal rejection, entry count and uncompressed size limits
-- Report/share/export responses use `Cache-Control: no-store`
-- Typed API errors (`ZIP_INVALID`, `REPO_TOO_LARGE`, etc.)
+- Static analysis only — never executes target code
+- Capability-link report access; no public `DELETE`
+- No caller-controlled filesystem paths (`zipRef` rejected)
+- Public GitHub only; hardened ZIP extraction (magic bytes, traversal/collision rejection, size/entry caps)
+- `Cache-Control: no-store` on report/share/export
 
-## No AI Required
+**No AI.** Deterministic heuristics and extracted signals only; Candidate Brief claims should trace to evidence refs.
 
-RepoAtlas uses deterministic heuristics and extracted file signals only. It does not call external LLM APIs. Every Candidate Brief claim should trace to an evidence ref in the report.
-
-## What We Will Not Claim
-
-RepoAtlas does not assert vulnerabilities, production readiness, business purpose, or code correctness. Danger zones reflect structural risk signals (complexity, coupling, test proximity, churn) — not bug counts.
+**What we will not claim.** No vulnerabilities, production readiness, business purpose, or code correctness. Danger Zones are structural signals (size, coupling, complexity, test proximity, optional churn) — not bug counts or calibrated absolute risk.
 
 ---
 
 ## Libraries and Licenses
 
-The following are the direct libraries currently declared in `package.json`.
-
-### Runtime dependencies
-
-- `next`: application framework and server runtime
-- `react`, `react-dom`: UI rendering
-- `elkjs`: graph layout engine for the architecture map
-- `react-zoom-pan-pinch`: pan and zoom controls for graph navigation
-- `html2canvas`: DOM capture for image and PDF export
-- `jspdf`: PDF generation
-- `mermaid`: Markdown export diagram syntax generation
-- `adm-zip`: zip extraction for uploaded repositories
-- `@vercel/blob`: optional report storage when deployed on Vercel
-
-### Development dependencies
-
-- `typescript`: type checking and TS tooling
-- `vitest`: test runner
-- `eslint`, `eslint-config-next`: linting
-- `tailwindcss`, `postcss`, `autoprefixer`: styling pipeline
-- `@types/node`, `@types/react`, `@types/react-dom`, `@types/adm-zip`: TypeScript definitions
-
-Third-party dependencies are distributed under their own licenses. Check each package's npm page or repository for license details.
+Direct runtime dependencies: `next`, `react`, `react-dom`, `elkjs`, `react-zoom-pan-pinch`, `html2canvas`, `jspdf`, `mermaid`, `adm-zip`, `@vercel/blob`. Dev tooling: TypeScript, Vitest, Playwright, ESLint, Tailwind/PostCSS. See `package.json` for versions and each package’s license.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for the full text.
+MIT — see [LICENSE](LICENSE).

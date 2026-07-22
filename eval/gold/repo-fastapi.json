@@ -1,0 +1,12 @@
+{
+  "fixture": "repo-fastapi",
+  "entrypoints": ["main.py"],
+  "internal_edges": [],
+  "run_commands": ["pip install -r requirements.txt"],
+  "onboarding_files": ["README.md", "main.py"],
+  "high_coupling_files": ["main.py"],
+  "unresolved_imports": [],
+  "known_gaps": [
+    "External FastAPI imports are expected to stay unresolved; no internal module graph in this fixture"
+  ]
+}

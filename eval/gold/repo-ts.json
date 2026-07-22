@@ -1,0 +1,21 @@
+{
+  "fixture": "repo-ts",
+  "entrypoints": [
+    "src/index.ts",
+    "src/bootstrap.ts",
+    "src/app/page.tsx",
+    "src/app/layout.tsx",
+    "src/app/api/health/route.ts"
+  ],
+  "internal_edges": [
+    { "from": "src/index.ts", "to": "src/utils.ts" },
+    { "from": "src/index.ts", "to": "src/bootstrap.ts" },
+    { "from": "src/bootstrap.ts", "to": "src/utils.ts" },
+    { "from": "src/bootstrap.ts", "to": "src/lib/index.ts" },
+    { "from": "src/app/page.tsx", "to": "src/utils.ts" }
+  ],
+  "run_commands": ["npm run dev", "npm run start", "npm run build"],
+  "onboarding_files": ["README.md", "src/index.ts", "src/app/page.tsx"],
+  "high_coupling_files": ["src/utils.ts"],
+  "unresolved_imports": []
+}

@@ -4,6 +4,19 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Correctness
+
+- GitHub commit-history / churn analysis now requests commits for the ingested archive tip (`clone_hash`, falling back to the selected branch/tag) instead of the repository default branch.
+
+### Documentation
+
+- README drops redundant feature/API repetition and states language-pack depth honestly (TS/JS AST-backed; Python/Java heuristic).
+- Roadmap prioritizes the analyzer evaluation gold set ahead of further product surface area.
+
+### Testing
+
+- Seeded analyzer evaluation suite under `eval/gold` with precision/recall floors in `src/analyzer/eval/`.
+
 ## [2026-07-20] — Operational reliability
 
 ### Reliability
