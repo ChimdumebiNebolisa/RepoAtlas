@@ -58,6 +58,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/lib/ingest{,Github,GithubTransport,Input,Workspace,Zip}.ts": {
+          branches: 80,
+          lines: 85,
+        },
         "src/components/useReportActions.ts": {
           statements: 80,
           branches: 80,
