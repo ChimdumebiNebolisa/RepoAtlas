@@ -235,6 +235,7 @@ export function safeExtractZip(buffer: Buffer, extractRoot: string): void {
   }
 
   const entries = zip.getEntries();
+  const entriesByName = new Map(entries.map((entry) => [entry.entryName, entry]));
   const plannedEntries: PlannedEntry[] = [];
   const plannedPaths = new Map<string, boolean>();
   const totals = { entries: 0, uncompressed: 0 };
@@ -258,7 +259,7 @@ export function safeExtractZip(buffer: Buffer, extractRoot: string): void {
       continue;
     }
     fs.mkdirSync(path.dirname(planned.targetPath), { recursive: true });
-    const entry = entries.find((item) => item.entryName === planned.entryName);
+    const entry = entriesByName.get(planned.entryName);
     if (!entry) {
       throw new AppError({
         code: ERROR_CODES.ZIP_INVALID,
