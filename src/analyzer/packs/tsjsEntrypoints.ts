@@ -10,6 +10,7 @@ const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 const SCRIPT_PATH_RE =
   /(?:^|\s|["'])(\.{0,2}\/?[\w./-]+\.(?:ts|tsx|js|jsx|mjs|cjs))(?=\s|["']|$)/g;
 const ENTRY_SCRIPT_NAMES = new Set(["dev", "start", "build"]);
+const TEST_PATH_RE = /(?:^|\/)(?:__tests__\/.*|[^/]+\.(?:test|spec))\.(?:ts|tsx|js|jsx|mjs|cjs)$/i;
 
 export interface EntrypointHit {
   path: string;
@@ -33,6 +34,7 @@ function addIfPresent(
   overwrite = false
 ): void {
   const normalized = normalizeRelPath(candidate.replace(/^\.\//, ""));
+  if (TEST_PATH_RE.test(normalized)) return;
   const resolved = fileByNormalized.get(normalized);
   if (resolved && (overwrite || !out.has(resolved))) {
     out.set(resolved, reason);
@@ -69,6 +71,7 @@ function detectNextEntrypoints(
   const out = new Map<string, string>();
   for (const file of files) {
     const n = normalizeRelPath(file);
+    if (TEST_PATH_RE.test(n)) continue;
     if (
       /^((src\/)?app)\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n) ||
       /^((src\/)?app)\/.*\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n)
@@ -80,7 +83,7 @@ function detectNextEntrypoints(
     ) {
       out.set(file, "Next.js App Router layout");
     } else if (
-      /^((src\/)?app)\/api\/.+\/route\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n)
+      /^((src\/)?app)\/(?:.+\/)?route\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n)
     ) {
       out.set(file, "Next.js App Router route handler");
     } else if (
@@ -143,10 +146,12 @@ export function detectTsJsEntrypoints(
     }
 
     const pkgDir = path.posix.dirname(normalizeRelPath(pkgRel));
-    const withPkgDir = (candidate: string) =>
-      pkgDir === "."
-        ? normalizeRelPath(candidate)
-        : normalizeRelPath(`${pkgDir}/${candidate}`);
+    const withPkgDir = (candidate: string) => {
+      const packageRelative = normalizeRelPath(candidate);
+      return pkgDir === "."
+        ? packageRelative
+        : normalizeRelPath(`${pkgDir}/${packageRelative}`);
+    };
 
     for (const field of ["main", "module", "browser", "types"] as const) {
       const value = pkg[field];
