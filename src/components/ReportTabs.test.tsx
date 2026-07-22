@@ -8,8 +8,10 @@ import { ReportTabs } from "./ReportTabs";
 const createPortableShareLink = vi.hoisted(() => vi.fn());
 const captureReportShared = vi.hoisted(() => vi.fn());
 const captureReportViewed = vi.hoisted(() => vi.fn());
+const layoutGraph = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/portableSharing", () => ({ createPortableShareLink }));
+vi.mock("@/lib/elkLayout", () => ({ layoutGraph }));
 vi.mock("@/lib/productAnalytics", () => ({
   captureProductEvent: vi.fn(),
   captureReportExportFailure: vi.fn(),
@@ -21,6 +23,32 @@ beforeEach(() => {
   createPortableShareLink.mockReset();
   captureReportShared.mockReset();
   captureReportViewed.mockReset();
+  layoutGraph.mockReset();
+  layoutGraph.mockResolvedValue({
+    nodes: [
+      { id: "InputForm", label: "InputForm", x: 0, y: 0, width: 100, height: 40 },
+      {
+        id: "AnalyzeRoute",
+        label: "/api/analyze route",
+        x: 0,
+        y: 120,
+        width: 160,
+        height: 40,
+      },
+    ],
+    edges: [
+      {
+        from: "InputForm",
+        to: "AnalyzeRoute",
+        path: [
+          { x: 50, y: 40 },
+          { x: 80, y: 120 },
+        ],
+      },
+    ],
+    width: 200,
+    height: 200,
+  });
   vi.stubGlobal(
     "IntersectionObserver",
     class MockIntersectionObserver {
@@ -43,6 +71,14 @@ beforeEach(() => {
       root = null;
       rootMargin = "0px";
       thresholds = [0];
+    }
+  );
+  vi.stubGlobal(
+    "ResizeObserver",
+    class MockResizeObserver {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
     }
   );
   Object.defineProperty(window.navigator, "share", {
@@ -70,6 +106,20 @@ describe("ReportTabs walkthrough analytics", () => {
       expect(captureReportViewed).toHaveBeenCalledTimes(1);
     }
   );
+});
+
+describe("ReportTabs architecture integration", () => {
+  it("keeps the graph engine lazy until the Architecture Map tab opens", async () => {
+    const user = userEvent.setup();
+    render(<ReportTabs report={buildSampleReport()} />);
+
+    expect(layoutGraph).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("tab", { name: "Architecture Map" }));
+
+    expect(await screen.findByRole("button", { name: "Zoom in" })).toBeEnabled();
+    expect(layoutGraph).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("InputForm")).toBeInTheDocument();
+  });
 });
 
 describe("ReportTabs inline-share recovery", () => {
