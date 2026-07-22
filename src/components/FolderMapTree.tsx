@@ -18,14 +18,19 @@ function TreeNode({
   defaultExpandDepth?: number;
 }) {
   const [expanded, setExpanded] = useState(depth < defaultExpandDepth);
-  const isDir = node.type === "dir" && node.children && node.children.length > 0;
+  const isDirectory = node.type === "dir";
+  const isExpandable = isDirectory && Boolean(node.children?.length);
   const name = node.path.split("/").pop() || node.path;
   const rowContent = (
     <>
       <span className="absolute -left-[7px] h-2.5 w-2.5 rounded-full bg-slate-200 group-hover:bg-emerald-400" />
-      {isDir ? (
+      {isExpandable ? (
         <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-600">
           {expanded ? "-" : "+"}
+        </span>
+      ) : isDirectory ? (
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-600">
+          {node.truncated ? "…" : "/"}
         </span>
       ) : (
         <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-slate-50 text-[10px] text-slate-500">
@@ -35,9 +40,17 @@ function TreeNode({
       <span className={node.type === "dir" ? "font-medium text-slate-900" : "text-slate-800"}>
         {name}
       </span>
-      {node.type === "dir" && node.children && (
+      {isDirectory && node.children && !node.truncated && (
         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
           {node.children.length}
+        </span>
+      )}
+      {node.truncated && (
+        <span
+          data-folder-map-state="truncated"
+          className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800"
+        >
+          RepoAtlas stopped mapping at this depth.
         </span>
       )}
       {node.type === "file" && depth < 2 && (
@@ -48,7 +61,7 @@ function TreeNode({
 
   return (
     <div className="relative ml-4 border-l border-slate-200 pl-3">
-      {isDir ? (
+      {isExpandable ? (
         <button
           type="button"
           className="group flex w-full items-center gap-2 rounded-md py-1 pr-2 text-left hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
@@ -66,7 +79,7 @@ function TreeNode({
           {rowContent}
         </div>
       )}
-      {isDir && expanded && node.children && (
+      {isExpandable && expanded && node.children && (
         <div className="space-y-0.5">
           {node.children.map((child) => (
             <TreeNode
