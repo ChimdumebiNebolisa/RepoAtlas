@@ -79,6 +79,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/packs/tsjsResolve{,Compiler,Packages,Shared,Workspaces}.ts": {
+          branches: 80,
+          lines: 85,
+        },
       },
     },
   },
