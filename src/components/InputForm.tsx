@@ -1,6 +1,13 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useRef, useState, type RefObject } from "react";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from "react";
 import type { AnalysisIntent, Report } from "@/types/report";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 import { AnalysisIntentSelector } from "./AnalysisIntentSelector";
@@ -32,6 +39,8 @@ export interface InputFormHandle {
   generateSample: () => void;
 }
 
+const subscribeToHydration = () => () => undefined;
+
 export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function InputForm(
   {
     onAnalyzeStart,
@@ -54,6 +63,12 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   const githubRefInputRef = useRef<HTMLInputElement>(null);
   const latestGithubUrlRef = useRef<string | null>(null);
   const latestGithubRefRef = useRef<string | null>(null);
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false
+  );
+  const interactionsDisabled = loading || !hydrated;
   const runAnalysis = useAnalysisRequest({
     analysisIntent,
     onAnalyzeComplete,
@@ -62,7 +77,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (loading) return;
+    if (interactionsDisabled) return;
     setFieldError(null);
 
     if (mode === "zip") {
@@ -131,7 +146,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   };
 
   const handleSample = async () => {
-    if (loading) return;
+    if (interactionsDisabled) return;
     setFieldError(null);
     onAnalyzeStart();
     await runAnalysis(
@@ -151,7 +166,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   }));
 
   const switchMode = (next: InputMode) => {
-    if (loading) return;
+    if (interactionsDisabled) return;
     setMode(next);
     setFieldError(null);
   };
@@ -169,10 +184,10 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   };
 
   return (
-    <form onSubmit={handleSubmit} className="input-form" aria-busy={loading}>
+    <form onSubmit={handleSubmit} className="input-form" aria-busy={interactionsDisabled}>
       <AnalysisIntentSelector
         analysisIntent={analysisIntent}
-        disabled={loading}
+        disabled={interactionsDisabled}
         secondaryIntentsOpen={secondaryIntentsOpen}
         onAnalysisIntentChange={setAnalysisIntent}
         onSecondaryIntentsOpenChange={setSecondaryIntentsOpen}
@@ -186,7 +201,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
         <button
           ref={sampleButtonRef}
           type="button"
-          disabled={loading}
+          disabled={interactionsDisabled}
           onClick={handleSample}
           className="btn btn-primary"
         >
@@ -200,7 +215,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
 
       <RepositoryInputControls
         mode={mode}
-        loading={loading}
+        loading={interactionsDisabled}
         file={file}
         githubUrl={githubUrl}
         githubRef={githubRef}
@@ -223,7 +238,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
       <div className="form-actions">
         <button
           type="submit"
-          disabled={loading}
+          disabled={interactionsDisabled}
           className="btn btn-secondary"
         >
           <span aria-live="polite">
