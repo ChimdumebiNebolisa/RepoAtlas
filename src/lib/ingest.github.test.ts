@@ -241,6 +241,29 @@ describe("ingestFromGithub (mocked)", () => {
     ).rejects.toMatchObject({ code: "INVALID_URL", status: 400 });
   });
 
+  it("rejects invalid refs and already-aborted work before any network request", async () => {
+    installFetch(() => {
+      throw new Error("network should not be called");
+    });
+    await expect(
+      ingestRepo({
+        kind: "github",
+        githubUrl: "https://github.com/octocat/demo",
+        ref: "../unsafe",
+      })
+    ).rejects.toMatchObject({ code: "INVALID_URL", status: 400 });
+
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      ingestRepo(
+        { kind: "github", githubUrl: "https://github.com/octocat/demo" },
+        { signal: controller.signal }
+      )
+    ).rejects.toMatchObject({ code: "TIMEOUT", status: 504 });
+    expect(capturedUrls).toEqual([]);
+  });
+
   it("cleans up the temp dir when extraction fails", async () => {
     installFetch((url) => {
       if (url === "https://api.github.com/repos/octocat/demo") {
