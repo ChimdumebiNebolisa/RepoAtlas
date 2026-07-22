@@ -78,6 +78,10 @@ export default defineConfig({
           branches: 80,
           lines: 90,
         },
+        "src/components/CandidateBriefPanel.tsx": {
+          branches: 80,
+          lines: 85,
+        },
         "src/analyzer/packs/python{,/**}.ts": {
           branches: 80,
           lines: 85,
