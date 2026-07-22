@@ -16,11 +16,15 @@ export function ElkArchitectureGraph({
 }: ElkArchitectureGraphProps) {
   const rawMarkerId = useId();
   const arrowMarkerId = `arrowhead-${rawMarkerId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-  const [layout, setLayout] = useState<LayoutResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [layoutState, setLayoutState] = useState<{
+    architecture: Architecture;
+    layout: LayoutResult | null;
+    error: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!architecture.nodes.length) return;
+    let active = true;
 
     const filteredArch = {
       nodes: architecture.nodes.slice(0, 50),
@@ -28,9 +32,30 @@ export function ElkArchitectureGraph({
     };
 
     layoutGraph(filteredArch)
-      .then(setLayout)
-      .catch((err) => setError(err instanceof Error ? err.message : "Layout failed"));
+      .then((layout) => {
+        if (active) {
+          setLayoutState({ architecture, layout, error: null });
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setLayoutState({
+            architecture,
+            layout: null,
+            error: err instanceof Error ? err.message : "Layout failed",
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, [architecture]);
+
+  const currentLayoutState =
+    layoutState?.architecture === architecture ? layoutState : null;
+  const layout = currentLayoutState?.layout ?? null;
+  const error = currentLayoutState?.error ?? null;
 
   if (!architecture.nodes.length) {
     return (
