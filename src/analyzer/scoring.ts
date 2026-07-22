@@ -126,16 +126,16 @@ export function computeStartHere(
       const norm = normalizePath(filePath);
       const c = getCandidate(filePath);
 
-      if (/\/app\/api\/.+\/route\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(norm)) {
+      if (/(?:^|\/)app\/api\/.+\/route\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(norm)) {
         c.rawScore += 85;
         addReason(c, "Next.js route handler");
-      } else if (/\/app\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(norm)) {
+      } else if (/(?:^|\/)app\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(norm)) {
         c.rawScore += 80;
         addReason(c, "Next.js page entry");
-      } else if (/\/app\/layout\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(norm)) {
+      } else if (/(?:^|\/)app\/layout\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(norm)) {
         c.rawScore += 75;
         addReason(c, "Next.js layout entry");
-      } else if (/\/(router|routes)\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(norm)) {
+      } else if (/(?:^|\/)(router|routes)\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(norm)) {
         c.rawScore += 65;
         addReason(c, "router module");
       }
@@ -402,6 +402,9 @@ export function computeDangerZones(
     });
   }
 
-  items.sort((a, b) => b.score - a.score);
+  items.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.path.localeCompare(b.path);
+  });
   return items.slice(0, MAX_DANGER_ZONE_ITEMS);
 }
