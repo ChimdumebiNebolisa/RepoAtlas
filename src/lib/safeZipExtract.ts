@@ -44,7 +44,14 @@ export function resolveSafeZipEntryPath(extractRoot: string, entryName: string):
       message: "Zip entry contains an absolute path.",
     });
   }
-  const segments = normalized.split("/").filter((s) => s.length > 0);
+  const segments = normalized.split("/").filter((s) => s.length > 0 && s !== ".");
+  if (segments.length === 0) {
+    throw new AppError({
+      code: ERROR_CODES.ZIP_INVALID,
+      status: 400,
+      message: "Zip entry has an empty path.",
+    });
+  }
   if (segments.some((s) => s === "..")) {
     throw new AppError({
       code: ERROR_CODES.ZIP_INVALID,
@@ -59,6 +66,13 @@ export function resolveSafeZipEntryPath(extractRoot: string, entryName: string):
       code: ERROR_CODES.ZIP_INVALID,
       status: 400,
       message: "Zip entry escapes extraction root.",
+    });
+  }
+  if (resolved === rootResolved) {
+    throw new AppError({
+      code: ERROR_CODES.ZIP_INVALID,
+      status: 400,
+      message: "Zip entry has an empty path.",
     });
   }
   return resolved;
@@ -315,20 +329,23 @@ export async function safeExtractZipFromFile(
   const writer = await openZip(zipPath);
   const byName = new Map(plannedEntries.map((entry) => [entry.entryName, entry]));
   let actualUncompressed = 0;
+  let settled = false;
 
   try {
     await new Promise<void>((resolve, reject) => {
       const fail = (error: unknown) => {
-        try {
-          writer.close();
-        } catch {
-          /* ignore */
-        }
+        if (settled) return;
+        settled = true;
         reject(error);
+      };
+      const succeed = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
       };
 
       writer.on("error", fail);
-      writer.on("end", () => resolve());
+      writer.on("end", () => succeed());
       writer.on("entry", (entry: yauzl.Entry) => {
         const planned = byName.get(entry.fileName);
         if (!planned) {
@@ -374,7 +391,11 @@ export async function safeExtractZipFromFile(
                 callback(null, buf);
               },
             });
-            await pipeline(readStream as NodeJS.ReadableStream, counter, fs.createWriteStream(planned.targetPath));
+            await pipeline(
+              readStream as NodeJS.ReadableStream,
+              counter,
+              fs.createWriteStream(planned.targetPath)
+            );
             writer.readEntry();
           } catch (error) {
             fail(error);
@@ -383,12 +404,11 @@ export async function safeExtractZipFromFile(
       });
       writer.readEntry();
     });
-  } catch (error) {
+  } finally {
     try {
       writer.close();
     } catch {
       /* ignore */
     }
-    throw error;
   }
 }

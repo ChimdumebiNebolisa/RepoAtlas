@@ -137,7 +137,9 @@ export async function POST(request: NextRequest) {
         const nodeStream = Readable.fromWeb(
           blob.stream() as import("stream/web").ReadableStream
         );
-        await pipeline(nodeStream, fs.createWriteStream(tempZipPath));
+        await pipeline(nodeStream, fs.createWriteStream(tempZipPath), {
+          signal: abortSignal,
+        });
       } else {
         await fs.promises.writeFile(tempZipPath, Buffer.from(await blob.arrayBuffer()));
       }

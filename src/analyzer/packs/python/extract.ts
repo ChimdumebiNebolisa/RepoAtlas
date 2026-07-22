@@ -24,6 +24,22 @@ function skipSpaces(source: string, start: number): number {
   return index;
 }
 
+function skipSpacesAndContinuations(source: string, start: number): number {
+  let index = start;
+  for (;;) {
+    const before = index;
+    index = skipSpaces(source, index);
+    index = skipLineContinuation(source, index);
+    if (source[index] === "#") {
+      while (index < source.length && source[index] !== "\n" && source[index] !== "\r") {
+        index += 1;
+      }
+    }
+    if (index === before) break;
+  }
+  return index;
+}
+
 function skipLineContinuation(source: string, start: number): number {
   let index = start;
   if (source[index] === "\\" && (source[index + 1] === "\n" || source[index + 1] === "\r")) {
@@ -80,7 +96,14 @@ function readImportNameList(source: string, start: number): { names: string[]; n
       }
       continue;
     }
-    if ((ch === "#" || ch === "\n" || ch === "\r") && parenDepth === 0) break;
+    if ((ch === "\n" || ch === "\r") && parenDepth === 0) break;
+    if (ch === "#") {
+      // Comments may appear inside parenthesized import lists.
+      while (index < source.length && source[index] !== "\n" && source[index] !== "\r") {
+        index += 1;
+      }
+      continue;
+    }
     if (ch === "," && (parenDepth === 0 || parenDepth === 1)) {
       if (current.trim()) pushName(current);
       current = "";
@@ -190,23 +213,23 @@ export function extractImportSpecifiers(content: string): string[] {
     }
 
     if (atLineStart && content.startsWith("from", index) && !isIdentifierChar(content[index + 4] ?? "")) {
-      index = skipSpaces(content, index + 4);
+      index = skipSpacesAndContinuations(content, index + 4);
       let relativeDots = 0;
       while (content[index] === ".") {
         relativeDots += 1;
         index += 1;
       }
-      index = skipSpaces(content, index);
+      index = skipSpacesAndContinuations(content, index);
       let modulePath = "";
       // Bare relative form: `from . import x` — do not consume the `import` keyword as a module.
       if (!(content.startsWith("import", index) && !isIdentifierChar(content[index + 6] ?? ""))) {
         const moduleName = readDottedName(content, index);
         modulePath = moduleName?.value ?? "";
         if (moduleName) index = moduleName.next;
-        index = skipSpaces(content, index);
+        index = skipSpacesAndContinuations(content, index);
       }
       if (content.startsWith("import", index) && !isIdentifierChar(content[index + 6] ?? "")) {
-        index = skipSpaces(content, index + 6);
+        index = skipSpacesAndContinuations(content, index + 6);
         const list = readImportNameList(content, index);
         if (relativeDots > 0) {
           const base = ".".repeat(relativeDots) + modulePath;

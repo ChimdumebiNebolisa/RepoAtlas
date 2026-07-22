@@ -62,11 +62,13 @@ export async function analyzeRepository(
       const cached = await getCachedAnalysis(
         githubCoords.owner,
         githubCoords.repo,
-        workspace.cloneHash
+        workspace.cloneHash,
+        options.analysisIntent
       );
       if (cached) {
         return finish({
           ...cached,
+          analysis_intent: options.analysisIntent ?? cached.analysis_intent,
           repo_metadata: {
             ...cached.repo_metadata,
             analyzed_at: new Date().toISOString(),
@@ -165,7 +167,8 @@ export async function analyzeRepository(
         githubCoords.owner,
         githubCoords.repo,
         workspace.cloneHash,
-        result.report
+        result.report,
+        options.analysisIntent
       ).catch(() => undefined);
     }
 

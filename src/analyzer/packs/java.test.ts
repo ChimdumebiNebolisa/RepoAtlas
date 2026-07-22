@@ -370,6 +370,17 @@ import static com.example.util.Utils.helper;
     expect(specs).toContain("java.util.List");
     expect(specs).toContain("com.example.util.Utils.helper");
   });
+
+  it("resolves static member imports and static star imports to the owning type", () => {
+    const content = `package com.example;
+import static com.example.util.Utils.helper;
+import static com.example.util.Utils.*;
+`;
+    const specs = extractImportSpecifiers(content);
+    expect(specs).toContain("com.example.util.Utils.helper");
+    expect(specs).toContain("com.example.util.Utils");
+    expect(specs).not.toContain("com.example.util.Utils.*");
+  });
 });
 
 describe("same-package references", () => {

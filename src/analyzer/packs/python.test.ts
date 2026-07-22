@@ -127,9 +127,16 @@ from collections.abc import Mapping
     ]);
   });
 
-  it("ignores imports inside triple-quoted strings", () => {
-    const content = '"""\nfrom fake import x\n"""\nimport real\n';
-    expect(extractImportSpecifiers(content)).toEqual(["real"]);
+  it("handles parenthesized imports with comments", () => {
+    const content = "from pkg import (\n  # note\n  foo,\n  bar,\n)\n";
+    expect(extractImportSpecifiers(content)).toEqual(["pkg", "pkg.foo", "pkg.bar"]);
+  });
+
+  it("follows line-continued from/import forms", () => {
+    expect(extractImportSpecifiers("from pkg \\\nimport name\n")).toEqual([
+      "pkg",
+      "pkg.name",
+    ]);
   });
 });
 

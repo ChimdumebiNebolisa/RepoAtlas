@@ -4,6 +4,16 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Security / correctness (red-team pass)
+
+- Worker isolation no longer silently re-runs failed analysis in-process; only spawn failures fall back. Abort terminates the worker; exit-without-message no longer hangs.
+- Streaming ZIP extract closes yauzl FDs on success and rejects empty/dot-only entry paths.
+- Same-SHA cache keys include analysis intent + report version; future `cached_at` values are rejected.
+- Upstash limiter URL allowlisted to `*.upstash.io` over HTTPS.
+- Python import scanner handles `#` inside parenthesized lists and line-continued `from`/`import`.
+- Java same-package matching strips comments/strings; static `import static Type.*` resolves to the owning type.
+- Multipart zip write respects request abort signal.
+
 ### Correctness
 
 - GitHub commit-history / churn analysis now requests commits for the ingested archive tip (`clone_hash`, falling back to the selected branch/tag) instead of the repository default branch.

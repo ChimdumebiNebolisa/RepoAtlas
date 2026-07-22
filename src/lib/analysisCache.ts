@@ -1,12 +1,14 @@
 /**
  * Same-SHA analysis result cache for public GitHub repositories.
- * Keyed by owner/repo@sha so identical archives reuse a prior report within TTL.
+ * Keyed by owner/repo@sha@intent@report_version so identical archives reuse a
+ * prior report only when the analysis intent matches.
  */
 
 import fs from "fs";
 import path from "path";
 import { createHash } from "crypto";
-import type { Report } from "@/types/report";
+import type { AnalysisIntent, Report } from "@/types/report";
+import { REPORT_VERSION } from "@/types/report";
 import { validateReport } from "@/lib/reportSchema";
 import { getReportTtlMs } from "@/lib/reportTtl";
 import {
@@ -17,6 +19,7 @@ import {
 import { put, get, del } from "@vercel/blob";
 
 const CACHE_PREFIX = "analysis-cache/";
+const FUTURE_SKEW_MS = 60_000;
 
 function cacheRoot(): string {
   return (
@@ -25,9 +28,16 @@ function cacheRoot(): string {
   );
 }
 
-export function analysisCacheKey(owner: string, repo: string, sha: string): string {
+export function analysisCacheKey(
+  owner: string,
+  repo: string,
+  sha: string,
+  intent: AnalysisIntent | undefined = "interview"
+): string {
   const digest = createHash("sha256")
-    .update(`${owner.toLowerCase()}/${repo.toLowerCase()}@${sha.toLowerCase()}`)
+    .update(
+      `${owner.toLowerCase()}/${repo.toLowerCase()}@${sha.toLowerCase()}@${intent ?? "interview"}@v${REPORT_VERSION}`
+    )
     .digest("hex")
     .slice(0, 40);
   return digest;
@@ -42,6 +52,7 @@ interface CacheEnvelope {
   owner: string;
   repo: string;
   sha: string;
+  intent: AnalysisIntent;
   report: Report;
 }
 
@@ -50,6 +61,8 @@ function parseEnvelope(raw: string): CacheEnvelope | null {
     const parsed = JSON.parse(raw) as CacheEnvelope;
     if (!parsed || typeof parsed !== "object") return null;
     if (typeof parsed.cached_at !== "string") return null;
+    if (typeof parsed.owner !== "string" || typeof parsed.repo !== "string") return null;
+    if (typeof parsed.sha !== "string" || typeof parsed.intent !== "string") return null;
     const validated = validateReport(parsed.report);
     if (!validated.ok) return null;
     return { ...parsed, report: validated.report };
@@ -61,15 +74,31 @@ function parseEnvelope(raw: string): CacheEnvelope | null {
 function withinTtl(cachedAt: string): boolean {
   const ts = Date.parse(cachedAt);
   if (!Number.isFinite(ts)) return false;
+  if (ts > Date.now() + FUTURE_SKEW_MS) return false;
   return Date.now() - ts <= getReportTtlMs();
 }
 
 export async function getCachedAnalysis(
   owner: string,
   repo: string,
-  sha: string
+  sha: string,
+  intent: AnalysisIntent | undefined = "interview"
 ): Promise<Report | null> {
-  const key = analysisCacheKey(owner, repo, sha);
+  const key = analysisCacheKey(owner, repo, sha, intent);
+  const expectedIntent = intent ?? "interview";
+
+  const accept = (envelope: CacheEnvelope | null): Report | null => {
+    if (!envelope || !withinTtl(envelope.cached_at)) return null;
+    if (
+      envelope.owner.toLowerCase() !== owner.toLowerCase() ||
+      envelope.repo.toLowerCase() !== repo.toLowerCase() ||
+      envelope.sha.toLowerCase() !== sha.toLowerCase() ||
+      envelope.intent !== expectedIntent
+    ) {
+      return null;
+    }
+    return envelope.report;
+  };
 
   if (hasBlobStorageCredentials()) {
     const token = getStaticBlobToken();
@@ -93,13 +122,11 @@ export async function getCachedAnalysis(
       offset += chunk.length;
     }
     const envelope = parseEnvelope(new TextDecoder().decode(buffer));
-    if (!envelope || !withinTtl(envelope.cached_at)) {
-      if (envelope) {
-        await del(`${CACHE_PREFIX}${key}.json`, { ...(token && { token }) }).catch(() => undefined);
-      }
-      return null;
+    const hit = accept(envelope);
+    if (!hit && envelope) {
+      await del(`${CACHE_PREFIX}${key}.json`, { ...(token && { token }) }).catch(() => undefined);
     }
-    return envelope.report;
+    return hit;
   }
 
   if (isVercelRuntime()) return null;
@@ -108,25 +135,27 @@ export async function getCachedAnalysis(
   if (!fs.existsSync(/* turbopackIgnore: true */ filePath)) return null;
   const raw = await fs.promises.readFile(/* turbopackIgnore: true */ filePath, "utf-8");
   const envelope = parseEnvelope(raw);
-  if (!envelope || !withinTtl(envelope.cached_at)) {
+  const hit = accept(envelope);
+  if (!hit) {
     await fs.promises.unlink(/* turbopackIgnore: true */ filePath).catch(() => undefined);
-    return null;
   }
-  return envelope.report;
+  return hit;
 }
 
 export async function putCachedAnalysis(
   owner: string,
   repo: string,
   sha: string,
-  report: Report
+  report: Report,
+  intent: AnalysisIntent | undefined = "interview"
 ): Promise<void> {
-  const key = analysisCacheKey(owner, repo, sha);
+  const key = analysisCacheKey(owner, repo, sha, intent);
   const envelope: CacheEnvelope = {
     cached_at: new Date().toISOString(),
     owner,
     repo,
     sha,
+    intent: intent ?? "interview",
     report,
   };
   const body = JSON.stringify(envelope);

@@ -11,7 +11,7 @@ import { shouldSkipPath } from "../ignoreRules";
 const JAVA_EXTENSION = ".java";
 
 const PACKAGE_RE = /^\s*package\s+([\w.]+)\s*;/m;
-const IMPORT_RE = /^\s*import\s+(?:static\s+)?([\w.]+(?:\.\*)?)\s*;/gm;
+const IMPORT_RE = /^\s*import\s+(static\s+)?([\w.]+(?:\.\*)?)\s*;/gm;
 const MAIN_METHOD_RE =
   /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)/;
 const SPRING_BOOT_APP_RE = /@SpringBootApplication/;
@@ -142,7 +142,12 @@ export function extractImportSpecifiers(content: string): string[] {
 
   IMPORT_RE.lastIndex = 0;
   while ((match = IMPORT_RE.exec(content))) {
-    const spec = match[1].trim();
+    const isStatic = Boolean(match[1]);
+    let spec = match[2].trim();
+    if (isStatic && spec.endsWith(".*")) {
+      // import static pkg.Type.* → resolve owning type, not a package wildcard.
+      spec = spec.slice(0, -2);
+    }
     if (spec && !seen.has(spec)) {
       seen.add(spec);
       specs.push(spec);
@@ -185,16 +190,21 @@ function resolveImport(
 
 /**
  * Same-package type references without import statements (default or named package).
+ * Strips line/block comments and string literals before matching simple type names.
  */
 export function collectSamePackageRefs(
   content: string,
   selfPath: string,
   siblings: string[]
 ): string[] {
-  const body = content
+  const withoutImports = content
     .split("\n")
     .filter((line) => !/^\s*package\s+/.test(line) && !/^\s*import\s+/.test(line))
     .join("\n");
+  const body = withoutImports
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/\/\/[^\n]*/g, " ")
+    .replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, " ");
   const refs: string[] = [];
   for (const sibling of siblings) {
     if (sibling === selfPath) continue;

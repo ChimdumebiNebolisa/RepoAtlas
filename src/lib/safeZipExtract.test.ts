@@ -9,7 +9,7 @@ import {
   MAX_SINGLE_FILE_BYTES,
   MAX_UNCOMPRESSED_BYTES,
 } from "@/lib/ingestLimits";
-import { safeExtractZip, resolveSafeZipEntryPath } from "./safeZipExtract";
+import { safeExtractZip, safeExtractZipFromFile, resolveSafeZipEntryPath } from "./safeZipExtract";
 
 function withTempDir(fn: (dir: string) => void): void {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repoatlas-zip-test-"));
@@ -106,6 +106,14 @@ describe("safeExtractZip", () => {
         expect.objectContaining({ code: "ZIP_INVALID" })
       );
       expectExtractionRootToBeEmpty(extractRoot);
+    });
+  });
+
+  it("rejects empty and dot-only entry paths", () => {
+    withTempDir((extractRoot) => {
+      expect(() => resolveSafeZipEntryPath(extractRoot, "")).toThrow(AppError);
+      expect(() => resolveSafeZipEntryPath(extractRoot, ".")).toThrow(AppError);
+      expect(() => resolveSafeZipEntryPath(extractRoot, "./")).toThrow(AppError);
     });
   });
 
@@ -256,4 +264,22 @@ describe("safeExtractZip", () => {
       expectExtractionRootToBeEmpty(extractRoot);
     });
   }, 20_000);
+
+  it("streams extraction from a zip file without loading the whole archive API path", async () => {
+    const buffer = makeZip([
+      { name: "README.md", data: "# streamed" },
+      { name: "src/app.ts", data: "export {};" },
+    ]);
+    const zipPath = path.join(os.tmpdir(), `repoatlas-stream-${Date.now()}.zip`);
+    fs.writeFileSync(zipPath, buffer);
+    const extractRoot = fs.mkdtempSync(path.join(os.tmpdir(), "repoatlas-stream-out-"));
+    try {
+      await safeExtractZipFromFile(zipPath, extractRoot);
+      expect(fs.readFileSync(path.join(extractRoot, "README.md"), "utf-8")).toBe("# streamed");
+      expect(fs.existsSync(path.join(extractRoot, "src", "app.ts"))).toBe(true);
+    } finally {
+      fs.rmSync(extractRoot, { recursive: true, force: true });
+      fs.unlinkSync(zipPath);
+    }
+  });
 });

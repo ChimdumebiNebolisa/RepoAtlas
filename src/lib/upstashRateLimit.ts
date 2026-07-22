@@ -20,6 +20,15 @@ export function upstashConfigFromEnv(): { url: string; token: string } | null {
   const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
   const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
   if (!url || !token) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:") return null;
+  const host = parsed.hostname.toLowerCase();
+  if (!(host === "upstash.io" || host.endsWith(".upstash.io"))) return null;
   return { url, token };
 }
 

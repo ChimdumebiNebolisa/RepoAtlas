@@ -45,8 +45,11 @@ export function detectEntrypoints(files: string[], workspacePath: string): Set<s
     if (entrypoints.has(file)) continue;
     try {
       const content = fs.readFileSync(path.join(workspacePath, file), "utf-8");
-      // Spec acceptance: treat scripts with an explicit main guard as entrypoints.
-      if (/if\s+__name__\s*==\s*["']__main__["']\s*:/.test(content)) {
+      // Strip comments/strings enough to avoid treating docs/examples as entrypoints.
+      const scrubbed = content
+        .replace(/'''[\s\S]*?'''|"""[\s\S]*?"""/g, '""')
+        .replace(/#[^\n]*/g, "");
+      if (/if\s+__name__\s*==\s*["']__main__["']\s*:/.test(scrubbed)) {
         entrypoints.add(file);
       }
     } catch {

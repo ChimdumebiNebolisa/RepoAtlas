@@ -50,6 +50,7 @@ function isStartHereItem(value: unknown): boolean {
   return (
     typeof value.path === "string" &&
     typeof value.score === "number" &&
+    Number.isFinite(value.score) &&
     typeof value.explanation === "string"
   );
 }
@@ -59,6 +60,7 @@ function isDangerZoneItem(value: unknown): boolean {
   if (
     typeof value.path !== "string" ||
     typeof value.score !== "number" ||
+    !Number.isFinite(value.score) ||
     typeof value.breakdown !== "string" ||
     !isObject(value.metrics)
   ) {
