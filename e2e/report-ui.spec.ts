@@ -434,6 +434,41 @@ test.describe("Report UI flows", () => {
 });
 
 test.describe("Share UI edge cases", () => {
+  test("invalid portable link shows bounded recovery", async ({ page }) => {
+    await page.goto("/share/portable#v1.invalid");
+
+    await expect(
+      page.getByRole("alert").filter({ hasText: "This private share link is invalid." })
+    ).toHaveText("This private share link is invalid.");
+    await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Back to home/i })).toHaveAttribute(
+      "href",
+      "/"
+    );
+  });
+
+  test("expired portable link shows bounded recovery", async ({ page }) => {
+    await page.addInitScript(installDeterministicPortableCodec);
+    const iv = Buffer.alloc(12, 1).toString("base64url");
+    const key = Buffer.alloc(32, 2).toString("base64url");
+    const ciphertext = Buffer.from(
+      JSON.stringify({
+        version: 1,
+        createdAt: "2026-07-01T00:00:00.000Z",
+        expiresAt: "2026-07-08T00:00:00.000Z",
+        report: buildSampleReport(),
+      })
+    ).toString("base64url");
+
+    await page.goto(`/share/portable#v1.${iv}.${key}.${ciphertext}`);
+
+    await expect(
+      page.getByRole("alert").filter({ hasText: "This private share link has expired." })
+    ).toHaveText("This private share link has expired.");
+    await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Repo Summary" })).toHaveCount(0);
+  });
+
   test("inline share offers a working PDF when browser compression is unavailable", async ({ page }) => {
     test.setTimeout(240_000);
     await page.addInitScript(() => {
