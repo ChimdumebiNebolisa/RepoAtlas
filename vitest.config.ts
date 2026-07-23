@@ -65,15 +65,20 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/lib/reportSchema.ts": {
+          branches: 80,
+          lines: 85,
+        },
         "src/components/useReportActions.ts": {
           statements: 80,
           branches: 80,
           functions: 80,
         },
-        "src/components/{InputForm,AnalysisIntentSelector,RepositoryInputControls,useAnalysisRequest,inputFormSupport}.{ts,tsx}": {
-          branches: 80,
-          lines: 90,
-        },
+        "src/components/{InputForm,AnalysisIntentSelector,RepositoryInputControls,useAnalysisRequest,inputFormSupport}.{ts,tsx}":
+          {
+            branches: 80,
+            lines: 90,
+          },
         "src/components/InputForm.tsx": {
           branches: 80,
           lines: 90,
@@ -86,10 +91,11 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
-        "src/components/{DeepAnalysisSection,DocumentsPanel,RunContributeSection,FolderMapTree,StartHereTable,DangerZonesTable,ReportOverview,ReportDocument}.tsx": {
-          branches: 80,
-          lines: 85,
-        },
+        "src/components/{DeepAnalysisSection,DocumentsPanel,RunContributeSection,FolderMapTree,StartHereTable,DangerZonesTable,ReportOverview,ReportDocument}.tsx":
+          {
+            branches: 80,
+            lines: 85,
+          },
         "src/components/ReportActionViews.tsx": {
           branches: 80,
           lines: 85,
@@ -98,18 +104,20 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
-        "src/analyzer/packs/tsjsResolve{,Compiler,Packages,Shared,Workspaces}.ts": {
-          branches: 80,
-          lines: 85,
-        },
+        "src/analyzer/packs/tsjsResolve{,Compiler,Packages,Shared,Workspaces}.ts":
+          {
+            branches: 80,
+            lines: 85,
+          },
         "src/analyzer/packs/tsjsEntrypoints.ts": {
           branches: 80,
           lines: 85,
         },
-        "src/analyzer/{index,analysisTypes,analysisDeadline,languagePacks,partialReport,reportAssembly,reportPersistence}.ts": {
-          branches: 80,
-          lines: 85,
-        },
+        "src/analyzer/{index,analysisTypes,analysisDeadline,languagePacks,partialReport,reportAssembly,reportPersistence}.ts":
+          {
+            branches: 80,
+            lines: 85,
+          },
         "src/analyzer/scoring.ts": {
           branches: 80,
           lines: 85,
