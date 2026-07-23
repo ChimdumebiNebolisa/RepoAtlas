@@ -73,12 +73,24 @@ function sortKeyDocs(keyDocs: string[]): void {
 export async function runIndexingPipeline(
   workspacePath: string
 ): Promise<IndexingPipelineResult> {
+  const workspaceRoot = path.resolve(workspacePath);
   const file_metadata = new Map<string, FileMetadata>();
   const key_docs: string[] = [];
   const ci_configs: string[] = [];
   const warnings: string[] = [];
   let fileCount = 0;
+  let fileLimitTruncated = false;
   let depthTruncated = false;
+  let unreadableDirectoryCount = 0;
+  let unreadableFileCount = 0;
+  let unsafeEntryCount = 0;
+
+  function isInsideWorkspace(candidate: string): boolean {
+    const relative = path.relative(workspaceRoot, candidate);
+    const escapesWorkspace =
+      relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+    return !escapesWorkspace;
+  }
 
   function buildFolderMap(dir: string, relPath: string, depth: number): FolderMapNode {
     if (depth >= MAX_DEPTH) {
@@ -87,27 +99,52 @@ export async function runIndexingPipeline(
       try {
         if (fs.readdirSync(dir).length > 0) depthTruncated = true;
       } catch {
-        /* ignore unreadable directory */
+        unreadableDirectoryCount++;
       }
       return { path: relPath || ".", type: "dir", children: [], truncated: true };
     }
 
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    let entries: fs.Dirent[];
+    try {
+      entries = fs
+        .readdirSync(dir, { withFileTypes: true })
+        .sort((a, b) => a.name.localeCompare(b.name));
+    } catch {
+      unreadableDirectoryCount++;
+      return { path: relPath || ".", type: "dir", children: [] };
+    }
     const children: FolderMapNode[] = [];
 
     for (const ent of entries) {
-      if (shouldSkipDir(ent.name)) continue;
-      const fullPath = path.join(dir, ent.name);
+      const fullPath = path.resolve(dir, ent.name);
       const childRel = (relPath ? path.join(relPath, ent.name) : ent.name).replace(
         /\\/g,
         "/"
       );
 
-      if (ent.isDirectory()) {
+      if (!isInsideWorkspace(fullPath)) {
+        unsafeEntryCount++;
+        continue;
+      }
+
+      let stat: fs.Stats;
+      try {
+        stat = fs.lstatSync(fullPath);
+      } catch {
+        unreadableFileCount++;
+        continue;
+      }
+
+      if (stat.isSymbolicLink()) {
+        unsafeEntryCount++;
+        continue;
+      }
+
+      if (stat.isDirectory()) {
+        if (shouldSkipDir(ent.name)) continue;
         children.push(buildFolderMap(fullPath, childRel, depth + 1));
-      } else {
+      } else if (stat.isFile()) {
         if (fileCount < MAX_FILE_COUNT) {
-          const stat = fs.statSync(fullPath);
           const ext = path.extname(ent.name);
           const lang = EXT_TO_LANG[ext] ?? "unknown";
           file_metadata.set(childRel, {
@@ -117,6 +154,8 @@ export async function runIndexingPipeline(
             language: lang,
           });
           fileCount++;
+        } else {
+          fileLimitTruncated = true;
         }
         children.push({ path: childRel, type: "file" });
 
@@ -127,6 +166,8 @@ export async function runIndexingPipeline(
         if (CI_PATTERNS.some((p) => childRel.includes(p) || childRel.endsWith(p))) {
           ci_configs.push(childRel);
         }
+      } else {
+        unsafeEntryCount++;
       }
     }
 
@@ -140,14 +181,35 @@ export async function runIndexingPipeline(
     };
   }
 
-  const folder_map = buildFolderMap(workspacePath, ".", 0);
+  const folder_map = buildFolderMap(workspaceRoot, ".", 0);
 
-  if (fileCount >= MAX_FILE_COUNT) {
+  if (fileLimitTruncated) {
     warnings.push("Max file count reached; some files omitted");
   }
   if (depthTruncated) {
     warnings.push(
       `Folder map truncated at depth ${MAX_DEPTH}; deeper directories were not walked.`
+    );
+  }
+  if (unreadableDirectoryCount > 0) {
+    warnings.push(
+      `${unreadableDirectoryCount} unreadable ${
+        unreadableDirectoryCount === 1 ? "directory was" : "directories were"
+      } skipped.`
+    );
+  }
+  if (unreadableFileCount > 0) {
+    warnings.push(
+      `${unreadableFileCount} unreadable ${
+        unreadableFileCount === 1 ? "file was" : "files were"
+      } skipped.`
+    );
+  }
+  if (unsafeEntryCount > 0) {
+    warnings.push(
+      `${unsafeEntryCount} unsafe filesystem ${
+        unsafeEntryCount === 1 ? "entry was" : "entries were"
+      } skipped.`
     );
   }
 
@@ -157,7 +219,7 @@ export async function runIndexingPipeline(
   ci_configs.sort((a, b) => a.localeCompare(b));
 
   const { commands: run_commands, warnings: runWarnings } =
-    extractAllRunCommands(workspacePath, key_docs);
+    extractAllRunCommands(workspaceRoot, key_docs);
   warnings.push(...runWarnings);
 
   const contribute_signals: ContributeSignals = {

@@ -163,6 +163,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/pipeline.ts": {
+          branches: 80,
+          lines: 85,
+        },
         "src/analyzer/commands/index.ts": {
           branches: 80,
           lines: 85,
