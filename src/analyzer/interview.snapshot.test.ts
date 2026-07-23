@@ -34,9 +34,15 @@ describe("Candidate Brief snapshots (repo-ts)", () => {
       ...Object.values(brief.interview_talking_points).flatMap((a) => a.evidence_refs),
       ...brief.first_pr_plan.flatMap((idea) => idea.evidence_refs),
       ...brief.resume_bullets.flatMap((b) => b.evidence_refs),
+      ...(brief.interview_questions ?? []).flatMap((question) => question.evidence_refs),
     ];
     for (const id of referenced) {
       expect(knownIds.has(id)).toBe(true);
+    }
+    for (const question of brief.interview_questions ?? []) {
+      if (!question.generic) {
+        expect(question.evidence_refs.length).toBeGreaterThan(0);
+      }
     }
 
     const serialized = JSON.stringify(brief).toLowerCase();
@@ -69,27 +75,27 @@ describe("Candidate Brief byte stability", () => {
     [
       "bundled sample",
       "repo-ts",
-      "91f72626fcf8c3ed8236c59201613efeb19867b922ebf99e3a8b48be7b763186",
+      "86ab059057ddc26c9a190f5757dcccce4d84074e244b0afec01d00aaa355a178",
     ],
     [
       "TypeScript",
       "repo-node-api",
-      "a08e16ba95ec31c2305586b681a765c06f79dc67f802bf1120353833f011c750",
+      "d2577cfa2ffb6e47206331c6bc0942bc4038bdd8cc86ffbb819b2b59b6e191a5",
     ],
     [
       "Python",
       "repo-python",
-      "0a1a840405e262ccaa577127c6a72b29cd9c23ba576dba417abd9ca980184b48",
+      "fca2429f19a85e9e2d6e9f8be6a55f69d2842809890c70e49c8e2e24a5f8c803",
     ],
     [
       "Java",
       "repo-java-maven",
-      "1ab1e49d911d52ad045daa83bdba38deab6632f13823e4d44fa8b30c9af67140",
+      "a819836d7582cf56166b048d1cc8d8b30819be981d215e230534836bef29a672",
     ],
     [
       "monorepo",
       "repo-monorepo",
-      "c7d953ca53c60cd9c464928d9f2c393c8b171a308494837072e56fb0d444b448",
+      "df98e00f7330fd10e043e64df1cfd11aa1b473145dfd4d86010421aabd88d324",
     ],
   ])("preserves the %s fixture byte-for-byte", async (_label, fixture, expected) => {
     const fixturePath = path.resolve(__dirname, `../../fixtures/${fixture}`);
