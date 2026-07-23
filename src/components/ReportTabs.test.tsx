@@ -65,6 +65,7 @@ beforeEach(() => {
   captureReportViewed.mockReset();
   layoutGraph.mockReset();
   html2canvas.mockReset();
+  Element.prototype.scrollIntoView = vi.fn();
   layoutGraph.mockResolvedValue({
     nodes: [
       { id: "InputForm", label: "InputForm", x: 0, y: 0, width: 100, height: 40 },
@@ -322,6 +323,36 @@ describe("ReportTabs architecture integration", () => {
     expect(await screen.findByRole("button", { name: "Zoom in" })).toBeEnabled();
     expect(layoutGraph).toHaveBeenCalledTimes(1);
     expect(screen.getByText("InputForm")).toBeInTheDocument();
+  });
+
+  it("keeps empty architecture guidance available after keyboard navigation", async () => {
+    const report = {
+      ...buildSampleReport(),
+      architecture: { nodes: [], edges: [] },
+      semantic_graph: undefined,
+    };
+    const user = userEvent.setup();
+    render(<ReportTabs report={report} />);
+
+    const architectureTab = screen.getByRole("tab", { name: "Architecture Map" });
+    await user.click(architectureTab);
+
+    expect(screen.getByText("No dependency map was produced.")).toBeInTheDocument();
+    expect(layoutGraph).not.toHaveBeenCalled();
+
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Start Here" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("Start Here content");
+
+    await user.keyboard("{ArrowLeft}");
+    expect(architectureTab).toHaveAttribute("aria-selected", "true");
+    expect(architectureTab).toHaveFocus();
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(
+      "Check Candidate Brief confidence notes for analysis limits."
+    );
   });
 });
 
