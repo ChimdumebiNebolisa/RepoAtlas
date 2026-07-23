@@ -59,9 +59,21 @@ export function ElkArchitectureGraph({
 
   if (!architecture.nodes.length) {
     return (
-      <p data-architecture-state="empty" className="text-gray-500">
-        No architecture data available for this repository.
-      </p>
+      <div
+        data-architecture-state="empty"
+        className="max-w-2xl rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
+      >
+        <p className="font-medium text-slate-900">No dependency map was produced.</p>
+        <p className="mt-1 text-sm leading-6 text-slate-700">
+          RepoAtlas found {architecture.nodes.length} graph nodes and{" "}
+          {architecture.edges.length} graph edges from supported dependency analysis. This does
+          not prove that the repository has no architecture.
+        </p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Use Folder Map and Start Here to inspect the repository structure. Check Candidate Brief
+          confidence notes for analysis limits.
+        </p>
+      </div>
     );
   }
 

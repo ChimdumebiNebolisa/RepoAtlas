@@ -142,9 +142,21 @@ describe("ElkArchitectureGraph states", () => {
   it("renders the empty state without starting the graph engine", () => {
     render(<ElkArchitectureGraph architecture={{ nodes: [], edges: [] }} />);
 
-    expect(screen.getByText("No architecture data available for this repository.")).toHaveAttribute(
-      "data-architecture-state",
-      "empty"
+    const emptyState = screen.getByText("No dependency map was produced.").closest(
+      '[data-architecture-state="empty"]'
+    );
+
+    expect(emptyState).toHaveTextContent(
+      "RepoAtlas found 0 graph nodes and 0 graph edges from supported dependency analysis."
+    );
+    expect(emptyState).toHaveTextContent(
+      "This does not prove that the repository has no architecture."
+    );
+    expect(emptyState).toHaveTextContent(
+      "Use Folder Map and Start Here to inspect the repository structure."
+    );
+    expect(emptyState).toHaveTextContent(
+      "Check Candidate Brief confidence notes for analysis limits."
     );
     expect(layoutGraph).not.toHaveBeenCalled();
   });
