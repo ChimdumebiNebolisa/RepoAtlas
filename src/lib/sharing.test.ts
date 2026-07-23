@@ -85,6 +85,15 @@ function record(
   return { reportId, createdAt, expiresAt };
 }
 
+function expiredRecord(reportId: string) {
+  const expiresAt = Date.now() - DAY_MS;
+  return record(
+    reportId,
+    new Date(expiresAt - 7 * DAY_MS).toISOString(),
+    new Date(expiresAt).toISOString()
+  );
+}
+
 describe("filesystem-backed sharing", () => {
   let reportsDir: string;
   let reportId: string;
@@ -180,13 +189,7 @@ describe("filesystem-backed sharing", () => {
     fs.mkdirSync(sharesDir, { recursive: true });
     fs.writeFileSync(
       path.join(sharesDir, `${VALID_TOKEN}.json`),
-      JSON.stringify(
-        record(
-          reportId,
-          new Date(Date.now() - 8 * DAY_MS).toISOString(),
-          new Date(Date.now() - DAY_MS).toISOString()
-        )
-      )
+      JSON.stringify(expiredRecord(reportId))
     );
 
     expect(await resolveShareToken(VALID_TOKEN)).toBeNull();
@@ -194,13 +197,7 @@ describe("filesystem-backed sharing", () => {
 
     fs.writeFileSync(
       path.join(sharesDir, `${VALID_TOKEN}.json`),
-      JSON.stringify(
-        record(
-          reportId,
-          new Date(Date.now() - 8 * DAY_MS).toISOString(),
-          new Date(Date.now() - DAY_MS).toISOString()
-        )
-      )
+      JSON.stringify(expiredRecord(reportId))
     );
     const fresh = await createShareLink(reportId);
     expect(fresh.token).not.toBe(VALID_TOKEN);
@@ -213,13 +210,7 @@ describe("filesystem-backed sharing", () => {
     const expiredToken = "B".repeat(32);
     fs.writeFileSync(
       path.join(sharesDir, `${expiredToken}.json`),
-      JSON.stringify(
-        record(
-          randomUUID(),
-          new Date(Date.now() - 8 * DAY_MS).toISOString(),
-          new Date(Date.now() - DAY_MS).toISOString()
-        )
-      )
+      JSON.stringify(expiredRecord(randomUUID()))
     );
 
     const result = await sweepExpiredShareTokens();
@@ -400,8 +391,9 @@ describe("private Blob-backed sharing", () => {
     const stored = JSON.parse(
       blob.store.get(`shares/${share.token}.json`)?.body ?? "null"
     ) as { createdAt: string; expiresAt: string; reportId: string };
-    stored.createdAt = new Date(Date.now() - 8 * DAY_MS).toISOString();
-    stored.expiresAt = new Date(Date.now() - DAY_MS).toISOString();
+    const expired = expiredRecord(reportId);
+    stored.createdAt = expired.createdAt;
+    stored.expiresAt = expired.expiresAt;
     blob.store.set(`shares/${share.token}.json`, {
       body: JSON.stringify(stored),
       uploadedAt: new Date(),
