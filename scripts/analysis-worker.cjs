@@ -26,6 +26,7 @@ async function main() {
     const { analyzeRepository } = jiti(
       path.join(process.cwd(), "src/analyzer/index.ts")
     );
+    parentPort.postMessage({ ready: true });
     const { input, options } = workerData;
     const result = await analyzeRepository(input, {
       ...options,

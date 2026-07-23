@@ -179,7 +179,7 @@ describe("runIsolatedAnalysis", () => {
       allowInlineFallback: true,
     });
 
-    worker.emit("online");
+    worker.emit("message", { ready: true });
     worker.emit("message", { ok: true, result });
 
     await expect(promise).resolves.toBe(result);
@@ -259,7 +259,7 @@ describe("runIsolatedAnalysis", () => {
   it("rejects an unexpected worker exit without rerunning inline", async () => {
     const { worker, promise } = startWorker();
 
-    worker.emit("online");
+    worker.emit("message", { ready: true });
     worker.emit("exit", 2);
 
     await expect(promise).rejects.toThrow(
@@ -268,7 +268,7 @@ describe("runIsolatedAnalysis", () => {
     expect(mocks.analyzeRepository).not.toHaveBeenCalled();
   });
 
-  it("falls back for a recognized startup error emitted before online", async () => {
+  it("falls back for a recognized startup error emitted before ready", async () => {
     mocks.analyzeRepository.mockResolvedValueOnce(result);
     const { worker, promise } = startWorker();
 
@@ -278,11 +278,24 @@ describe("runIsolatedAnalysis", () => {
     expect(mocks.analyzeRepository).toHaveBeenCalledOnce();
   });
 
+  it("falls back for a recognized startup error message before ready", async () => {
+    mocks.analyzeRepository.mockResolvedValueOnce(result);
+    const { worker, promise } = startWorker();
+
+    worker.emit("message", {
+      ok: false,
+      error: "Cannot find module jiti in the worker bundle",
+    });
+
+    await expect(promise).resolves.toBe(result);
+    expect(mocks.analyzeRepository).toHaveBeenCalledOnce();
+  });
+
   it("does not rerun inline for a worker failure after startup", async () => {
     const error = workerError("Cannot find module during analysis", "MODULE_NOT_FOUND");
     const { worker, promise } = startWorker();
 
-    worker.emit("online");
+    worker.emit("message", { ready: true });
     worker.emit("error", error);
 
     await expect(promise).rejects.toBe(error);
