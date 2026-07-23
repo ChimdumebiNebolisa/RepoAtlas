@@ -45,6 +45,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/lib/productAnalytics.ts": {
+          branches: 80,
+          lines: 85,
+        },
         statements: 63,
         branches: 78,
         functions: 82,
