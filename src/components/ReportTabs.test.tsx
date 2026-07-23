@@ -11,6 +11,16 @@ const captureReportViewed = vi.hoisted(() => vi.fn());
 const layoutGraph = vi.hoisted(() => vi.fn());
 const html2canvas = vi.hoisted(() => vi.fn());
 
+function deferred<T>() {
+  let reject!: (reason?: unknown) => void;
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    reject = rejectPromise;
+    resolve = resolvePromise;
+  });
+  return { promise, reject, resolve };
+}
+
 vi.mock("@/lib/portableSharing", () => ({ createPortableShareLink }));
 vi.mock("@/lib/elkLayout", () => ({ layoutGraph }));
 vi.mock("html2canvas", () => ({ default: html2canvas }));
@@ -266,7 +276,8 @@ describe("ReportTabs walkthrough analytics", () => {
   });
 
   it("mounts the hidden report for export and clears the active export on replacement", async () => {
-    html2canvas.mockRejectedValueOnce(new Error("Snapshot rendering failed."));
+    const pendingSnapshot = deferred<HTMLCanvasElement>();
+    html2canvas.mockReturnValueOnce(pendingSnapshot.promise);
     const replacementReport = {
       ...buildSampleReport(),
       repo_metadata: {
@@ -282,6 +293,7 @@ describe("ReportTabs walkthrough analytics", () => {
       await screen.findByRole("heading", { name: "Repo Analysis: repo-atlas" })
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Exporting PDF..." })).toBeDisabled();
+    await waitFor(() => expect(html2canvas).toHaveBeenCalledOnce());
 
     rerender(<ReportTabs report={replacementReport} />);
 
@@ -291,6 +303,11 @@ describe("ReportTabs walkthrough analytics", () => {
       ).toBeNull()
     );
     expect(screen.getByRole("button", { name: "Export PDF" })).toBeEnabled();
+    await act(async () => {
+      pendingSnapshot.reject(new Error("Snapshot rendering failed."));
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 
