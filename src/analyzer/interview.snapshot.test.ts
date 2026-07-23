@@ -90,7 +90,7 @@ describe("Candidate Brief byte stability", () => {
     [
       "Java",
       "repo-java-maven",
-      "a819836d7582cf56166b048d1cc8d8b30819be981d215e230534836bef29a672",
+      "fc374270ab8529bfdd17db4ef64796ab8358dc0df38eb613ab7642483f1327f6",
     ],
     [
       "monorepo",

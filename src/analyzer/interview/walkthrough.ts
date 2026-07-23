@@ -6,6 +6,11 @@ import {
 } from "./evidence";
 import type { BuildCandidateBriefInput, EvidenceIndex } from "./types";
 
+function finishSentence(value: string): string {
+  const trimmed = value.trimEnd();
+  return /[.!?]$/.test(trimmed) ? `${trimmed} ` : `${trimmed}. `;
+}
+
 export function buildWalkthroughScript(
   input: BuildCandidateBriefInput,
   evidence: EvidenceIndex
@@ -30,7 +35,7 @@ export function buildWalkthroughScript(
   }
 
   const thirty_second =
-    `${profile}${purpose ? `: ${purpose.slice(0, 80)}` : ""}. ` +
+    finishSentence(`${profile}${purpose ? `: ${purpose.slice(0, 80)}` : ""}`) +
     `Start at ${topPaths[0] ?? "the folder map"}, validate with ${commands[0] ?? "detected project files"}.`;
 
   const two_minute =
