@@ -174,14 +174,21 @@ export async function openPortableShare(
       new TextDecoder().decode(await decompress(compressed))
     ) as Partial<PortableShareEnvelope>;
 
+    if (envelope.version !== 1 || typeof envelope.createdAt !== "string" || typeof envelope.expiresAt !== "string") {
+      throw new PortableShareError("INVALID", "This private share link is invalid.");
+    }
+    const createdAtMs = Date.parse(envelope.createdAt);
+    const expiresAtMs = Date.parse(envelope.expiresAt);
     if (
-      envelope.version !== 1 ||
-      typeof envelope.createdAt !== "string" ||
-      typeof envelope.expiresAt !== "string"
+      !Number.isFinite(createdAtMs) ||
+      !Number.isFinite(expiresAtMs) ||
+      new Date(createdAtMs).toISOString() !== envelope.createdAt ||
+      new Date(expiresAtMs).toISOString() !== envelope.expiresAt ||
+      expiresAtMs - createdAtMs !== PORTABLE_SHARE_TTL_MS
     ) {
       throw new PortableShareError("INVALID", "This private share link is invalid.");
     }
-    if (new Date(envelope.expiresAt).getTime() <= now.getTime()) {
+    if (expiresAtMs <= now.getTime()) {
       throw new PortableShareError("EXPIRED", "This private share link has expired.");
     }
 

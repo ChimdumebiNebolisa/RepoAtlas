@@ -41,6 +41,10 @@ export default defineConfig({
         "**/node_modules/**",
       ],
       thresholds: {
+        "src/lib/portableSharing.ts": {
+          branches: 80,
+          lines: 85,
+        },
         statements: 63,
         branches: 78,
         functions: 82,
