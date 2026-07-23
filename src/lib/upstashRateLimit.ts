@@ -53,6 +53,20 @@ async function upstashCommand(
   return payload.result;
 }
 
+function parseCounterResult(value: unknown): number {
+  if (
+    (typeof value !== "number" && typeof value !== "string") ||
+    (typeof value === "string" && value.trim() === "")
+  ) {
+    throw new Error("Upstash counter result is invalid");
+  }
+  const count = Number(value);
+  if (!Number.isSafeInteger(count) || count < 1) {
+    throw new Error("Upstash counter result is invalid");
+  }
+  return count;
+}
+
 /**
  * Fixed-window counter in Redis. Durable across isolates when Upstash is configured.
  */
@@ -72,7 +86,9 @@ export class UpstashRedisRateLimiter implements RateLimiter {
     const bucket = Math.floor(Date.now() / this.windowMs);
     const redisKey = `repoatlas:analyze:${key}:${bucket}`;
     try {
-      const count = Number(await upstashCommand(this.url, this.token, ["INCR", redisKey]));
+      const count = parseCounterResult(
+        await upstashCommand(this.url, this.token, ["INCR", redisKey])
+      );
       if (count === 1) {
         await upstashCommand(this.url, this.token, [
           "PEXPIRE",

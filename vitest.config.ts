@@ -89,6 +89,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/lib/upstashRateLimit.ts": {
+          branches: 80,
+          lines: 85,
+        },
         "src/lib/sharing.ts": {
           branches: 80,
           lines: 85,
