@@ -5,11 +5,45 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ReportTabs } from "@/components/ReportTabs";
 import type { Report } from "@/types/report";
+import { validateReport } from "@/lib/reportSchema";
 import {
   openPortableShare,
   PORTABLE_SHARE_TOKEN,
   PortableShareError,
 } from "@/lib/portableSharing";
+
+const INVALID_SHARE_MESSAGE =
+  "This shared report could not be opened because its data is incomplete or invalid.";
+const INCOMPATIBLE_SHARE_MESSAGE =
+  "This shared report was created by an unsupported RepoAtlas version.";
+
+function responseMessage(data: unknown, fallback: string): string {
+  if (
+    data &&
+    typeof data === "object" &&
+    "message" in data &&
+    typeof data.message === "string"
+  ) {
+    return data.message;
+  }
+  return fallback;
+}
+
+function readExpiresAt(data: unknown): string | null {
+  if (
+    !data ||
+    typeof data !== "object" ||
+    !("share" in data) ||
+    !data.share ||
+    typeof data.share !== "object" ||
+    !("expiresAt" in data.share) ||
+    typeof data.share.expiresAt !== "string"
+  ) {
+    return null;
+  }
+  const timestamp = Date.parse(data.share.expiresAt);
+  return Number.isFinite(timestamp) ? data.share.expiresAt : null;
+}
 
 export default function TokenSharePage() {
   const params = useParams<{ token: string }>();
@@ -31,6 +65,7 @@ export default function TokenSharePage() {
     setLoading(true);
     setError(null);
     setReport(null);
+    setExpiresAt(null);
 
     try {
       if (portable) {
@@ -45,11 +80,26 @@ export default function TokenSharePage() {
       const data = await res.json().catch(() => ({}));
       if (signal.aborted) return;
       if (!res.ok) {
-        setError(data.message ?? "Share link expired or not found.");
+        setError(responseMessage(data, "Share link expired or not found."));
         return;
       }
-      setReport(data.report as Report);
-      setExpiresAt(data.share?.expiresAt ?? null);
+
+      const reportData =
+        data && typeof data === "object" && "report" in data
+          ? data.report
+          : undefined;
+      const validated = validateReport(reportData);
+      const nextExpiresAt = readExpiresAt(data);
+      if (!validated.ok || !nextExpiresAt) {
+        setError(
+          !validated.ok && validated.reason === "incompatible"
+            ? INCOMPATIBLE_SHARE_MESSAGE
+            : INVALID_SHARE_MESSAGE
+        );
+        return;
+      }
+      setReport(validated.report);
+      setExpiresAt(nextExpiresAt);
     } catch (err) {
       if (signal.aborted) return;
       if (err instanceof DOMException && err.name === "AbortError") return;

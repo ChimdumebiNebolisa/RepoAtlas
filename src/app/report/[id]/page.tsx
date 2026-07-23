@@ -4,7 +4,25 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ReportTabs } from "@/components/ReportTabs";
+import { validateReport } from "@/lib/reportSchema";
 import type { Report } from "@/types/report";
+
+const INVALID_REPORT_MESSAGE =
+  "This report could not be opened because its data is incomplete or invalid.";
+const INCOMPATIBLE_REPORT_MESSAGE =
+  "This report was created by an unsupported RepoAtlas version.";
+
+function responseMessage(data: unknown, fallback: string): string {
+  if (
+    data &&
+    typeof data === "object" &&
+    "message" in data &&
+    typeof data.message === "string"
+  ) {
+    return data.message;
+  }
+  return fallback;
+}
 
 export default function SharedReportPage() {
   const params = useParams<{ id: string }>();
@@ -18,27 +36,43 @@ export default function SharedReportPage() {
   useEffect(() => {
     if (!reportId) return;
 
-    let alive = true;
+    const controller = new AbortController();
     (async () => {
       try {
-        const res = await fetch(`/api/reports/${reportId}`);
+        const res = await fetch(`/api/reports/${reportId}`, {
+          signal: controller.signal,
+        });
         const data = await res.json().catch(() => ({}));
-        if (!alive) return;
+        if (controller.signal.aborted) return;
         if (!res.ok) {
-          setError(data.message ?? "Report not found.");
+          setError(responseMessage(data, "Report not found."));
           return;
         }
-        setReport(data as Report);
-      } catch {
-        if (alive) setError("Failed to load report.");
+
+        const validated = validateReport(data);
+        if (!validated.ok) {
+          setError(
+            validated.reason === "incompatible"
+              ? INCOMPATIBLE_REPORT_MESSAGE
+              : INVALID_REPORT_MESSAGE
+          );
+          return;
+        }
+        setReport(validated.report);
+      } catch (error) {
+        if (
+          controller.signal.aborted ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          return;
+        }
+        setError("Failed to load report.");
       } finally {
-        if (alive) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     })();
 
-    return () => {
-      alive = false;
-    };
+    return () => controller.abort();
   }, [reportId]);
 
   return (
