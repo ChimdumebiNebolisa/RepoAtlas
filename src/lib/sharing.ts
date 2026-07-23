@@ -12,6 +12,8 @@ import { getStaticBlobToken, hasBlobStorageCredentials } from "@/lib/storageConf
 
 const SHARES_BLOB_PREFIX = "shares/";
 const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const REPORT_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getReportsDir(): string {
   return (
@@ -45,6 +47,41 @@ function isValidShareToken(token: string): boolean {
   return /^[A-Za-z0-9_-]{20,64}$/.test(token);
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseCanonicalTimestamp(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return null;
+  return new Date(timestamp).toISOString() === value ? timestamp : null;
+}
+
+function parseShareRecord(value: unknown, now = Date.now()): ShareRecord | null {
+  if (!isPlainObject(value) || typeof value.reportId !== "string") return null;
+  if (!REPORT_ID_RE.test(value.reportId)) return null;
+
+  const createdAt = parseCanonicalTimestamp(value.createdAt);
+  const expiresAt = parseCanonicalTimestamp(value.expiresAt);
+  if (createdAt === null || expiresAt === null) return null;
+  if (createdAt > now || expiresAt - createdAt !== SHARE_TTL_MS) return null;
+
+  return {
+    reportId: value.reportId,
+    createdAt: value.createdAt as string,
+    expiresAt: value.expiresAt as string,
+  };
+}
+
+function parseShareRecordJson(value: string): ShareRecord | null {
+  try {
+    return parseShareRecord(JSON.parse(value));
+  } catch {
+    return null;
+  }
+}
+
 async function saveShareRecord(token: string, record: ShareRecord): Promise<void> {
   const body = JSON.stringify(record);
 
@@ -61,15 +98,24 @@ async function saveShareRecord(token: string, record: ShareRecord): Promise<void
 
   ensureSharesDir();
   const target = path.join(getSharesDir(), `${token}.json`);
-  const tmp = `${target}.${process.pid}.tmp`;
-  await fs.promises.writeFile(/* turbopackIgnore: true */ tmp, body, {
-    encoding: "utf-8",
-    mode: 0o600,
-  });
-  await fs.promises.rename(
-    /* turbopackIgnore: true */ tmp,
-    /* turbopackIgnore: true */ target
-  );
+  const tmp = `${target}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
+  try {
+    await fs.promises.writeFile(/* turbopackIgnore: true */ tmp, body, {
+      encoding: "utf-8",
+      mode: 0o600,
+    });
+    await fs.promises.rename(
+      /* turbopackIgnore: true */ tmp,
+      /* turbopackIgnore: true */ target
+    );
+  } catch (error) {
+    try {
+      await fs.promises.unlink(/* turbopackIgnore: true */ tmp);
+    } catch {
+      /* ignore cleanup failures */
+    }
+    throw error;
+  }
 }
 
 async function loadShareRecord(token: string): Promise<ShareRecord | null> {
@@ -77,27 +123,27 @@ async function loadShareRecord(token: string): Promise<ShareRecord | null> {
 
   if (shouldUseBlobStorage()) {
     const blobToken = getStaticBlobToken();
-    const result = await get(`${SHARES_BLOB_PREFIX}${token}.json`, {
-      access: "private",
-      ...(blobToken && { token: blobToken }),
-    });
-    if (!result || result.statusCode !== 200 || !result.stream) return null;
-    const chunks: Uint8Array[] = [];
-    const reader = result.stream.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) chunks.push(value);
-    }
-    const length = chunks.reduce((sum, c) => sum + c.length, 0);
-    const buffer = new Uint8Array(length);
-    let offset = 0;
-    for (const chunk of chunks) {
-      buffer.set(chunk, offset);
-      offset += chunk.length;
-    }
     try {
-      return JSON.parse(new TextDecoder().decode(buffer)) as ShareRecord;
+      const result = await get(`${SHARES_BLOB_PREFIX}${token}.json`, {
+        access: "private",
+        ...(blobToken && { token: blobToken }),
+      });
+      if (!result || result.statusCode !== 200 || !result.stream) return null;
+      const chunks: Uint8Array[] = [];
+      const reader = result.stream.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
+      }
+      const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const buffer = new Uint8Array(length);
+      let offset = 0;
+      for (const chunk of chunks) {
+        buffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+      return parseShareRecordJson(new TextDecoder().decode(buffer));
     } catch {
       return null;
     }
@@ -111,7 +157,7 @@ async function loadShareRecord(token: string): Promise<ShareRecord | null> {
       ),
       "utf-8"
     );
-    return JSON.parse(data) as ShareRecord;
+    return parseShareRecordJson(data);
   } catch {
     return null;
   }
@@ -140,17 +186,19 @@ async function deleteShareRecord(token: string): Promise<void> {
   }
 }
 
-async function findActiveShareForReport(reportId: string): Promise<ShareRecord | null> {
+async function findActiveShareForReport(
+  reportId: string
+): Promise<{ token: string; record: ShareRecord } | null> {
   const tokens = await listShareTokens();
-  const now = new Date();
+  const now = Date.now();
   for (const token of tokens) {
     const record = await loadShareRecord(token);
     if (!record || record.reportId !== reportId) continue;
-    if (new Date(record.expiresAt) < now) {
+    if (Date.parse(record.expiresAt) <= now) {
       await deleteShareRecord(token);
       continue;
     }
-    return record;
+    return { token, record };
   }
   return null;
 }
@@ -165,17 +213,11 @@ export async function createShareLink(
 
   const existing = await findActiveShareForReport(reportId);
   if (existing) {
-    const tokens = await listShareTokens();
-    for (const token of tokens) {
-      const record = await loadShareRecord(token);
-      if (record?.reportId === reportId && record.expiresAt === existing.expiresAt) {
-        return {
-          token,
-          expiresAt: existing.expiresAt,
-          sharePath: `/share/${token}`,
-        };
-      }
-    }
+    return {
+      token: existing.token,
+      expiresAt: existing.record.expiresAt,
+      sharePath: `/share/${existing.token}`,
+    };
   }
 
   const token = randomBytes(24).toString("base64url");
@@ -200,7 +242,7 @@ export async function resolveShareToken(token: string): Promise<ShareRecord | nu
   const record = await loadShareRecord(token);
   if (!record) return null;
 
-  if (new Date(record.expiresAt) < new Date()) {
+  if (Date.parse(record.expiresAt) <= Date.now()) {
     await deleteShareRecord(token);
     return null;
   }
@@ -222,7 +264,8 @@ export async function listShareTokens(): Promise<string[]> {
       for (const blob of result.blobs) {
         const name = blob.pathname.slice(SHARES_BLOB_PREFIX.length);
         if (name.endsWith(".json")) {
-          tokens.push(name.replace(/\.json$/, ""));
+          const shareToken = name.replace(/\.json$/, "");
+          if (isValidShareToken(shareToken)) tokens.push(shareToken);
         }
       }
       cursor = result.hasMore ? result.cursor : undefined;
@@ -234,7 +277,10 @@ export async function listShareTokens(): Promise<string[]> {
     const files = await fs.promises.readdir(
       /* turbopackIgnore: true */ getSharesDir()
     );
-    return files.filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, ""));
+    return files
+      .filter((file) => file.endsWith(".json"))
+      .map((file) => file.replace(/\.json$/, ""))
+      .filter(isValidShareToken);
   } catch {
     return [];
   }
@@ -258,8 +304,7 @@ export async function sweepExpiredShareTokens(): Promise<{ deleted: string[]; sc
   const deleted: string[] = [];
   for (const token of tokens) {
     const record = await loadShareRecord(token);
-    if (!record) continue;
-    if (new Date(record.expiresAt) < new Date()) {
+    if (!record || Date.parse(record.expiresAt) <= Date.now()) {
       await deleteShareRecord(token);
       deleted.push(token);
     }
