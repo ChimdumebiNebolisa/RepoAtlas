@@ -131,6 +131,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/runIsolatedAnalysis.ts": {
+          branches: 80,
+          lines: 85,
+        },
         "src/analyzer/projectType.ts": {
           branches: 80,
           lines: 85,
