@@ -6,7 +6,7 @@
 
 import fs from "fs";
 import path from "path";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import type { AnalysisIntent, Report } from "@/types/report";
 import { REPORT_VERSION } from "@/types/report";
 import { validateReport } from "@/lib/reportSchema";
@@ -101,45 +101,62 @@ export async function getCachedAnalysis(
   };
 
   if (hasBlobStorageCredentials()) {
-    const token = getStaticBlobToken();
-    const result = await get(`${CACHE_PREFIX}${key}.json`, {
-      access: "private",
-      ...(token && { token }),
-    });
-    if (!result || result.statusCode !== 200 || !result.stream) return null;
-    const chunks: Uint8Array[] = [];
-    const reader = result.stream.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) chunks.push(value);
+    try {
+      const token = getStaticBlobToken();
+      const result = await get(`${CACHE_PREFIX}${key}.json`, {
+        access: "private",
+        ...(token && { token }),
+      });
+      if (!result || result.statusCode !== 200 || !result.stream) return null;
+      const chunks: Uint8Array[] = [];
+      const reader = result.stream.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) chunks.push(value);
+      }
+      const length = chunks.reduce((sum, c) => sum + c.length, 0);
+      const buffer = new Uint8Array(length);
+      let offset = 0;
+      for (const chunk of chunks) {
+        buffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+      const envelope = parseEnvelope(new TextDecoder().decode(buffer));
+      const hit = accept(envelope);
+      if (!hit) {
+        await del(`${CACHE_PREFIX}${key}.json`, {
+          ...(token && { token }),
+        }).catch(() => undefined);
+      }
+      return hit;
+    } catch {
+      // Cache availability must never prevent a fresh repository analysis.
+      return null;
     }
-    const length = chunks.reduce((sum, c) => sum + c.length, 0);
-    const buffer = new Uint8Array(length);
-    let offset = 0;
-    for (const chunk of chunks) {
-      buffer.set(chunk, offset);
-      offset += chunk.length;
-    }
-    const envelope = parseEnvelope(new TextDecoder().decode(buffer));
-    const hit = accept(envelope);
-    if (!hit && envelope) {
-      await del(`${CACHE_PREFIX}${key}.json`, { ...(token && { token }) }).catch(() => undefined);
-    }
-    return hit;
   }
 
   if (isVercelRuntime()) return null;
 
-  const filePath = filesystemPath(key);
-  if (!fs.existsSync(/* turbopackIgnore: true */ filePath)) return null;
-  const raw = await fs.promises.readFile(/* turbopackIgnore: true */ filePath, "utf-8");
-  const envelope = parseEnvelope(raw);
-  const hit = accept(envelope);
-  if (!hit) {
-    await fs.promises.unlink(/* turbopackIgnore: true */ filePath).catch(() => undefined);
+  try {
+    const filePath = filesystemPath(key);
+    if (!fs.existsSync(/* turbopackIgnore: true */ filePath)) return null;
+    const raw = await fs.promises.readFile(
+      /* turbopackIgnore: true */ filePath,
+      "utf-8"
+    );
+    const envelope = parseEnvelope(raw);
+    const hit = accept(envelope);
+    if (!hit) {
+      await fs.promises
+        .unlink(/* turbopackIgnore: true */ filePath)
+        .catch(() => undefined);
+    }
+    return hit;
+  } catch {
+    // A local cache miss or read error is recoverable by analyzing the source.
+    return null;
   }
-  return hit;
 }
 
 export async function putCachedAnalysis(
@@ -176,13 +193,20 @@ export async function putCachedAnalysis(
   const dir = cacheRoot();
   await fs.promises.mkdir(/* turbopackIgnore: true */ dir, { recursive: true });
   const filePath = filesystemPath(key);
-  const tmpPath = `${filePath}.${process.pid}.tmp`;
-  await fs.promises.writeFile(/* turbopackIgnore: true */ tmpPath, body, {
-    encoding: "utf-8",
-    mode: 0o600,
-  });
-  await fs.promises.rename(
-    /* turbopackIgnore: true */ tmpPath,
-    /* turbopackIgnore: true */ filePath
-  );
+  const tmpPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await fs.promises.writeFile(/* turbopackIgnore: true */ tmpPath, body, {
+      encoding: "utf-8",
+      mode: 0o600,
+    });
+    await fs.promises.rename(
+      /* turbopackIgnore: true */ tmpPath,
+      /* turbopackIgnore: true */ filePath
+    );
+  } catch (error) {
+    await fs.promises
+      .unlink(/* turbopackIgnore: true */ tmpPath)
+      .catch(() => undefined);
+    throw error;
+  }
 }
