@@ -28,7 +28,8 @@ type WorkerAppErrorPayload = {
 };
 
 type WorkerMessage = {
-  ok: boolean;
+  ready?: boolean;
+  ok?: boolean;
   result?: AnalyzeResult;
   error?: string;
   appError?: WorkerAppErrorPayload;
@@ -117,7 +118,7 @@ export async function runIsolatedAnalysis(
       }
 
       let settled = false;
-      let workerOnline = false;
+      let workerReady = false;
       let hardTimer: ReturnType<typeof setTimeout> | undefined;
       const cleanup = () => {
         if (hardTimer) clearTimeout(hardTimer);
@@ -150,17 +151,25 @@ export async function runIsolatedAnalysis(
         });
       }, hardDeadlineMs);
 
-      worker.on("online", () => {
-        workerOnline = true;
-      });
       worker.on("message", (message: WorkerMessage) => {
+        if (message.ready) {
+          workerReady = true;
+          return;
+        }
         settle(() => {
-          if (message.ok && message.result) resolve(message.result);
-          else reject(errorFromWorkerMessage(message));
+          if (message.ok && message.result) {
+            resolve(message.result);
+            return;
+          }
+          const error = errorFromWorkerMessage(message);
+          if (!workerReady && isSpawnFailure(error)) {
+            workerFallbackAllowed = true;
+          }
+          reject(error);
         });
       });
       worker.on("error", (error) => {
-        if (!workerOnline && isSpawnFailure(error)) {
+        if (!workerReady && isSpawnFailure(error)) {
           workerFallbackAllowed = true;
         }
         settle(() => reject(error));
