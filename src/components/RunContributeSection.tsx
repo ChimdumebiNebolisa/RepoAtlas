@@ -20,11 +20,11 @@ export function RunContributeSection({
         ) : (
           <ul className="space-y-2">
             {runCommands.map((cmd, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <code className="bg-gray-100 text-slate-900 px-2 py-1 rounded font-mono">
+              <li key={i} className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start">
+                <code className="max-w-full min-w-0 break-words whitespace-pre-wrap rounded bg-gray-100 px-2 py-1 font-mono text-slate-900">
                   {cmd.command}
                 </code>
-                <span className="text-gray-500 text-sm">
+                <span className="min-w-0 break-words text-sm text-gray-500">
                   (from {cmd.source})
                   {cmd.description && ` — ${cmd.description}`}
                 </span>

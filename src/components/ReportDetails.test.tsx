@@ -251,7 +251,9 @@ describe("RunContributeSection", () => {
     );
 
     expect(screen.getByText("npm test")).toBeInTheDocument();
+    expect(screen.getByText("npm test")).toHaveClass("break-words");
     expect(screen.getByText(/\(from package.json\) — Run tests/i)).toBeInTheDocument();
+    expect(screen.getByText(/\(from package.json\) — Run tests/i)).toHaveClass("break-words");
     expect(screen.getByText(/\(from Makefile\)$/i)).toBeInTheDocument();
     expect(screen.getByText("CONTRIBUTING.md")).toBeInTheDocument();
     expect(screen.getByText(".github/workflows/ci.yml")).toBeInTheDocument();
