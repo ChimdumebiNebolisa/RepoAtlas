@@ -131,8 +131,13 @@ export function buildRepoSummary(
       ? `${input.repoName} has a ranked reading path starting at ${topStart.path}`
       : `${input.repoName} has limited deterministic onboarding signals`;
 
-  const plainEnglish = input.projectPurpose
-    ? `${input.projectPurpose.text} (extracted from ${input.projectPurpose.path}). ` +
+  const projectPurpose = input.projectPurpose;
+  const supportedPurpose =
+    projectPurpose && evidence.refs.some((ref) => ref.path === projectPurpose.path)
+      ? projectPurpose
+      : undefined;
+  const plainEnglish = supportedPurpose
+    ? `${supportedPurpose.text} (extracted from ${supportedPurpose.path}). ` +
       `RepoAtlas also found ${input.startHere.length} reading candidates, ${input.dangerZones.length} risk-ranked files, and ${input.runCommands.length} run commands.`
     : `RepoAtlas found ${input.startHere.length} reading candidates, ` +
       `${input.dangerZones.length} risk-ranked files, ${input.runCommands.length} run commands, ` +
