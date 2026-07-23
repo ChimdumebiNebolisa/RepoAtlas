@@ -34,7 +34,10 @@ describe("CandidateBriefEvidence", () => {
 
     const card = document.getElementById(`evidence-${ref.id}`);
     expect(card).not.toBeNull();
-    expect(within(card!).getByText("src/app/page.tsx:24")).toBeInTheDocument();
+    expect(card).toHaveClass("min-w-0");
+    const location = within(card!).getByText("src/app/page.tsx:24");
+    expect(location).toBeInTheDocument();
+    expect(location).toHaveClass("break-words");
     expect(within(card!).getByText("import → src/lib/report.ts")).toBeInTheDocument();
     expect(within(card!).getByText(ref.snippet!)).toBeInTheDocument();
     expect(within(card!).getByText("Used by: 30-second walkthrough, Architecture answer"))

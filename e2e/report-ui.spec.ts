@@ -16,7 +16,11 @@ import {
 import { buildSampleReport } from "../src/lib/buildSampleReport";
 import { PORTABLE_SHARE_MAX_URL_LENGTH } from "../src/lib/portableSharing";
 
-async function openControlledInlineReport(page: Page, report = buildSampleReport()) {
+async function openControlledInlineReport(
+  page: Page,
+  report = buildSampleReport(),
+  expectShare = true
+) {
   await page.route("**/api/analyze", async (route) => {
     await route.fulfill({
       status: 200,
@@ -32,7 +36,9 @@ async function openControlledInlineReport(page: Page, report = buildSampleReport
   await page.goto("/");
   await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
   await expectCompletedReportInViewport(page);
-  await expect(page.getByRole("button", { name: "Share Candidate Brief" })).toBeVisible();
+  if (expectShare) {
+    await expect(page.getByRole("button", { name: "Share Candidate Brief" })).toBeVisible();
+  }
 }
 
 async function expectWorkingPdfRecovery(page: Page) {
@@ -370,6 +376,145 @@ test.describe("Report UI flows", () => {
     await page.goto(`/report/${reportId}`);
     await page.getByRole("tab", { name: "Overview", exact: true }).click();
     await expect(page.getByText(/Partial report/i)).toBeVisible();
+  });
+
+  test("sparse partial report keeps every report section usable", async ({ page }) => {
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await openControlledInlineReport(
+        page,
+        minimalReport({
+          partial: true,
+          report_version: 2,
+          repo_metadata: {
+            name: "sparse-partial-e2e",
+            url: "zip",
+            branch: "main",
+            clone_hash: null,
+            analyzed_at: new Date().toISOString(),
+          },
+          warnings: ["Analysis timed out; partial results are available."],
+        }),
+        false
+      );
+
+      const tablist = page.getByRole("tablist", { name: "Report sections" }).last();
+      for (const tabName of REPORT_TABS) {
+        await tablist.getByRole("tab", { name: tabName, exact: true }).click();
+        const reportPanel = page
+          .locator(".report-tabs")
+          .last()
+          .locator('[role="tabpanel"]:visible');
+        await expect(reportPanel).toBeVisible();
+        const overflow = await page.evaluate(() => ({
+          document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          body: document.body.scrollWidth - document.body.clientWidth,
+        }));
+        const panelOverflow = await reportPanel.evaluate(
+          (panel) => panel.scrollWidth - panel.clientWidth
+        );
+        expect(overflow.document).toBeLessThanOrEqual(1);
+        expect(overflow.body).toBeLessThanOrEqual(1);
+        expect(panelOverflow, `${tabName} panel overflow`).toBeLessThanOrEqual(1);
+      }
+
+      await tablist.getByRole("tab", { name: "Candidate Brief", exact: true }).click();
+      await expect(page.getByText(/Candidate Brief is not available/i)).toBeVisible();
+      await tablist.getByRole("tab", { name: "Overview", exact: true }).click();
+      await expect(page.getByText(/Partial report \(analysis timed out\)/i)).toBeVisible();
+    }
+  });
+
+  test("long repository paths and commands remain readable", async ({ page }) => {
+    const report = buildSampleReport();
+    const longPath = [
+      "packages",
+      "candidate-brief-generation",
+      "src",
+      "deeply-nested-repository-evidence-without-short-segments",
+      "repository-analysis-coordinator-with-a-descriptive-name.ts",
+    ].join("/");
+    const longCommand =
+      "pnpm --filter @repoatlas/candidate-brief-generation-with-a-long-workspace-name test:integration:repository-analysis";
+
+    report.start_here[0] = { ...report.start_here[0], path: longPath };
+    report.danger_zones[0] = { ...report.danger_zones[0], path: longPath };
+    report.run_commands[0] = {
+      ...report.run_commands[0],
+      command: longCommand,
+      source: longPath,
+    };
+    if (report.candidate_brief) {
+      report.candidate_brief.reading_path[0] = {
+        ...report.candidate_brief.reading_path[0],
+        path: longPath,
+      };
+      report.candidate_brief.evidence_refs[0] = {
+        ...report.candidate_brief.evidence_refs[0],
+        path: longPath,
+      };
+    }
+
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await openControlledInlineReport(page, report);
+
+      for (const tabName of [
+        "Candidate Brief",
+        "Overview",
+        "Start Here",
+        "Danger Zones",
+        "Run & Contribute",
+      ] as const) {
+        await page
+          .getByRole("tablist", { name: "Report sections" })
+          .last()
+          .getByRole("tab", { name: tabName, exact: true })
+          .click();
+        const reportPanel = page
+          .locator(".report-tabs")
+          .last()
+          .locator('[role="tabpanel"]:visible');
+        const overflow = await page.evaluate(() => ({
+          document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          body: document.body.scrollWidth - document.body.clientWidth,
+        }));
+        const panelOverflow = await reportPanel.evaluate(
+          (panel) => panel.scrollWidth - panel.clientWidth
+        );
+        expect(overflow.document).toBeLessThanOrEqual(1);
+        expect(overflow.body).toBeLessThanOrEqual(1);
+        expect(panelOverflow, `${tabName} panel overflow`).toBeLessThanOrEqual(1);
+
+        if (tabName === "Candidate Brief") {
+          const evidenceContainment = await reportPanel.evaluate((panel) => {
+            const cards = [...panel.querySelectorAll<HTMLElement>('[id^="evidence-"]')];
+            const panelBounds = panel.getBoundingClientRect();
+
+            return {
+              cardCount: cards.length,
+              escapedCards: cards.filter((card) => {
+                const bounds = card.getBoundingClientRect();
+                return (
+                  bounds.left < panelBounds.left - 1 ||
+                  bounds.right > panelBounds.right + 1
+                );
+              }).length,
+            };
+          });
+          expect(evidenceContainment.cardCount).toBeGreaterThan(0);
+          expect(evidenceContainment.escapedCards).toBe(0);
+        }
+      }
+
+      await expect(page.getByText(longCommand, { exact: true })).toBeVisible();
+    }
   });
 
   test("homepage preview disables Markdown export (no reportId)", async ({ page }) => {

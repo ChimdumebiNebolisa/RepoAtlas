@@ -26,7 +26,7 @@ export function CandidateBriefEvidence({ grouped, usedBy }: CandidateBriefEviden
                   <div
                     key={ref.id}
                     id={`evidence-${ref.id}`}
-                    className="scroll-mt-24 rounded-lg border border-slate-200 bg-slate-50 p-3"
+                    className="min-w-0 scroll-mt-24 rounded-lg border border-slate-200 bg-slate-50 p-3"
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <code className="rounded bg-white px-2 py-1 text-xs text-slate-900">
@@ -35,7 +35,7 @@ export function CandidateBriefEvidence({ grouped, usedBy }: CandidateBriefEviden
                     </div>
                     <p className="mt-2 text-sm font-medium text-slate-900">{ref.label}</p>
                     {ref.path && (
-                      <p className="mt-1 font-mono text-xs text-slate-600">
+                      <p className="mt-1 break-words font-mono text-xs text-slate-600">
                         {ref.path}
                         {ref.line_start ? `:${ref.line_start}` : ""}
                       </p>
