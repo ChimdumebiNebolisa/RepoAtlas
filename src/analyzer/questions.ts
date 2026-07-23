@@ -20,7 +20,7 @@ export function generateInterviewQuestions(
 ): InterviewQuestion[] {
   const questions: InterviewQuestion[] = [];
 
-  if (input.projectProfile) {
+  if (input.projectProfile?.evidence_refs[0]) {
     questions.push({
       question: `Why does this appear to be a ${input.projectProfile.label}?`,
       rationale: "Project type is derived from detected files and dependencies.",
@@ -31,20 +31,25 @@ export function generateInterviewQuestions(
   if (input.dangerZones[0]) {
     const dz = input.dangerZones[0];
     const dzRef = input.dangerZoneEvidenceRefs?.[dz.path];
-    questions.push({
-      question: `What makes \`${dz.path}\` a danger zone in this codebase?`,
-      rationale: "Top risk-ranked file with measurable breakdown.",
-      evidence_refs: dzRef ? [dzRef] : [],
-    });
+    if (dzRef) {
+      questions.push({
+        question: `What makes \`${dz.path}\` a danger zone in this codebase?`,
+        rationale: "Top risk-ranked file with measurable breakdown.",
+        evidence_refs: [dzRef],
+      });
+    }
   }
 
   if (input.testInventory?.untested_high_risk_files[0]) {
     const target = input.testInventory.untested_high_risk_files[0];
-    questions.push({
-      question: `What tests would you add near \`${target}\`?`,
-      rationale: "High-risk file with low test proximity (a static signal, not measured coverage).",
-      evidence_refs: input.testInventory.evidence_refs,
-    });
+    const targetRef = input.dangerZoneEvidenceRefs?.[target];
+    if (targetRef) {
+      questions.push({
+        question: `What tests would you add near \`${target}\`?`,
+        rationale: "High-risk file with low test proximity (a static signal, not measured coverage).",
+        evidence_refs: [targetRef],
+      });
+    }
   }
 
   questions.push({
@@ -56,11 +61,13 @@ export function generateInterviewQuestions(
 
   if (input.architectureInsights?.violations[0]) {
     const v = input.architectureInsights.violations[0];
-    questions.push({
-      question: `Why might importing from \`${v.to}\` into \`${v.from}\` be worth discussing?`,
-      rationale: v.reason,
-      evidence_refs: input.architectureEvidenceRef ? [input.architectureEvidenceRef] : [],
-    });
+    if (input.architectureEvidenceRef) {
+      questions.push({
+        question: `Why might importing from \`${v.to}\` into \`${v.from}\` be worth discussing?`,
+        rationale: v.reason,
+        evidence_refs: [input.architectureEvidenceRef],
+      });
+    }
   }
 
   return questions.slice(0, 10);
