@@ -2,12 +2,46 @@ import fs from "fs";
 import path from "path";
 import type { RunCommand } from "@/types/report";
 
-function readText(filePath: string): string | null {
+function safeFilePath(workspacePath: string, relativePath: string): string | null {
+  try {
+    const workspaceRoot = fs.realpathSync(workspacePath);
+    const candidate = path.resolve(workspaceRoot, relativePath);
+    const relative = path.relative(workspaceRoot, candidate);
+    if (
+      relative === ".." ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative)
+    ) {
+      return null;
+    }
+
+    let current = workspaceRoot;
+    const parts = relative.split(path.sep).filter(Boolean);
+    for (const [index, part] of parts.entries()) {
+      current = path.join(current, part);
+      const stat = fs.lstatSync(current);
+      if (stat.isSymbolicLink()) return null;
+      if (index < parts.length - 1 && !stat.isDirectory()) return null;
+      if (index === parts.length - 1 && !stat.isFile()) return null;
+    }
+    return parts.length > 0 ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
+function readText(workspacePath: string, relativePath: string): string | null {
+  const filePath = safeFilePath(workspacePath, relativePath);
+  if (!filePath) return null;
   try {
     return fs.readFileSync(filePath, "utf-8");
   } catch {
     return null;
   }
+}
+
+function hasSafeFile(workspacePath: string, relativePath: string): boolean {
+  return safeFilePath(workspacePath, relativePath) !== null;
 }
 
 function dedupeCommands(commands: RunCommand[]): RunCommand[] {
@@ -23,10 +57,9 @@ function dedupeCommands(commands: RunCommand[]): RunCommand[] {
 }
 
 export function extractPackageJsonCommands(workspacePath: string): RunCommand[] {
-  const pkgPath = path.join(workspacePath, "package.json");
-  if (!fs.existsSync(pkgPath)) return [];
+  if (!hasSafeFile(workspacePath, "package.json")) return [];
   try {
-    const pkg = JSON.parse(readText(pkgPath) ?? "{}");
+    const pkg = JSON.parse(readText(workspacePath, "package.json") ?? "{}");
     const scripts = pkg.scripts;
     if (!scripts || typeof scripts !== "object" || Array.isArray(scripts)) return [];
     return Object.entries(scripts)
@@ -42,11 +75,11 @@ export function extractPackageJsonCommands(workspacePath: string): RunCommand[] 
 }
 
 export function extractMakefileCommands(workspacePath: string): RunCommand[] {
-  const makefile = ["Makefile", "makefile", "GNUmakefile"].find((f) =>
-    fs.existsSync(path.join(workspacePath, f))
+  const makefile = ["Makefile", "makefile", "GNUmakefile"].find((file) =>
+    hasSafeFile(workspacePath, file)
   );
   if (!makefile) return [];
-  const content = readText(path.join(workspacePath, makefile));
+  const content = readText(workspacePath, makefile);
   if (!content) return [];
   const targets = ["test", "run", "dev", "build", "lint", "start", "install"];
   const commands: RunCommand[] = [];
@@ -64,9 +97,8 @@ export function extractMakefileCommands(workspacePath: string): RunCommand[] {
 
 export function extractPythonCommands(workspacePath: string): RunCommand[] {
   const commands: RunCommand[] = [];
-  const pyproject = path.join(workspacePath, "pyproject.toml");
-  if (fs.existsSync(pyproject)) {
-    const content = readText(pyproject) ?? "";
+  if (hasSafeFile(workspacePath, "pyproject.toml")) {
+    const content = readText(workspacePath, "pyproject.toml") ?? "";
     const scriptMatches = content.matchAll(
       /\[(?:project|tool\.poetry)\.scripts\][^\S\r\n]*\r?\n([\s\S]*?)(?=\r?\n\[|$)/g
     );
@@ -88,19 +120,18 @@ export function extractPythonCommands(workspacePath: string): RunCommand[] {
       commands.push({ source: "pyproject.toml", command: "poetry run pytest", description: "test" });
     }
   }
-  const pipfile = path.join(workspacePath, "Pipfile");
-  if (fs.existsSync(pipfile)) {
+  if (hasSafeFile(workspacePath, "Pipfile")) {
     commands.push({ source: "Pipfile", command: "pipenv install", description: "install" });
     commands.push({ source: "Pipfile", command: "pipenv run pytest", description: "test" });
   }
-  if (fs.existsSync(path.join(workspacePath, "requirements.txt"))) {
+  if (hasSafeFile(workspacePath, "requirements.txt")) {
     commands.push({
       source: "requirements.txt",
       command: "pip install -r requirements.txt",
       description: "install",
     });
   }
-  if (fs.existsSync(path.join(workspacePath, "manage.py"))) {
+  if (hasSafeFile(workspacePath, "manage.py")) {
     commands.push({ source: "django", command: "python manage.py runserver", description: "runserver" });
   }
   return commands;
@@ -108,13 +139,13 @@ export function extractPythonCommands(workspacePath: string): RunCommand[] {
 
 export function extractJavaCommands(workspacePath: string): RunCommand[] {
   const commands: RunCommand[] = [];
-  if (fs.existsSync(path.join(workspacePath, "pom.xml"))) {
+  if (hasSafeFile(workspacePath, "pom.xml")) {
     commands.push({ source: "pom.xml", command: "mvn test", description: "test" });
     commands.push({ source: "pom.xml", command: "mvn package", description: "package" });
   }
   if (
-    fs.existsSync(path.join(workspacePath, "build.gradle")) ||
-    fs.existsSync(path.join(workspacePath, "build.gradle.kts"))
+    hasSafeFile(workspacePath, "build.gradle") ||
+    hasSafeFile(workspacePath, "build.gradle.kts")
   ) {
     commands.push({ source: "build.gradle", command: "./gradlew test", description: "test" });
     commands.push({ source: "build.gradle", command: "./gradlew build", description: "build" });
@@ -124,7 +155,7 @@ export function extractJavaCommands(workspacePath: string): RunCommand[] {
 
 export function extractDockerCommands(workspacePath: string): RunCommand[] {
   const files = ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"];
-  const found = files.find((f) => fs.existsSync(path.join(workspacePath, f)));
+  const found = files.find((file) => hasSafeFile(workspacePath, file));
   if (!found) return [];
   return [
     { source: "docker-compose", command: "docker compose up", description: "up" },
@@ -135,9 +166,8 @@ export function extractDockerCommands(workspacePath: string): RunCommand[] {
 export function extractReadmeCommands(workspacePath: string, keyDocs: string[]): RunCommand[] {
   const commands: RunCommand[] = [];
   const readme = keyDocs.find((d) => /readme/i.test(d)) ?? "README.md";
-  const readmePath = path.join(workspacePath, readme);
-  if (!fs.existsSync(readmePath)) return [];
-  const content = readText(readmePath) ?? "";
+  if (!hasSafeFile(workspacePath, readme)) return [];
+  const content = readText(workspacePath, readme) ?? "";
   const fenceRe = /```(?:bash|sh|shell)?[ \t]*\r?\n([\s\S]*?)```/gi;
   let match;
   while ((match = fenceRe.exec(content)) !== null) {
