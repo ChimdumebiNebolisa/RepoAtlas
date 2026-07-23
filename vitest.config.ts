@@ -115,6 +115,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/components/CandidateBriefEvidence.tsx": {
+          branches: 80,
+          lines: 85,
+        },
         "src/components/ElkArchitectureGraph.tsx": {
           branches: 80,
           lines: 85,
