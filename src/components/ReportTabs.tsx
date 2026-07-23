@@ -52,6 +52,34 @@ export function ReportTabs({
   variant = "live",
   initialDemoMode = false,
 }: ReportTabsProps) {
+  const workspaceKey = [
+    reportId ?? "inline",
+    variant,
+    report.repo_metadata.name,
+    report.repo_metadata.url,
+    report.repo_metadata.branch,
+    report.repo_metadata.clone_hash ?? "working-tree",
+    report.repo_metadata.analyzed_at,
+    report.analysis_intent ?? "interview",
+  ].join("\u0000");
+
+  return (
+    <ReportWorkspace
+      key={workspaceKey}
+      report={report}
+      reportId={reportId}
+      variant={variant}
+      initialDemoMode={initialDemoMode}
+    />
+  );
+}
+
+function ReportWorkspace({
+  report,
+  reportId,
+  variant = "live",
+  initialDemoMode = false,
+}: ReportTabsProps) {
   const tabsId = useId();
   const [activeTab, setActiveTab] = useState<ReportTab>("Candidate Brief");
   const [demoMode, setDemoMode] = useState(
