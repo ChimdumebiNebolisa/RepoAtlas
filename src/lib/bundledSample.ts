@@ -11,8 +11,8 @@ export function bundledSampleInput(): AnalyzeInput {
 
 export function analyzeBundledSample(options: AnalyzeOptions = {}) {
   return analyzeRepository(bundledSampleInput(), {
+    ...options,
     analysisIntent: "interview",
     persist: false,
-    ...options,
   });
 }
