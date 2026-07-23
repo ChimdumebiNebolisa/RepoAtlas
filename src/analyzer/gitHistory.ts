@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
+import * as childProcess from "child_process";
 import type { CommitInsights } from "@/types/report";
 import { validateGithubUrl } from "@/lib/ingest";
 
@@ -31,7 +31,10 @@ function buildInsightsFromFileCounts(
   mode: "local_git" | "github_api"
 ): CommitInsights {
   const high_churn_files = Array.from(fileCounts.entries())
-    .sort((a, b) => b[1] - a[1])
+    .sort(
+      ([pathA, countA], [pathB, countB]) =>
+        countB - countA || (pathA < pathB ? -1 : pathA > pathB ? 1 : 0)
+    )
     .slice(0, 5)
     .map(([f]) => f);
 
@@ -50,23 +53,32 @@ function buildInsightsFromFileCounts(
   };
 }
 
-function analyzeLocalGit(workspacePath: string): CommitInsights {
+function analyzeLocalGit(
+  workspacePath: string,
+  opts?: Pick<CommitInsightsOptions, "sha" | "ref">
+): CommitInsights {
   const gitDir = path.join(workspacePath, ".git");
   if (!fs.existsSync(gitDir)) return UNAVAILABLE;
 
   try {
-    execSync("git --version", { stdio: "ignore" });
-    const names = execSync("git log --name-only --pretty=format: -n 20", {
-      cwd: workspacePath,
-      encoding: "utf-8",
-      timeout: 10_000,
-    });
+    const tip = historyTip(opts);
+    const revisionArgs = tip ? ["--end-of-options", tip, "--"] : [];
+    const names = childProcess.execFileSync(
+      "git",
+      ["log", "--name-only", "--pretty=format:", "-n", "20", ...revisionArgs],
+      {
+        cwd: workspacePath,
+        encoding: "utf-8",
+        timeout: 10_000,
+      }
+    );
     const fileCounts = new Map<string, number>();
     for (const line of names.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      fileCounts.set(trimmed, (fileCounts.get(trimmed) ?? 0) + 1);
+      const filePath = validHistoryFilePath(line);
+      if (!filePath) continue;
+      fileCounts.set(filePath, (fileCounts.get(filePath) ?? 0) + 1);
     }
+    if (fileCounts.size === 0) return UNAVAILABLE;
     return buildInsightsFromFileCounts(fileCounts, "local_git");
   } catch {
     return UNAVAILABLE;
@@ -78,6 +90,46 @@ function historyTip(opts?: Pick<CommitInsightsOptions, "sha" | "ref">): string |
   if (sha) return sha;
   const ref = opts?.ref?.trim();
   return ref || undefined;
+}
+
+function validHistoryFilePath(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const filePath = value.trim();
+  if (
+    !filePath ||
+    filePath.startsWith("#") ||
+    path.posix.isAbsolute(filePath) ||
+    path.win32.isAbsolute(filePath) ||
+    filePath.split(/[\\/]/).includes("..")
+  ) {
+    return null;
+  }
+  return filePath;
+}
+
+function commitShas(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const uniqueShas = new Set<string>();
+  for (const commit of value) {
+    if (!commit || typeof commit !== "object" || !("sha" in commit)) continue;
+    const sha = (commit as { sha?: unknown }).sha;
+    if (typeof sha === "string" && sha.trim()) uniqueShas.add(sha.trim());
+    if (uniqueShas.size === 8) break;
+  }
+  return Array.from(uniqueShas);
+}
+
+function detailFilePaths(value: unknown): string[] {
+  if (!value || typeof value !== "object" || !("files" in value)) return [];
+  const files = (value as { files?: unknown }).files;
+  if (!Array.isArray(files)) return [];
+  const uniquePaths = new Set<string>();
+  for (const file of files) {
+    if (!file || typeof file !== "object" || !("filename" in file)) continue;
+    const filePath = validHistoryFilePath((file as { filename?: unknown }).filename);
+    if (filePath) uniquePaths.add(filePath);
+  }
+  return Array.from(uniquePaths);
 }
 
 async function analyzeGithubApi(
@@ -102,23 +154,25 @@ async function analyzeGithubApi(
     });
     if (!res.ok) return UNAVAILABLE;
 
-    const commits = (await res.json()) as Array<{ sha: string }>;
+    const commits = commitShas(await res.json());
+    if (commits.length === 0) return UNAVAILABLE;
     const fileCounts = new Map<string, number>();
 
-    for (const commit of commits.slice(0, 8)) {
-      const detailRes = await fetch(
-        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${commit.sha}`,
-        {
-          headers: { ...GITHUB_JSON_HEADERS },
-          signal: AbortSignal.timeout(10_000),
+    for (const commitSha of commits) {
+      try {
+        const detailRes = await fetch(
+          `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(commitSha)}`,
+          {
+            headers: { ...GITHUB_JSON_HEADERS },
+            signal: AbortSignal.timeout(10_000),
+          }
+        );
+        if (!detailRes.ok) continue;
+        for (const filePath of detailFilePaths(await detailRes.json())) {
+          fileCounts.set(filePath, (fileCounts.get(filePath) ?? 0) + 1);
         }
-      );
-      if (!detailRes.ok) continue;
-      const detail = (await detailRes.json()) as {
-        files?: Array<{ filename: string }>;
-      };
-      for (const file of detail.files ?? []) {
-        fileCounts.set(file.filename, (fileCounts.get(file.filename) ?? 0) + 1);
+      } catch {
+        continue;
       }
     }
 
@@ -133,7 +187,7 @@ export async function analyzeCommitInsights(
   workspacePath: string,
   opts?: CommitInsightsOptions
 ): Promise<CommitInsights> {
-  const local = analyzeLocalGit(workspacePath);
+  const local = analyzeLocalGit(workspacePath, { sha: opts?.sha, ref: opts?.ref });
   if (local.mode !== "unavailable") return local;
 
   const githubUrl = opts?.githubUrl?.trim();
@@ -147,6 +201,6 @@ export async function analyzeCommitInsights(
 export function churnScoreForFile(filePath: string, insights: CommitInsights): number {
   if (insights.mode === "unavailable") return 0;
   const idx = insights.high_churn_files.indexOf(filePath);
-  if (idx === -1) return 0;
-  return Math.max(0, 100 - idx * 15);
+  if (idx < 0 || idx >= 5) return 0;
+  return 100 - idx * 15;
 }
