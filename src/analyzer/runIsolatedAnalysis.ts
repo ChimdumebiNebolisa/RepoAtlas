@@ -53,8 +53,16 @@ function isSpawnFailure(error: unknown): boolean {
     code === "ERR_WORKER_PATH" ||
     code === "ERR_WORKER_INVALID_EXEC_ARGV" ||
     code === "MODULE_NOT_FOUND" ||
-    /Cannot find module|not a valid Worker|Worker terminated/i.test(error.message)
+    /Cannot find module|not a valid Worker/i.test(error.message)
   );
+}
+
+function timeoutError(): AppError {
+  return new AppError({
+    code: ERROR_CODES.TIMEOUT,
+    status: 504,
+    message: "Analysis timed out.",
+  });
 }
 
 function errorFromWorkerMessage(message: WorkerMessage): Error {
@@ -85,7 +93,7 @@ export async function runIsolatedAnalysis(
     return analyzeRepository(input, options);
   }
 
-  let spawnFailed = false;
+  let workerFallbackAllowed = false;
   try {
     return await new Promise<AnalyzeResult>((resolve, reject) => {
       let worker: Worker;
@@ -103,29 +111,29 @@ export async function runIsolatedAnalysis(
           },
         });
       } catch (error) {
-        spawnFailed = true;
+        workerFallbackAllowed = isSpawnFailure(error);
         reject(error);
         return;
       }
 
       let settled = false;
+      let workerOnline = false;
+      let hardTimer: ReturnType<typeof setTimeout> | undefined;
+      const cleanup = () => {
+        if (hardTimer) clearTimeout(hardTimer);
+        options.signal?.removeEventListener("abort", onAbort);
+      };
       const settle = (fn: () => void) => {
         if (settled) return;
         settled = true;
+        cleanup();
         fn();
       };
 
       const onAbort = () => {
         settle(() => {
-          void worker.terminate().finally(() => {
-            reject(
-              new AppError({
-                code: ERROR_CODES.TIMEOUT,
-                status: 504,
-                message: "Analysis timed out.",
-              })
-            );
-          });
+          void worker.terminate().catch(() => undefined);
+          reject(timeoutError());
         });
       };
       options.signal?.addEventListener("abort", onAbort, { once: true });
@@ -135,43 +143,36 @@ export async function runIsolatedAnalysis(
       }
 
       const hardDeadlineMs = Math.max(1_000, (options.deadlineMs ?? 120_000) + 5_000);
-      const hardTimer = setTimeout(() => {
+      hardTimer = setTimeout(() => {
         settle(() => {
-          void worker.terminate().finally(() => {
-            reject(
-              new AppError({
-                code: ERROR_CODES.TIMEOUT,
-                status: 504,
-                message: "Analysis timed out.",
-              })
-            );
-          });
+          void worker.terminate().catch(() => undefined);
+          reject(timeoutError());
         });
       }, hardDeadlineMs);
 
+      worker.on("online", () => {
+        workerOnline = true;
+      });
       worker.on("message", (message: WorkerMessage) => {
-        clearTimeout(hardTimer);
-        options.signal?.removeEventListener("abort", onAbort);
         settle(() => {
           if (message.ok && message.result) resolve(message.result);
           else reject(errorFromWorkerMessage(message));
         });
       });
       worker.on("error", (error) => {
-        clearTimeout(hardTimer);
-        options.signal?.removeEventListener("abort", onAbort);
+        if (!workerOnline && isSpawnFailure(error)) {
+          workerFallbackAllowed = true;
+        }
         settle(() => reject(error));
       });
       worker.on("exit", (code) => {
-        clearTimeout(hardTimer);
-        options.signal?.removeEventListener("abort", onAbort);
         settle(() => {
           reject(new Error(`Analysis worker exited with code ${code} before completing`));
         });
       });
     });
   } catch (error) {
-    if (spawnFailed || isSpawnFailure(error)) {
+    if (workerFallbackAllowed) {
       return analyzeRepository(input, options);
     }
     throw error;
