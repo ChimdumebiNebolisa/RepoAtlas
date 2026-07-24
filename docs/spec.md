@@ -1,7 +1,7 @@
 # RepoAtlas Engineering Specification
 
-**Version:** 1.4
-**Status:** Living spec (validated against `main` 2026-07-20)
+**Version:** 1.5
+**Status:** Living spec (validated against `main` at `5c91669` on 2026-07-24)
 **Target:** Local dev first; optional Vercel Blob storage  
 
 ---
@@ -14,9 +14,9 @@ Engineers preparing to discuss a repository need to find entrypoints, understand
 
 ### Key Value Proposition
 
-**Two supported inputs** — a **zip upload** or a **public GitHub repository URL** — produce a **Candidate Brief** + **Repo Analysis** with:
+**Three supported starts** — the **bundled sample**, a **public GitHub repository URL**, or a **zip upload** — produce a **Candidate Brief** + **Repo Analysis** with:
 
-- **Candidate Brief** – Interview-facing output: reading path, talking points, first PR plan, resume bullets, evidence index (deterministic, no AI).
+- **Candidate Brief** – Interview-facing output: 30-second and 2-minute walkthroughs, evidence-backed interview answers, reading path, first PR plan, resume bullets, and evidence index (deterministic, no AI).
 - **Folder Map** – Directory tree of the repo.
 - **Architecture Map** – Interactive dependency graph in the runtime UI (ELK layout + pan/zoom).
 - **Start Here** – Prioritized reading list with explanations.
@@ -49,13 +49,13 @@ RepoAtlas does **not** assert vulnerabilities, production readiness, business pu
 ### User Flow
 
 ```
-Input (zip upload OR public GitHub URL) → Validation → Analysis (loading) → Report Tabs
+Bundled sample OR custom input (public GitHub URL or zip upload) → Validation → Analysis (loading) → Report Tabs
 ```
 
-1. User picks an input method via an accessible tablist:
+1. User starts the bundled sample directly or picks a custom input via an accessible tablist:
    - **Public GitHub URL** — pastes a canonical `https://github.com/owner/repo` URL with an optional branch/tag ref (default), or
    - **Upload ZIP** — selects a `.zip` of the repository.
-2. Client validates input client-side (mirroring server rules) and submits `POST /api/analyze` (multipart for zip, JSON `{ githubUrl, ref? }` for GitHub).
+2. Client validates custom input client-side (mirroring server rules) and submits `POST /api/analyze` (multipart for zip, JSON `{ githubUrl, ref? }` for GitHub). The sample uses the server-owned fixture with fixed interview focus and inline private handling.
 3. Server saves zip to temp / downloads the public GitHub archive, extracts, runs analyzer.
 4. UI shows an honest loading state ("Analyzing… (up to 2 min)").
 5. On success, the API always returns a valid `reportId` plus a persistence status:
@@ -84,17 +84,18 @@ Completed report workspace at `/`, `/report/:id`, or `/share/:token`:
 
 | Tab | Content | Acceptance Criteria |
 |-----|---------|---------------------|
-| Candidate Brief | Repo summary, reading path, talking points, first PR plan, resume bullets, evidence | Default tab; every claim links to evidence refs |
+| Candidate Brief | Timed walkthroughs, repo summary, evidence-backed interview answers, reading path, first PR plan, resume bullets, evidence | Default tab; repository-specific claims link to evidence refs |
 | Overview | Repo metadata, deep analysis panels, share link, run commands summary | Shows `project_profile`, `test_inventory`, `architecture_insights`, `commit_insights` when present; `partial` badge when timed out |
 | Folder Map | Recursive tree with expand/collapse | Renders `folder_map`; depth limit respected |
-| Architecture Map | Interactive ELK-based dependency graph (pan/zoom) | Renders `architecture`; collapses if nodes > 50 |
+| Architecture Map | Interactive ELK-based dependency graph (pan/zoom) | Renders `architecture`; collapses if nodes > 50; zero-edge reports state the evidence limit and recovery paths |
 | Start Here | Sortable table: path, score, explanation | Sorted by score desc; explanations visible |
 | Danger Zones | Sortable table: path, score, breakdown | Sorted by score desc; metrics breakdown visible |
 | Run & Contribute | Run commands + contribute signals (docs, CI) | Lists commands with source; lists found docs/CI |
+| Export | PDF, PNG, Markdown availability, and private sharing | PDF/PNG work for saved and inline reports; Markdown is enabled only for saved reports; share failures offer PDF recovery |
 
 ### Loading States
 
-- **Idle**: Input form visible with ZIP / GitHub URL tabs.
+- **Idle**: Bundled sample action visible; custom ZIP / GitHub URL inputs remain available.
 - **Analyzing**: A single honest indicator ("Analyzing… (up to 2 min)"). No fabricated staged progress — the analyzer does not stream stage events, so the UI does not pretend to. Submit is disabled.
 - **Fetching saved report**: After `{ persisted: true }` and a validated `reportId` are returned, an optional skeleton for tabs until the stored report loads.
 - **Rendering inline report**: After `{ persisted: false, report }` is returned, the UI renders the report immediately without a second API request.
@@ -175,7 +176,7 @@ flowchart TB
 |-----------|-------------|
 | **Next.js UI** | React + TypeScript + Tailwind CSS. Public product and trust pages plus tabbed report views. |
 | **API Routes** | Next.js Route Handlers for analysis, saved reports, Markdown export, stored-token sharing, and cleanup. |
-| **Analyzer Worker** | Node.js (TypeScript) module. Runs in-process; not a separate Go process. |
+| **Analyzer Worker** | Node.js analysis hosted in an isolated `worker_threads` worker by default. Recognized startup failures before the ready handshake may fall back in-process; post-start failures do not rerun the repository. |
 | **Temp Workspace** | `os.tmpdir()` subdir per analysis. Clone or extract zip here. |
 | **Report Storage** | JSON files on disk locally (`{REPORTS_DIR}/{reportId}.json`) or in a connected private Vercel Blob store. Production without usable Blob credentials returns reports inline instead of failing the completed analysis. |
 | **Portable Sharing** | Browser-only compression, AES-GCM encryption, expiry validation, and report validation for inline report links. |
@@ -184,7 +185,7 @@ flowchart TB
 
 1. **Request**: Client `POST /api/analyze` with multipart zip (`file` or `zip`), JSON `{ githubUrl, ref? }`, or `{ sample: true }`. JSON `zipRef` is **rejected**.
 2. **Ingest**: Server extracts uploaded zip (server-created temp path only) or downloads a public GitHub archive into temp workspace.
-3. **Analysis**: Analyzer walks workspace, runs common pipeline + applicable language packs.
+3. **Analysis**: The isolated analyzer worker walks the workspace, runs the common pipeline and applicable language packs, and stops promptly on request abort or deadline.
 4. **Report**: Analyzer produces validated `Report` JSON and attempts persistence when the runtime has storage credentials.
 5. **Response**: Successful persistence returns `{ reportId, persisted: true }`. Unavailable storage or a best-effort save failure returns `{ reportId, report, persisted: false }`.
 6. **Render**: The UI fetches a saved report by ID or renders the inline report directly. Stored JSON and portable shared JSON are validated before use (`src/lib/reportSchema.ts`).
@@ -228,7 +229,7 @@ Rejected: non-HTTPS, non-`github.com` hosts, `tree`/`blob` subpaths, query strin
   - **Local dev:** `MAX_COMPRESSED_BYTES` = **100 MB**.
   - Selected by `maxCompressedBytesForZipUpload()` in `src/lib/ingestLimits.ts`.
 - **Validation**: Check magic bytes `50 4B 03 04` or `50 4B 05 06` (PK) for zip.
-- **Extraction**: `adm-zip` via `src/lib/safeZipExtract.ts` — path jail, normalized-target collision preflight, entry count cap, uncompressed size cap.
+- **Extraction**: production ingest streams from disk through `yauzl` in `src/lib/safeZipExtract.ts`; the small buffer-based test helper retains `adm-zip`. Both paths enforce the path jail, normalized-target collision preflight, entry count cap, per-file cap, and uncompressed size cap.
 - **Path traversal**: For each entry, resolve path relative to extract root; reject if resolved path is outside root or contains `..`.
 - **Path collisions**: Reject duplicate normalized destinations (including dot-segment and platform separator aliases) and file/child-path conflicts before writing any entry.
 - **Size limit**: Max cumulative uncompressed **50 MB**; abort extraction if exceeded.
@@ -308,7 +309,7 @@ Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `sr
 
 | Aspect | Rules |
 |--------|-------|
-| **Import extraction** | Regex: `import\s+([a-zA-Z0-9_.]+)`, `from\s+([a-zA-Z0-9_.]+)\s+import`. Resolve relative (`.` package) to file path. |
+| **Import extraction** | Import-statement scanner that skips strings and comments, handles parenthesized and line-continued statements, expands `from pkg import name`, and resolves absolute or relative package paths without claiming a full Python AST. |
 | **Entrypoint heuristics** | `if __name__ == "__main__"`; `setup.py` entry_points; `pyproject.toml` `[project.scripts]`; `-m` targets from docs. |
 | **Test proximity** | `test_*.py`, `*_test.py`, `tests/` dir. |
 | **Complexity proxy** | McCabe complexity via AST or line-based proxy (same as TS). |
@@ -320,7 +321,7 @@ Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `sr
 
 | Aspect | Rules |
 |--------|-------|
-| **Import extraction** | Regex: `import\s+([a-zA-Z0-9_.]+)\s*;`. Map to file path via package/class convention. |
+| **Import extraction** | Anchored import scanning for ordinary, wildcard, and static imports, with package/class resolution. Safe same-package type references are also recovered after comments and strings are removed. |
 | **Entrypoint heuristics** | `public static void main`; `@SpringBootApplication`; JAR manifest `Main-Class`. |
 | **Test proximity** | `*Test.java`, `*IT.java`, `src/test/java` layout. |
 | **Complexity proxy** | Cyclomatic via line-based or simple AST. |
@@ -734,14 +735,14 @@ else {
 | SSRF / redirect abuse | Only canonical `github.com` URLs are accepted; archive redirects are followed only to known GitHub hosts. |
 | Zip bombs / oversized archives | Deployment-aware compressed caps ([adr/002-zip-limits.md](./adr/002-zip-limits.md)), uncompressed caps, entry-count and per-file caps, streamed GitHub download with abort-on-cap. |
 | Fetch hangs | GitHub API and archive requests have `AbortController` timeouts. |
-| Rate limiting | Process-local concurrency gate (`MAX_CONCURRENT_ANALYSES`) plus best-effort sliding window (`ANALYZE_RATE_LIMIT_PER_MIN`). `RateLimiter` interface swappable for Redis/KV. |
+| Rate limiting | Process-local concurrency gate (`MAX_CONCURRENT_ANALYSES`) plus a 30-per-minute sliding window by default. Configured Upstash REST credentials select the distributed limiter once per process; missing or invalid shared-store results use an explicit best-effort path. |
 | Cron misconfiguration | Production cleanup returns `503` when `CRON_SECRET` unset; mutation requires bearer secret when configured. |
 | Share token cleanup on Blob | `listShareTokens()` and `deleteShareRecord()` use Vercel Blob list/del with `shares/` prefix. |
 
 **Security assumptions & remaining limitations:**
 
 - Only **public** GitHub repositories are supported. There is no user-scoped GitHub auth; private-repo support would require a deliberately designed OAuth flow.
-- The default rate limiter is per-instance. Production quotas require a shared-store backend (or a WAF/API-gateway rule) injected through the isolated interface.
+- Without valid Upstash REST configuration, the analysis rate limiter remains per-instance and best-effort. Durable cross-instance quotas require the configured shared-store path or an external WAF/API-gateway rule.
 - Blob-store retention relies on the cron sweep (`POST /api/cron/cleanup`); schedule it (e.g. Vercel Cron) in production and set `CRON_SECRET`.
 
 **Acceptance criteria**: Zip with `../../etc/passwd` does not write outside extract dir; analyzer never executes repo code; a private repo cannot be read via server credentials; JSON `zipRef` cannot analyze an arbitrary server path; corrupt stored report JSON is not served (see `src/lib/reportSchema.test.ts`, `src/app/api/reports/reports-api.integration.test.ts`).
@@ -752,10 +753,10 @@ else {
 
 | Strategy | Description |
 |----------|-------------|
-| Progressive analysis | Optional: emit folder_map first, then architecture, then scoring; UI can show partial results |
-| Clone cache | Optional: cache by `owner/repo@commit`; reuse if same commit requested within TTL |
-| Timeouts | Clone: 60s; analysis: 120s; partial report saved when deadline hit after folder map |
-| Graceful degradation | On timeout after indexing: return `partial: true` report with Candidate Brief and `warnings` (see `src/analyzer/index.ts`) |
+| Staged analysis | Inventory, language packs, scoring, and report assembly run in sequence inside one request; the UI shows one honest loading state rather than fabricated stage progress |
+| Same-commit cache | Complete public-GitHub reports may be reused by `owner/repo@commit`, analysis intent, and report version within the configured report TTL; invalid or partial records are not reused |
+| Timeouts | GitHub API request: 15s; archive download: 60s; full analysis: 120s |
+| Graceful degradation | After indexing, an expired analysis deadline returns a validated `partial: true` report with a Candidate Brief and warnings (see `src/analyzer/index.ts`) |
 
 ---
 
@@ -763,7 +764,7 @@ else {
 
 ### Unit Tests
 
-- Parsers: import extraction (TS/JS, Python, Java regex).
+- Parsers: TypeScript Compiler API extraction, Python import-statement scanning, and Java import and same-package reference extraction.
 - Language detection: extension → language.
 - Scoring: `StartHereScore` and `RiskScore` with mock inputs.
 - Path traversal: zip extraction rejects malicious paths.
