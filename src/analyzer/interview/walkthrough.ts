@@ -8,9 +8,47 @@ import type { BuildCandidateBriefInput, EvidenceIndex } from "./types";
 
 const WALKTHROUGH_PURPOSE_LIMIT = 80;
 
+interface TextRange {
+  start: number;
+  end: number;
+}
+
 function finishSentence(value: string): string {
   const trimmed = value.trimEnd();
   return /[.!?…]$/.test(trimmed) ? `${trimmed} ` : `${trimmed}. `;
+}
+
+function collectMatches(value: string, pattern: RegExp): TextRange[] {
+  return Array.from(value.matchAll(pattern), (match) => ({
+    start: match.index,
+    end: match.index + match[0].length,
+  }));
+}
+
+function inlineMarkdownRanges(value: string): TextRange[] {
+  return [
+    ...collectMatches(value, /!?\[[^\]\n]+\]\([^\)\n]+\)/g),
+    ...collectMatches(value, /(`+)(?=\S)([^\n]*?\S)\1/g),
+    ...collectMatches(value, /\*\*(?=\S)([^\n]*?\S)\*\*/g),
+    ...collectMatches(value, /__(?=\S)([^\n]*?\S)__/g),
+  ];
+}
+
+function graphemeSafeEnd(value: string, codePointLimit: number): number {
+  const segmenter = new Intl.Segmenter(undefined, {
+    granularity: "grapheme",
+  });
+  let codePoints = 0;
+  let end = 0;
+
+  for (const segment of segmenter.segment(value)) {
+    const nextCount = codePoints + Array.from(segment.segment).length;
+    if (nextCount > codePointLimit) break;
+    codePoints = nextCount;
+    end = segment.index + segment.segment.length;
+  }
+
+  return end;
 }
 
 function concisePurpose(value: string): string {
@@ -18,9 +56,23 @@ function concisePurpose(value: string): string {
   const characters = Array.from(normalized);
   if (characters.length <= WALKTHROUGH_PURPOSE_LIMIT) return normalized;
 
-  const clipped = characters
-    .slice(0, WALKTHROUGH_PURPOSE_LIMIT)
-    .join("");
+  const graphemeEnd = graphemeSafeEnd(
+    normalized,
+    WALKTHROUGH_PURPOSE_LIMIT
+  );
+  const markdownStart = inlineMarkdownRanges(normalized)
+    .filter((range) => range.start < graphemeEnd && range.end > graphemeEnd)
+    .reduce<number | undefined>(
+      (earliest, range) =>
+        earliest === undefined ? range.start : Math.min(earliest, range.start),
+      undefined
+    );
+  if (markdownStart !== undefined) {
+    const beforeMarkdown = normalized.slice(0, markdownStart).trimEnd();
+    return beforeMarkdown ? `${beforeMarkdown}…` : "…";
+  }
+
+  const clipped = normalized.slice(0, graphemeEnd);
   const trimmedClipped = clipped.trimEnd();
   if (/[.!?…]$/.test(trimmedClipped)) return trimmedClipped;
 

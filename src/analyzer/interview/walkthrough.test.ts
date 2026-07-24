@@ -106,6 +106,16 @@ describe("buildWalkthroughScript", () => {
       `${"A".repeat(70)} 🚀 ready for repository interviews with more evidence`,
       `${"A".repeat(70)} 🚀 ready…`,
     ],
+    [
+      "a joined emoji",
+      `${"Maps files ".repeat(6)}for teams 👨‍👩‍👧‍👦 preparing repository interviews`,
+      `${"Maps files ".repeat(6)}for teams…`,
+    ],
+    [
+      "a combining mark",
+      `${"A".repeat(78)} e\u0301 supports repository interviews with more evidence`,
+      `${"A".repeat(78)}…`,
+    ],
   ])(
     "shortens a long repository purpose safely near %s",
     (_, purpose, expectedPurpose) => {
@@ -136,6 +146,50 @@ describe("buildWalkthroughScript", () => {
         expect(script?.thirty_second).not.toContain("Documentation project:");
         expect(script?.thirty_second).not.toContain("A".repeat(79));
       }
+      expect(script?.two_minute.startsWith(script.thirty_second)).toBe(true);
+      expect(script?.deep_technical.startsWith(script.two_minute)).toBe(true);
+      expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
+    }
+  );
+
+  it.each([
+    [
+      "a Markdown link",
+      `${"Maps files ".repeat(4)}with a [repository guide](docs/guide.md) for interviews`,
+      `${"Maps files ".repeat(4)}with a…`,
+    ],
+    [
+      "inline code",
+      `${"Maps files ".repeat(6)}with \`npm run verify\` before repository interviews`,
+      `${"Maps files ".repeat(6)}with…`,
+    ],
+    [
+      "emphasis",
+      `${"Maps files ".repeat(6)}with **direct evidence** for repository interviews`,
+      `${"Maps files ".repeat(6)}with…`,
+    ],
+  ])(
+    "does not split %s at the purpose boundary",
+    (_, purpose, expectedPurpose) => {
+      const script = buildWalkthroughScript(
+        {
+          ...baseInput,
+          projectPurpose: {
+            text: purpose,
+            source: "readme_intro",
+            path: "README.md",
+            extracted: true,
+            evidence_refs: [],
+          },
+        },
+        evidence
+      );
+      const introduction = `Documentation project: ${expectedPurpose} Start at README.md`;
+
+      expect(Array.from(expectedPurpose).length).toBeLessThanOrEqual(80);
+      expect(script?.thirty_second).toContain(introduction);
+      expect(script?.two_minute).toContain(introduction);
+      expect(script?.deep_technical).toContain(introduction);
       expect(script?.two_minute.startsWith(script.thirty_second)).toBe(true);
       expect(script?.deep_technical.startsWith(script.two_minute)).toBe(true);
       expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
