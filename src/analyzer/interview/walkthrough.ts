@@ -74,7 +74,14 @@ function markdownLinkRanges(value: string): TextRange[] {
       continue;
     }
 
-    if (value[labelEnd + 1] !== "(") continue;
+    if (value[labelEnd + 1] !== "(") {
+      // A shortcut reference link is only the label at the point of use.
+      // Its matching definition can live elsewhere in the README, outside the
+      // extracted purpose, so preserve the complete label at this boundary.
+      ranges.push({ start, end: labelEnd + 1 });
+      start = labelEnd;
+      continue;
+    }
 
     let depth = 1;
     for (let cursor = labelEnd + 2; cursor < value.length; cursor += 1) {
