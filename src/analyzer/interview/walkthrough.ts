@@ -98,6 +98,10 @@ function markdownLinkRanges(value: string): TextRange[] {
 
 function inlineMarkdownRanges(value: string): TextRange[] {
   return [
+    ...collectMatches(
+      value,
+      /<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>\s]*|[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)>/g
+    ),
     ...markdownLinkRanges(value),
     ...collectMatches(value, /(`+)(?=\S)([^\n]*?\S)\1/g),
     ...collectMatches(value, /\*\*(?=\S)([^\n]*?\S)\*\*/g),
