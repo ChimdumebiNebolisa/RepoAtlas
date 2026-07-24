@@ -77,6 +77,68 @@ describe("buildWalkthroughScript", () => {
 
   it.each([
     [
+      "a full reference label",
+      "A".repeat(61),
+      "[repository guide][guide-ref]",
+    ],
+    [
+      "a collapsed reference label",
+      "A".repeat(68),
+      "[setup guide][]",
+    ],
+    [
+      "an image reference label",
+      "A".repeat(62),
+      "![architecture overview][map-ref]",
+    ],
+    [
+      "an emphasized reference label",
+      "A".repeat(62),
+      "[**risk parser**][risk-ref]",
+    ],
+    [
+      "a hyphenated reference label",
+      "A".repeat(61),
+      "[first-PR small-fix guide][contribute-ref]",
+    ],
+  ])(
+    "does not split %s at the purpose boundary",
+    (_, prefix, link) => {
+      const purpose = `${prefix} ${link} for repository interviews`;
+      const script = buildWalkthroughScript(
+        {
+          ...baseInput,
+          projectPurpose: {
+            text: purpose,
+            source: "readme_intro",
+            path: "README.md",
+            extracted: true,
+            evidence_refs: [],
+          },
+        },
+        evidence
+      );
+      const introduction = `Documentation project: ${prefix}… Start at README.md`;
+      const passages = [
+        script?.thirty_second,
+        script?.two_minute,
+        script?.deep_technical,
+      ];
+
+      for (const passage of passages) {
+        expect(passage).toContain(introduction);
+        expect(passage).not.toContain("[");
+        expect(passage).not.toContain("]");
+      }
+      expect(script?.two_minute.startsWith(script.thirty_second)).toBe(true);
+      expect(script?.deep_technical.startsWith(script.two_minute)).toBe(true);
+      expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
+      expect(purpose).toContain(link);
+    }
+  );
+
+  it.each([
+    [
       "one nested label",
       "A".repeat(61),
       "[repository [guide]](docs/guide.md)",
