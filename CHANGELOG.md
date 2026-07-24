@@ -4,43 +4,68 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
-### Security / correctness (red-team pass)
+## [2026-07-24] - Walkthrough text integrity
 
-- Worker isolation no longer silently re-runs failed analysis in-process; only spawn failures fall back. Abort terminates the worker; exit-without-message no longer hangs.
-- Streaming ZIP extract closes yauzl FDs on success and rejects empty/dot-only entry paths.
-- Same-SHA cache keys include analysis intent + report version; future `cached_at` values are rejected.
-- Upstash limiter URL allowlisted to `*.upstash.io` over HTTPS.
-- Python import scanner handles `#` inside parenthesized lists and line-continued `from`/`import`.
-- Java same-package matching strips comments/strings; static `import static Type.*` resolves to the owning type.
-- Multipart zip write respects request abort signal.
+### Candidate Brief
 
-### Correctness
+- Long README purposes now stop at complete words, grapheme clusters, and inline Markdown boundaries in the 30-second, 2-minute, and system-flow walkthroughs.
+- Purpose excerpts preserve valid links with nested destination parentheses and retain a single terminal mark without changing the full extracted purpose or its evidence.
+- Starting a new analysis removes the previous Candidate Brief before loading, so a failed retry cannot leave stale evidence or saved-report guidance on screen.
 
-- GitHub commit-history / churn analysis now requests commits for the ingested archive tip (`clone_hash`, falling back to the selected branch/tag) instead of the repository default branch.
-- Start Here no longer maps equal raw scores to 100; ties normalize to a neutral 50.
-- Danger Zone percentiles shrink toward absolute scale on tiny repos (fewer than 5 scored files) to reduce percentile spikes.
+### Reliability
 
-### Analyzer depth
+- Analysis-rate-limit startup keeps the first configured process-wide limiter instead of replacing a healthy limiter after a startup-module reload.
+- The interview-preparation start link preserves accepted bounded source values, discards unrecognized values, and continues to open the analysis form.
 
-- Python import extraction is now an import-statement scanner (parentheses, continuations, string/comment skipping) that expands `from pkg import name` to `pkg.name`.
-- Java same-package references without imports are recovered; static/nested FQNs walk prefixes to the owning type file.
-- Seeded analyzer evaluation suite under `eval/gold` with precision/recall floors.
+## [2026-07-23] - Evidence integrity and sparse-report recovery
+
+### Candidate Brief
+
+- Sparse Architecture Maps now show the exact zero-node and zero-edge result, explain that missing dependency evidence does not prove missing architecture, and direct readers to Folder Map, Start Here, and confidence notes.
+- Long evidence paths, run commands, and source locations now wrap inside narrow report panels.
+- Evidence cards preserve generated relationship, warning, and manifest context. Repository summaries and interview questions use repository-specific claims only when the report contains direct evidence for them.
+- New reports and delivery variants open a clean Candidate Brief workspace instead of inheriting the previous report's selected panel or export and sharing feedback.
+
+### Security and reliability
+
+- Evidence snippet reads reject absolute paths, traversal, symlink escapes, secret-like names, unreadable files, and invalid line bounds before reading.
+- Repository indexing skips unreadable or unsafe nested entries while preserving deterministic ordering and preventing traversal outside the workspace.
+- Shared report loaders, stored share records, portable links, cached analyses, and current-version report data fail closed when records are malformed, incomplete, expired, future-dated, or incompatible.
+- Product analytics now applies event-specific property allowlists before capture, including the bounded `report_viewed` and `walkthrough_copied` signals.
+- Commit-history signals remain scoped to the analyzed revision, and equal churn counts use a stable path tie-break.
+
+## [2026-07-22] - Analysis and report hardening
+
+### Analysis
+
+- Production ZIP extraction streams from disk through `yauzl`, enforces path and size limits before writing, and closes archive handles on success and failure.
+- Analysis runs in an isolated `worker_threads` host. Only recognized startup failures before the ready handshake may fall back in-process; aborts, deadlines, worker exits, and post-start failures stop without silently rerunning the repository.
+- TypeScript entry-point detection now resolves nested package targets and valid Next.js App Router route handlers while excluding test files.
+- Python import scanning handles parenthesized and continued statements, and Java analysis resolves safe same-package and static-import references without treating test-tree classes as application entry points.
+- Run-command extraction now handles alternate package, Python, Compose, shell-fence, Pipenv, Poetry, Maven, and Gradle forms without inventing commands from malformed metadata.
+- Start Here maps equal raw scores to a neutral value, and Danger Zone percentiles shrink toward the absolute scale for very small repositories.
 
 ### Platform
 
-- ZIP extraction from disk streams via `yauzl` (no whole-archive `readFileSync` on the production path); multipart uploads stream to temp files.
-- Analysis API runs through an isolated `worker_threads` host (`scripts/analysis-worker.cjs`) with in-process fallback.
-- Optional Upstash Redis REST distributed rate limiting (`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`).
-- Same-SHA GitHub analysis result cache (filesystem or Blob).
+- Optional Upstash Redis REST rate limiting provides a distributed path when configured. Endpoints must use HTTPS under `upstash.io`, and malformed store responses use the explicit best-effort fallback instead of being reported as a healthy distributed check.
+- Same-commit GitHub cache entries are scoped by analysis intent and report version and reject expired, future-dated, mismatched, malformed, or partial records.
+- Runtime report validation now checks the complete current Candidate Brief shape, finite numeric values, bounded folder depth, and semantic and evidence fields before saved or shared data reaches the interface.
+- Multipart ZIP writes stop when the request is aborted. Report action feedback remains truthful while availability is loading or an export or share fails, and current form values survive hydration and fast submission.
 
-### Validation
+## [2026-07-21] - Candidate-first walkthrough
 
-- Runtime report validation deeply checks Start Here, Danger Zones, run commands, architecture nodes/edges, contribute signals, Candidate Brief, commit insights, and semantic graph stats.
+### Customer-visible behavior
 
-### Documentation
+- The homepage now follows one five-section proof path, keeps interview walkthrough as the primary intent, and uses the bundled sample as the single prominent starting action.
+- Completed reports appear immediately after analysis instead of below the marketing page. Public GitHub and ZIP submissions read the current form values even on fast submission.
+- The sample preview now derives its repository summary, walkthrough, reading path, architecture explanation, interviewer question, and evidence references from the same analysis as the full sample report.
+- The interview-preparation page and homepage now make the same supported-language, evidence, storage, export, and sharing promises.
 
-- README drops redundant feature/API repetition and states language-pack depth honestly.
-- Roadmap prioritizes analyzer evaluation and the above platform items.
+### Reliability and measurement
+
+- Report navigation, export, sharing, and walkthrough state are separated into focused boundaries while preserving the established report order and delivery behavior.
+- Product analytics now records one bounded `report_viewed` signal and a confirmed `walkthrough_copied` signal for the 30-second or 2-minute format without repository content, URLs, paths, or report identifiers.
+- The complete mobile sharing matrix returns first-attempt results without retries, including repeated native WebKit sharing.
 
 ## [2026-07-20] — Operational reliability
 
