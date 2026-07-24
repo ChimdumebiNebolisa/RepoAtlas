@@ -60,13 +60,21 @@ function markdownLinkRanges(value: string): TextRange[] {
         }
       }
     }
-    if (
-      labelEnd === labelStart + 1 ||
-      labelEnd < 0 ||
-      value[labelEnd + 1] !== "("
-    ) {
+    if (labelEnd === labelStart + 1 || labelEnd < 0) continue;
+
+    if (value[labelEnd + 1] === "[") {
+      for (let cursor = labelEnd + 2; cursor < value.length; cursor += 1) {
+        if (value[cursor] === "\n") break;
+        if (value[cursor] === "]" && !isEscaped(value, cursor)) {
+          ranges.push({ start, end: cursor + 1 });
+          start = cursor;
+          break;
+        }
+      }
       continue;
     }
+
+    if (value[labelEnd + 1] !== "(") continue;
 
     let depth = 1;
     for (let cursor = labelEnd + 2; cursor < value.length; cursor += 1) {
