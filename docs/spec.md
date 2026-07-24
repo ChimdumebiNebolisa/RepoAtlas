@@ -95,7 +95,7 @@ Completed report workspace at `/`, `/report/:id`, or `/share/:token`:
 
 ### Loading States
 
-- **Idle**: Input form visible with ZIP / GitHub URL tabs.
+- **Idle**: Bundled sample action visible; custom ZIP / GitHub URL inputs remain available.
 - **Analyzing**: A single honest indicator ("Analyzing… (up to 2 min)"). No fabricated staged progress — the analyzer does not stream stage events, so the UI does not pretend to. Submit is disabled.
 - **Fetching saved report**: After `{ persisted: true }` and a validated `reportId` are returned, an optional skeleton for tabs until the stored report loads.
 - **Rendering inline report**: After `{ persisted: false, report }` is returned, the UI renders the report immediately without a second API request.
@@ -309,7 +309,7 @@ Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `sr
 
 | Aspect | Rules |
 |--------|-------|
-| **Import extraction** | Regex: `import\s+([a-zA-Z0-9_.]+)`, `from\s+([a-zA-Z0-9_.]+)\s+import`. Resolve relative (`.` package) to file path. |
+| **Import extraction** | Import-statement scanner that skips strings and comments, handles parenthesized and line-continued statements, expands `from pkg import name`, and resolves absolute or relative package paths without claiming a full Python AST. |
 | **Entrypoint heuristics** | `if __name__ == "__main__"`; `setup.py` entry_points; `pyproject.toml` `[project.scripts]`; `-m` targets from docs. |
 | **Test proximity** | `test_*.py`, `*_test.py`, `tests/` dir. |
 | **Complexity proxy** | McCabe complexity via AST or line-based proxy (same as TS). |
@@ -321,7 +321,7 @@ Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `sr
 
 | Aspect | Rules |
 |--------|-------|
-| **Import extraction** | Regex: `import\s+([a-zA-Z0-9_.]+)\s*;`. Map to file path via package/class convention. |
+| **Import extraction** | Anchored import scanning for ordinary, wildcard, and static imports, with package/class resolution. Safe same-package type references are also recovered after comments and strings are removed. |
 | **Entrypoint heuristics** | `public static void main`; `@SpringBootApplication`; JAR manifest `Main-Class`. |
 | **Test proximity** | `*Test.java`, `*IT.java`, `src/test/java` layout. |
 | **Complexity proxy** | Cyclomatic via line-based or simple AST. |
@@ -753,10 +753,10 @@ else {
 
 | Strategy | Description |
 |----------|-------------|
-| Progressive analysis | Optional: emit folder_map first, then architecture, then scoring; UI can show partial results |
-| Clone cache | Optional: cache by `owner/repo@commit`; reuse if same commit requested within TTL |
-| Timeouts | Clone: 60s; analysis: 120s; partial report saved when deadline hit after folder map |
-| Graceful degradation | On timeout after indexing: return `partial: true` report with Candidate Brief and `warnings` (see `src/analyzer/index.ts`) |
+| Staged analysis | Inventory, language packs, scoring, and report assembly run in sequence inside one request; the UI shows one honest loading state rather than fabricated stage progress |
+| Same-commit cache | Complete public-GitHub reports may be reused by `owner/repo@commit`, analysis intent, and report version within the configured report TTL; invalid or partial records are not reused |
+| Timeouts | GitHub API request: 15s; archive download: 60s; full analysis: 120s |
+| Graceful degradation | After indexing, an expired analysis deadline returns a validated `partial: true` report with a Candidate Brief and warnings (see `src/analyzer/index.ts`) |
 
 ---
 
@@ -764,7 +764,7 @@ else {
 
 ### Unit Tests
 
-- Parsers: import extraction (TS/JS, Python, Java regex).
+- Parsers: TypeScript Compiler API extraction, Python import-statement scanning, and Java import and same-package reference extraction.
 - Language detection: extension → language.
 - Scoring: `StartHereScore` and `RiskScore` with mock inputs.
 - Path traversal: zip extraction rejects malicious paths.
