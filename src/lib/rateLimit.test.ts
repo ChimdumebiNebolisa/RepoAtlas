@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   InMemoryRateLimiter,
   tryAcquireAnalysisSlot,
@@ -58,5 +58,52 @@ describe("clientKeyFromHeaders", () => {
 
   it("falls back to unknown", () => {
     expect(clientKeyFromHeaders(new Headers())).toBe("unknown");
+  });
+});
+
+describe("rate limiter startup configuration", () => {
+  it("keeps the first configured limiter", async () => {
+    vi.resetModules();
+    const { configureRateLimiterOnce, getRateLimiter } = await import(
+      "./rateLimit"
+    );
+    const firstLimiter = { check: vi.fn() };
+    const secondFactory = vi.fn(() => ({ check: vi.fn() }));
+
+    expect(configureRateLimiterOnce(() => firstLimiter)).toBe(true);
+    expect(configureRateLimiterOnce(secondFactory)).toBe(false);
+    expect(secondFactory).not.toHaveBeenCalled();
+    expect(getRateLimiter()).toBe(firstLimiter);
+  });
+
+  it("preserves an explicitly injected limiter", async () => {
+    vi.resetModules();
+    const { configureRateLimiterOnce, getRateLimiter, setRateLimiter } =
+      await import("./rateLimit");
+    const injectedLimiter = { check: vi.fn() };
+    const startupFactory = vi.fn(() => ({ check: vi.fn() }));
+
+    setRateLimiter(injectedLimiter);
+
+    expect(configureRateLimiterOnce(startupFactory)).toBe(false);
+    expect(startupFactory).not.toHaveBeenCalled();
+    expect(getRateLimiter()).toBe(injectedLimiter);
+  });
+
+  it("allows startup to retry after construction fails", async () => {
+    vi.resetModules();
+    const { configureRateLimiterOnce, getRateLimiter } = await import(
+      "./rateLimit"
+    );
+    const limiter = { check: vi.fn() };
+
+    expect(() =>
+      configureRateLimiterOnce(() => {
+        throw new Error("construction failed");
+      })
+    ).toThrow("construction failed");
+
+    expect(configureRateLimiterOnce(() => limiter)).toBe(true);
+    expect(getRateLimiter()).toBe(limiter);
   });
 });

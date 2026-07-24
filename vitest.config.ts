@@ -97,6 +97,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/lib/configureAbuseControls.ts": {
+          branches: 80,
+          lines: 85,
+        },
         "src/lib/sharing.ts": {
           branches: 80,
           lines: 85,

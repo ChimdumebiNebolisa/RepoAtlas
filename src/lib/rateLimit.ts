@@ -80,10 +80,28 @@ export class InMemoryRateLimiter implements RateLimiter {
 }
 
 let activeRateLimiter: RateLimiter = new InMemoryRateLimiter();
+let rateLimiterConfigured = false;
 
 /** Inject a durable, distributed limiter (e.g. Redis-backed) in production. */
 export function setRateLimiter(limiter: RateLimiter): void {
   activeRateLimiter = limiter;
+  rateLimiterConfigured = true;
+}
+
+/**
+ * Make the process-wide startup choice once.
+ *
+ * Keeping the guard beside the active limiter prevents a reload of the startup
+ * hook from replacing a healthy limiter that this module still owns.
+ */
+export function configureRateLimiterOnce(
+  createLimiter: () => RateLimiter
+): boolean {
+  if (rateLimiterConfigured) return false;
+  const limiter = createLimiter();
+  activeRateLimiter = limiter;
+  rateLimiterConfigured = true;
+  return true;
 }
 
 export function getRateLimiter(): RateLimiter {
