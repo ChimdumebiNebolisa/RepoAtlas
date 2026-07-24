@@ -195,6 +195,7 @@ function inlineMarkdownRanges(value: string): TextRange[] {
     ...inlineHtmlRanges(value),
     ...markdownLinkRanges(value),
     ...collectMatches(value, /(`+)(?=\S)([^\n]*?\S)\1/g),
+    ...collectMatches(value, /~~(?=\S)([^\n]*?\S)~~/g),
     ...collectMatches(value, /\*\*(?=\S)([^\n]*?\S)\*\*/g),
     ...collectMatches(value, /__(?=\S)([^\n]*?\S)__/g),
     ...collectMatches(value, /(?<![\w\\])\*(?=\S)([^*\n]*?\S)\*(?!\w)/g),
