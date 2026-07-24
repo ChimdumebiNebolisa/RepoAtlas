@@ -74,4 +74,71 @@ describe("buildWalkthroughScript", () => {
       expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
     }
   );
+
+  it.each([
+    [
+      "a word",
+      "Builds evidence-linked Candidate Briefs for repository interviews and keeps every technical claim traceable.",
+      "Builds evidence-linked Candidate Briefs for repository interviews and keeps…",
+    ],
+    [
+      "terminal punctuation",
+      `${"A".repeat(78)}. More evidence follows.`,
+      `${"A".repeat(78)}.`,
+    ],
+    [
+      "a terminal ellipsis",
+      `${"A".repeat(79)}… More evidence follows.`,
+      `${"A".repeat(79)}…`,
+    ],
+    [
+      "boundary whitespace",
+      `${"A".repeat(79)} next words continue beyond the limit`,
+      `${"A".repeat(79)}…`,
+    ],
+    [
+      "unbroken text",
+      "A".repeat(100),
+      undefined,
+    ],
+    [
+      "a multibyte character",
+      `${"A".repeat(70)} 🚀 ready for repository interviews with more evidence`,
+      `${"A".repeat(70)} 🚀 ready…`,
+    ],
+  ])(
+    "shortens a long repository purpose safely near %s",
+    (_, purpose, expectedPurpose) => {
+      const script = buildWalkthroughScript(
+        {
+          ...baseInput,
+          projectPurpose: {
+            text: purpose,
+            source: "readme_intro",
+            path: "README.md",
+            extracted: true,
+            evidence_refs: [],
+          },
+        },
+        evidence
+      );
+      const introduction = expectedPurpose
+        ? `Documentation project: ${expectedPurpose} Start at README.md`
+        : "Documentation project. Start at README.md";
+
+      if (expectedPurpose) {
+        expect(Array.from(expectedPurpose).length).toBeLessThanOrEqual(80);
+      }
+      expect(script?.thirty_second).toContain(introduction);
+      expect(script?.two_minute).toContain(introduction);
+      expect(script?.deep_technical).toContain(introduction);
+      if (!expectedPurpose) {
+        expect(script?.thirty_second).not.toContain("Documentation project:");
+        expect(script?.thirty_second).not.toContain("A".repeat(79));
+      }
+      expect(script?.two_minute.startsWith(script.thirty_second)).toBe(true);
+      expect(script?.deep_technical.startsWith(script.two_minute)).toBe(true);
+      expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
+    }
+  );
 });
