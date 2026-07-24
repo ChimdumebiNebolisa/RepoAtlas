@@ -103,6 +103,8 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <InputForm
             ref={inputFormRef}
             onAnalyzeStart={() => {
+              setReport(null);
+              setReportId(null);
               setLoading(true);
               setError(null);
             }}
