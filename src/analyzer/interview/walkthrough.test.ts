@@ -77,6 +77,68 @@ describe("buildWalkthroughScript", () => {
 
   it.each([
     [
+      "a URL host separator",
+      "A".repeat(57),
+      "<https://docs.example.com/guide>",
+    ],
+    [
+      "a URL subdomain separator",
+      "A".repeat(65),
+      "<https://repo.example.dev/map>",
+    ],
+    [
+      "URL query punctuation",
+      "A".repeat(47),
+      "<https://docs.example.com/guide?view=full>",
+    ],
+    [
+      "an email domain separator",
+      "A".repeat(54),
+      "<candidate.guide@example.com>",
+    ],
+    [
+      "an email local-part separator",
+      "A".repeat(72),
+      "<first.last+repo@example.dev>",
+    ],
+  ])(
+    "does not split an angle-bracket autolink at %s",
+    (_, prefix, autolink) => {
+      const purpose = `${prefix} ${autolink} for repository interviews`;
+      const script = buildWalkthroughScript(
+        {
+          ...baseInput,
+          projectPurpose: {
+            text: purpose,
+            source: "readme_intro",
+            path: "README.md",
+            extracted: true,
+            evidence_refs: [],
+          },
+        },
+        evidence
+      );
+      const introduction = `Documentation project: ${prefix}… Start at README.md`;
+      const passages = [
+        script?.thirty_second,
+        script?.two_minute,
+        script?.deep_technical,
+      ];
+
+      for (const passage of passages) {
+        expect(passage).toContain(introduction);
+        expect(passage).not.toContain("<");
+        expect(passage).not.toContain(">");
+      }
+      expect(script?.two_minute.startsWith(script.thirty_second)).toBe(true);
+      expect(script?.deep_technical.startsWith(script.two_minute)).toBe(true);
+      expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
+      expect(purpose).toContain(autolink);
+    }
+  );
+
+  it.each([
+    [
       "a full reference label",
       "A".repeat(61),
       "[repository guide][guide-ref]",
