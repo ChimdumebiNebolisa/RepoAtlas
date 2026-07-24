@@ -6,9 +6,27 @@ import {
 } from "./evidence";
 import type { BuildCandidateBriefInput, EvidenceIndex } from "./types";
 
+const WALKTHROUGH_PURPOSE_LIMIT = 80;
+
 function finishSentence(value: string): string {
   const trimmed = value.trimEnd();
-  return /[.!?]$/.test(trimmed) ? `${trimmed} ` : `${trimmed}. `;
+  return /[.!?…]$/.test(trimmed) ? `${trimmed} ` : `${trimmed}. `;
+}
+
+function concisePurpose(value: string): string {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  const characters = Array.from(normalized);
+  if (characters.length <= WALKTHROUGH_PURPOSE_LIMIT) return normalized;
+
+  const clipped = characters
+    .slice(0, WALKTHROUGH_PURPOSE_LIMIT)
+    .join("");
+  const trimmedClipped = clipped.trimEnd();
+  if (/[.!?…]$/.test(trimmedClipped)) return trimmedClipped;
+
+  const lastWhitespace = clipped.lastIndexOf(" ");
+  if (lastWhitespace <= 0) return "";
+  return `${clipped.slice(0, lastWhitespace)}…`;
 }
 
 export function buildWalkthroughScript(
@@ -17,6 +35,7 @@ export function buildWalkthroughScript(
 ): WalkthroughScript | undefined {
   const profile = input.projectProfile?.label ?? "this codebase";
   const purpose = input.projectPurpose?.text;
+  const purposeExcerpt = purpose ? concisePurpose(purpose) : "";
   const topPaths = input.startHere.slice(0, 3).map((item) => item.path);
   const commands = input.runCommands.slice(0, 2).map((item) => item.command);
   const symbolNames = (input.symbols ?? [])
@@ -35,7 +54,7 @@ export function buildWalkthroughScript(
   }
 
   const thirty_second =
-    finishSentence(`${profile}${purpose ? `: ${purpose.slice(0, 80)}` : ""}`) +
+    finishSentence(`${profile}${purposeExcerpt ? `: ${purposeExcerpt}` : ""}`) +
     `Start at ${topPaths[0] ?? "the folder map"}, validate with ${commands[0] ?? "detected project files"}.`;
 
   const two_minute =
