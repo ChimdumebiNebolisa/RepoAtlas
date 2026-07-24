@@ -45,17 +45,24 @@ function markdownLinkRanges(value: string): TextRange[] {
           : -1;
     if (labelStart < 0 || isEscaped(value, labelStart)) continue;
 
-    let labelEnd = labelStart + 1;
-    while (
-      labelEnd < value.length &&
-      value[labelEnd] !== "\n" &&
-      (value[labelEnd] !== "]" || isEscaped(value, labelEnd))
-    ) {
-      labelEnd += 1;
+    let labelDepth = 1;
+    let labelEnd = -1;
+    for (let cursor = labelStart + 1; cursor < value.length; cursor += 1) {
+      if (value[cursor] === "\n") break;
+      if (isEscaped(value, cursor)) continue;
+      if (value[cursor] === "[") {
+        labelDepth += 1;
+      } else if (value[cursor] === "]") {
+        labelDepth -= 1;
+        if (labelDepth === 0) {
+          labelEnd = cursor;
+          break;
+        }
+      }
     }
     if (
       labelEnd === labelStart + 1 ||
-      value[labelEnd] !== "]" ||
+      labelEnd < 0 ||
       value[labelEnd + 1] !== "("
     ) {
       continue;
