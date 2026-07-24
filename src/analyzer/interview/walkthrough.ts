@@ -197,6 +197,8 @@ function inlineMarkdownRanges(value: string): TextRange[] {
     ...collectMatches(value, /(`+)(?=\S)([^\n]*?\S)\1/g),
     ...collectMatches(value, /\*\*(?=\S)([^\n]*?\S)\*\*/g),
     ...collectMatches(value, /__(?=\S)([^\n]*?\S)__/g),
+    ...collectMatches(value, /(?<![\w\\])\*(?=\S)([^*\n]*?\S)\*(?!\w)/g),
+    ...collectMatches(value, /(?<![\w\\])_(?=\S)([^_\n]*?\S)_(?!\w)/g),
   ];
 }
 
@@ -227,7 +229,7 @@ function concisePurpose(value: string): string {
     WALKTHROUGH_PURPOSE_LIMIT
   );
   const markdownStart = inlineMarkdownRanges(normalized)
-    .filter((range) => range.start < graphemeEnd && range.end > graphemeEnd)
+    .filter((range) => range.start < graphemeEnd && range.end >= graphemeEnd)
     .reduce<number | undefined>(
       (earliest, range) =>
         earliest === undefined ? range.start : Math.min(earliest, range.start),
