@@ -23,7 +23,8 @@ export interface LayoutResult {
 export async function layoutGraph(arch: Architecture): Promise<LayoutResult> {
   const elk = new ELK();
 
-  const nodeIds = new Set(arch.nodes.map((n) => n.id));
+  const nodeById = new Map(arch.nodes.map((node) => [node.id, node]));
+  const nodeIds = new Set(nodeById.keys());
   const validEdges = arch.edges.filter(
     (e) =>
       nodeIds.has(e.from) &&
@@ -52,24 +53,35 @@ export async function layoutGraph(arch: Architecture): Promise<LayoutResult> {
       targets: [e.to],
     })),
   };
+  const edgeByLayoutId = new Map(
+    validEdges.map((edge, index) => [`e${index}`, edge])
+  );
 
   const layout = await elk.layout(graph);
 
-  const layoutNodes: LayoutNode[] = (layout.children ?? []).map((child) => {
-    const node = arch.nodes.find((n) => n.id === child.id)!;
-    return {
+  const layoutNodes: LayoutNode[] = (layout.children ?? []).flatMap((child) => {
+    const node = nodeById.get(child.id);
+    if (!node) return [];
+
+    return [{
       ...node,
       x: child.x ?? 0,
       y: child.y ?? 0,
       width: child.width ?? 100,
       height: child.height ?? 40,
-    };
+    }];
   });
 
-  const layoutEdges: LayoutEdge[] = (layout.edges ?? []).map((edge) => {
-    const from = edge.sources[0];
-    const to = edge.targets[0];
-    const archEdge = validEdges.find((e) => e.from === from && e.to === to)!;
+  const layoutEdges: LayoutEdge[] = (layout.edges ?? []).flatMap((edge) => {
+    const archEdge = edgeByLayoutId.get(edge.id);
+    if (
+      !archEdge ||
+      edge.sources?.[0] !== archEdge.from ||
+      edge.targets?.[0] !== archEdge.to
+    ) {
+      return [];
+    }
+
     const section = (edge as {
       sections?: Array<{
         startPoint: { x: number; y: number };
@@ -84,10 +96,10 @@ export async function layoutGraph(arch: Architecture): Promise<LayoutResult> {
           section.endPoint,
         ]
       : [];
-    return {
+    return [{
       ...archEdge,
       path,
-    };
+    }];
   });
 
   const layoutShape = layout as { width?: number; height?: number };
