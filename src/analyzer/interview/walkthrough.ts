@@ -96,12 +96,103 @@ function markdownLinkRanges(value: string): TextRange[] {
   return ranges;
 }
 
+interface HtmlTagToken extends TextRange {
+  name: string;
+  closing: boolean;
+  selfClosing: boolean;
+}
+
+const VOID_HTML_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
+
+function htmlTagTokens(value: string): HtmlTagToken[] {
+  const tokens: HtmlTagToken[] = [];
+
+  for (let start = 0; start < value.length; start += 1) {
+    if (value[start] !== "<" || isEscaped(value, start)) continue;
+
+    let cursor = start + 1;
+    const closing = value[cursor] === "/";
+    if (closing) cursor += 1;
+
+    const nameStart = cursor;
+    if (!/[A-Za-z]/.test(value[cursor] ?? "")) continue;
+    cursor += 1;
+    while (/[A-Za-z0-9-]/.test(value[cursor] ?? "")) cursor += 1;
+
+    const name = value.slice(nameStart, cursor).toLowerCase();
+    if (!/[\s/>]/.test(value[cursor] ?? "")) continue;
+
+    let quote: '"' | "'" | undefined;
+    for (; cursor < value.length; cursor += 1) {
+      const character = value[cursor];
+      if (character === "\n" || (!quote && character === "<")) break;
+      if (quote) {
+        if (character === quote) quote = undefined;
+        continue;
+      }
+      if (character === '"' || character === "'") {
+        quote = character;
+      } else if (character === ">") {
+        const beforeClose = value.slice(start, cursor).trimEnd();
+        tokens.push({
+          start,
+          end: cursor + 1,
+          name,
+          closing,
+          selfClosing: beforeClose.endsWith("/"),
+        });
+        start = cursor;
+        break;
+      }
+    }
+  }
+
+  return tokens;
+}
+
+function inlineHtmlRanges(value: string): TextRange[] {
+  const ranges: TextRange[] = [];
+  const openTags: HtmlTagToken[] = [];
+
+  for (const token of htmlTagTokens(value)) {
+    if (token.closing) {
+      const opener = openTags.at(-1);
+      if (opener?.name === token.name) {
+        openTags.pop();
+        ranges.push({ start: opener.start, end: token.end });
+      }
+      continue;
+    }
+    if (!token.selfClosing && !VOID_HTML_TAGS.has(token.name)) {
+      openTags.push(token);
+    }
+  }
+
+  return ranges;
+}
+
 function inlineMarkdownRanges(value: string): TextRange[] {
   return [
     ...collectMatches(
       value,
       /<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>\s]*|[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)>/g
     ),
+    ...inlineHtmlRanges(value),
     ...markdownLinkRanges(value),
     ...collectMatches(value, /(`+)(?=\S)([^\n]*?\S)\1/g),
     ...collectMatches(value, /\*\*(?=\S)([^\n]*?\S)\*\*/g),

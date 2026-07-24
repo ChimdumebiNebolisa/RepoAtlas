@@ -139,6 +139,68 @@ describe("buildWalkthroughScript", () => {
 
   it.each([
     [
+      "a paired span",
+      "A".repeat(61),
+      "<span>repository guide</span>",
+    ],
+    [
+      "a paired span with a safe class attribute",
+      "A".repeat(53),
+      '<span class="purpose">repository map</span>',
+    ],
+    [
+      "a paired link with a relative href",
+      "A".repeat(54),
+      '<a href="docs/guide.md">repository guide</a>',
+    ],
+    [
+      "a paired abbreviation with a title",
+      "A".repeat(44),
+      '<abbr title="Application Programming Interface">API</abbr>',
+    ],
+    [
+      "nested paired strong and code tags",
+      "A".repeat(55),
+      "<strong><code>npm run verify</code></strong>",
+    ],
+  ])(
+    "does not split raw inline HTML near %s at the purpose boundary",
+    (_, prefix, html) => {
+      const purpose = `${prefix} ${html} for repository interviews`;
+      const script = buildWalkthroughScript(
+        {
+          ...baseInput,
+          projectPurpose: {
+            text: purpose,
+            source: "readme_intro",
+            path: "README.md",
+            extracted: true,
+            evidence_refs: [],
+          },
+        },
+        evidence
+      );
+      const introduction = `Documentation project: ${prefix}… Start at README.md`;
+      const passages = [
+        script?.thirty_second,
+        script?.two_minute,
+        script?.deep_technical,
+      ];
+
+      for (const passage of passages) {
+        expect(passage).toContain(introduction);
+        expect(passage).not.toContain("<");
+        expect(passage).not.toContain(">");
+      }
+      expect(script?.two_minute.startsWith(script.thirty_second)).toBe(true);
+      expect(script?.deep_technical.startsWith(script.two_minute)).toBe(true);
+      expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
+      expect(purpose).toContain(html);
+    }
+  );
+
+  it.each([
+    [
       "a full reference label",
       "A".repeat(61),
       "[repository guide][guide-ref]",
