@@ -25,9 +25,65 @@ function collectMatches(value: string, pattern: RegExp): TextRange[] {
   }));
 }
 
+function isEscaped(value: string, index: number): boolean {
+  let backslashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && value[cursor] === "\\"; cursor -= 1) {
+    backslashes += 1;
+  }
+  return backslashes % 2 === 1;
+}
+
+function markdownLinkRanges(value: string): TextRange[] {
+  const ranges: TextRange[] = [];
+
+  for (let start = 0; start < value.length; start += 1) {
+    const labelStart =
+      value[start] === "["
+        ? start
+        : value[start] === "!" && value[start + 1] === "["
+          ? start + 1
+          : -1;
+    if (labelStart < 0 || isEscaped(value, labelStart)) continue;
+
+    let labelEnd = labelStart + 1;
+    while (
+      labelEnd < value.length &&
+      value[labelEnd] !== "\n" &&
+      (value[labelEnd] !== "]" || isEscaped(value, labelEnd))
+    ) {
+      labelEnd += 1;
+    }
+    if (
+      labelEnd === labelStart + 1 ||
+      value[labelEnd] !== "]" ||
+      value[labelEnd + 1] !== "("
+    ) {
+      continue;
+    }
+
+    let depth = 1;
+    for (let cursor = labelEnd + 2; cursor < value.length; cursor += 1) {
+      if (value[cursor] === "\n") break;
+      if (isEscaped(value, cursor)) continue;
+      if (value[cursor] === "(") {
+        depth += 1;
+      } else if (value[cursor] === ")") {
+        depth -= 1;
+        if (depth === 0) {
+          ranges.push({ start, end: cursor + 1 });
+          start = cursor;
+          break;
+        }
+      }
+    }
+  }
+
+  return ranges;
+}
+
 function inlineMarkdownRanges(value: string): TextRange[] {
   return [
-    ...collectMatches(value, /!?\[[^\]\n]+\]\([^\)\n]+\)/g),
+    ...markdownLinkRanges(value),
     ...collectMatches(value, /(`+)(?=\S)([^\n]*?\S)\1/g),
     ...collectMatches(value, /\*\*(?=\S)([^\n]*?\S)\*\*/g),
     ...collectMatches(value, /__(?=\S)([^\n]*?\S)__/g),
