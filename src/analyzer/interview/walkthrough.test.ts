@@ -195,4 +195,58 @@ describe("buildWalkthroughScript", () => {
       expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
     }
   );
+
+  it.each([
+    [
+      "a parenthesized filename",
+      "A".repeat(38),
+      "[repository guide](docs/guide_(advanced).md)",
+    ],
+    [
+      "a parenthesized path segment",
+      "A".repeat(47),
+      "[architecture notes](docs/(core)/architecture.md)",
+    ],
+    [
+      "two nested parenthesis levels",
+      "A".repeat(37),
+      "[setup reference](docs/setup_(node_(lts)).md)",
+    ],
+    [
+      "adjacent nested parentheses",
+      "A".repeat(44),
+      "[risk review](docs/risk_(parser(v2)).md)",
+    ],
+    [
+      "a hyphenated nested destination",
+      "A".repeat(32),
+      "[first PR guide](docs/contribute_(small-fixes).md)",
+    ],
+  ])(
+    "does not split a Markdown link with %s at the purpose boundary",
+    (_, prefix, link) => {
+      const script = buildWalkthroughScript(
+        {
+          ...baseInput,
+          projectPurpose: {
+            text: `${prefix} ${link} for repository interviews`,
+            source: "readme_intro",
+            path: "README.md",
+            extracted: true,
+            evidence_refs: [],
+          },
+        },
+        evidence
+      );
+      const introduction = `Documentation project: ${prefix}… Start at README.md`;
+
+      expect(script?.thirty_second).toContain(introduction);
+      expect(script?.two_minute).toContain(introduction);
+      expect(script?.deep_technical).toContain(introduction);
+      expect(script?.thirty_second).not.toContain("[");
+      expect(script?.two_minute.startsWith(script.thirty_second)).toBe(true);
+      expect(script?.deep_technical.startsWith(script.two_minute)).toBe(true);
+      expect(script?.evidence_refs).toEqual(["start-1", "arch-1"]);
+    }
+  );
 });
