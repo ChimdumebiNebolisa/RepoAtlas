@@ -85,7 +85,7 @@ describe("Candidate Brief byte stability", () => {
     [
       "Python",
       "repo-python",
-      "fca2429f19a85e9e2d6e9f8be6a55f69d2842809890c70e49c8e2e24a5f8c803",
+      "2ab9ef2a975c2c5a8896f442ae59e573f9e9bd07120313384ebf19f99a92fa40",
     ],
     [
       "Java",

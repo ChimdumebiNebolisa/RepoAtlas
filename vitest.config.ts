@@ -203,6 +203,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/testInventory.ts": {
+          branches: 80,
+          lines: 85,
+        },
         "src/analyzer/interview/summary.ts": {
           branches: 80,
           lines: 85,

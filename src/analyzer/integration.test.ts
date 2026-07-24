@@ -51,6 +51,7 @@ describe("analyzeRepository integration (acceptance)", () => {
       "Next.js",
       "Vitest",
     ]);
+    expect(result.report.test_inventory?.frameworks).toEqual(["Vitest"]);
     expectDecisionEvidenceToResolve(result, fixturePath);
   }, 30000);
 
@@ -159,6 +160,11 @@ describe("analyzeRepository integration (acceptance)", () => {
         (item) => item.path.includes("src/test/") && item.explanation.includes("entrypoint")
       )
     ).toBe(false);
+    expect(result.report.test_inventory?.frameworks).toEqual([]);
+    expect(result.report.test_inventory?.tested_areas).toEqual([
+      "src/java/com/example/App.java",
+      "src/java/com/example/service/UserService.java",
+    ]);
     expect(result.report.technical_decisions).toEqual([]);
     expect(
       result.report.candidate_brief?.behavioral_hooks?.find((hook) =>
@@ -215,6 +221,15 @@ describe("analyzeRepository integration (acceptance)", () => {
     expect(
       result.report.warnings.some((w) => w.includes("Deep Python analysis unavailable"))
     ).toBe(false);
+    expect(result.report.test_inventory?.frameworks).toEqual(["pytest"]);
+    expect(result.report.test_inventory?.tested_areas).toEqual([
+      "utils.py",
+      "cli.py",
+      "models.py",
+    ]);
+    expect(result.report.candidate_brief?.confidence_assessment?.reasons).toContain(
+      "3 test file(s) detected"
+    );
     expect(result.report.technical_decisions?.map((decision) => decision.decision)).toEqual([
       "pytest",
     ]);
