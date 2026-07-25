@@ -12,6 +12,28 @@ import {
   type WorkspacePackage,
 } from "./tsjsResolveShared";
 
+const EXPORT_CONDITIONS = [
+  "import",
+  "require",
+  "default",
+  "module",
+  "browser",
+  "types",
+] as const;
+
+function isSupportedPackageExportTarget(target: unknown): boolean {
+  if (typeof target === "string") return true;
+  if (!target || typeof target !== "object" || Array.isArray(target)) {
+    return false;
+  }
+  const record = target as Record<string, unknown>;
+  return EXPORT_CONDITIONS.some(
+    (condition) =>
+      condition in record &&
+      isSupportedPackageExportTarget(record[condition])
+  );
+}
+
 function resolvePackageExportTarget(
   packageRoot: string,
   target: unknown
@@ -34,7 +56,7 @@ function resolvePackageExportTarget(
   }
   if (target && typeof target === "object" && !Array.isArray(target)) {
     const record = target as Record<string, unknown>;
-    for (const key of ["import", "require", "default", "module", "browser", "types"]) {
+    for (const key of EXPORT_CONDITIONS) {
       if (key in record) {
         const resolved = resolvePackageExportTarget(packageRoot, record[key]);
         if (resolved) return resolved;
@@ -57,28 +79,42 @@ function resolveViaPackageJson(
   if (!pkg) return { abs: null, unsupportedExports: false };
 
   if (pkg.exports != null) {
-    if (typeof pkg.exports === "string" && (subpath === "" || subpath === ".")) {
-      return {
-        abs: resolvePackageExportTarget(packageRoot, pkg.exports),
-        unsupportedExports: false,
-      };
+    const isRootImport = subpath === "" || subpath === ".";
+    if (typeof pkg.exports === "string") {
+      return isRootImport
+        ? {
+            abs: resolvePackageExportTarget(packageRoot, pkg.exports),
+            unsupportedExports: false,
+          }
+        : { abs: null, unsupportedExports: true };
     }
     if (pkg.exports && typeof pkg.exports === "object" && !Array.isArray(pkg.exports)) {
       const exportsMap = pkg.exports as Record<string, unknown>;
+      if (isRootImport && isSupportedPackageExportTarget(exportsMap)) {
+        return {
+          abs: resolvePackageExportTarget(packageRoot, exportsMap),
+          unsupportedExports: false,
+        };
+      }
       const exportKey =
-        subpath === "" || subpath === "."
+        isRootImport
           ? "."
           : subpath.startsWith("./")
             ? subpath
             : `./${subpath}`;
       if (exportKey in exportsMap) {
+        const exportTarget = exportsMap[exportKey];
+        if (!isSupportedPackageExportTarget(exportTarget)) {
+          return { abs: null, unsupportedExports: true };
+        }
         return {
-          abs: resolvePackageExportTarget(packageRoot, exportsMap[exportKey]),
+          abs: resolvePackageExportTarget(packageRoot, exportTarget),
           unsupportedExports: false,
         };
       }
       return { abs: null, unsupportedExports: true };
     }
+    return { abs: null, unsupportedExports: true };
   }
 
   if (subpath && subpath !== ".") {
