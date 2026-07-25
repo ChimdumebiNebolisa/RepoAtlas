@@ -257,12 +257,13 @@ describe("repository summary boundary", () => {
     ]);
   });
 
-  it("builds resume bullets and warning fallbacks without unsupported certainty", () => {
+  it("uses bounded resume wording when repository evidence is sparse", () => {
     const input = inputWith({
       startHere: [],
       dangerZones: [],
       runCommands: [],
       contributeSignals: { key_docs: [], ci_configs: [] },
+      architecture: { nodes: [], edges: [] },
       warnings: ["Partial analysis"],
     });
     const evidence = evidenceFor(input);
@@ -271,11 +272,15 @@ describe("repository summary boundary", () => {
     expect(buildResumeBullets(input, evidence)).toEqual([
       expect.objectContaining({
         audience: "resume",
-        text: expect.stringContaining("0 reading candidates"),
+        text:
+          "Prepared a repository walkthrough from static analysis, without claiming unverified authorship, runtime behavior, or business impact.",
+        evidence_refs: [evidence.architectureRef],
       }),
       expect.objectContaining({
         audience: "linkedin",
-        text: expect.stringContaining("1 architecture nodes"),
+        text:
+          "Prepared a repository walkthrough from static analysis, without claiming unverified authorship, runtime behavior, or business impact.",
+        evidence_refs: [evidence.architectureRef],
       }),
     ]);
     expect(buildCandidateWarnings(input, evidence)).toEqual([
@@ -287,5 +292,117 @@ describe("repository summary boundary", () => {
       expect.objectContaining({ message: expect.stringContaining("No danger-zone") }),
       expect.objectContaining({ message: expect.stringContaining("No run commands") }),
     ]);
+  });
+
+  it("drops stale resume references and their unsupported signal claims", () => {
+    const input = inputWith();
+    const evidence = evidenceFor(input);
+    evidence.startHereRefs.clear();
+    evidence.dangerZoneRefs.clear();
+    evidence.commandRefs.clear();
+    evidence.architectureRef = "missing-architecture";
+
+    const bullets = buildResumeBullets(input, evidence);
+
+    expect(bullets).toEqual([
+      {
+        audience: "resume",
+        text:
+          "Prepared a repository walkthrough from static analysis, without claiming unverified authorship, runtime behavior, or business impact.",
+        evidence_refs: [],
+      },
+      {
+        audience: "linkedin",
+        text:
+          "Prepared a repository walkthrough from static analysis, without claiming unverified authorship, runtime behavior, or business impact.",
+        evidence_refs: [],
+      },
+    ]);
+    expect(bullets[0].text).not.toContain("summary-fixture");
+    expect(bullets[0].text).not.toMatch(/reading candidates|risk-ranked files|run commands|architecture nodes/);
+  });
+
+  it("deduplicates repeated signals before making resume claims", () => {
+    const input = inputWith({
+      startHere: [...baseInput.startHere, ...baseInput.startHere],
+      dangerZones: [...baseInput.dangerZones, ...baseInput.dangerZones],
+      runCommands: [...baseInput.runCommands, ...baseInput.runCommands],
+    });
+    const evidence = evidenceFor(input);
+    const bullets = buildResumeBullets(input, evidence);
+
+    expect(bullets[0].text).toBe(
+      "Prepared an evidence-linked technical brief from RepoAtlas static analysis, based on 1 reading candidate, 1 risk-ranked file, 1 run command, 1 architecture node."
+    );
+    expect(new Set(bullets[0].evidence_refs).size).toBe(
+      bullets[0].evidence_refs.length
+    );
+    expect(bullets[1]).toEqual({
+      audience: "linkedin",
+      text: bullets[0].text,
+      evidence_refs: bullets[0].evidence_refs,
+    });
+  });
+
+  it("rejects wrong-kind mappings before a resume claim uses them", () => {
+    const input = inputWith();
+    const evidence = evidenceFor(input);
+    evidence.startHereRefs.set(
+      "README.md",
+      evidence.dangerZoneRefs.get("src/risky.ts")!
+    );
+
+    const bullet = buildResumeBullets(input, evidence)[0];
+    const knownIds = new Set(evidence.refs.map((ref) => ref.id));
+
+    expect(bullet.text).not.toContain("reading candidate");
+    expect(bullet.text).toContain("1 risk-ranked file");
+    expect(bullet.text).toContain("1 run command");
+    expect(bullet.evidence_refs.every((id) => knownIds.has(id))).toBe(true);
+    expect(bullet.evidence_refs).toEqual([
+      evidence.dangerZoneRefs.get("src/risky.ts"),
+      evidence.commandRefs.get("package.json:npm test"),
+      evidence.architectureRef,
+    ]);
+  });
+
+  it("does not turn sparse or conflicting project profiles into resume claims", () => {
+    const input = inputWith({
+      projectProfile: {
+        type: "nextjs-app",
+        label: "Ruby production platform serving millions",
+        confidence: "high",
+        signals: [
+          "Owned the React migration",
+          "Increased revenue by 200%",
+          "Operated at global scale",
+        ],
+        evidence_refs: ["missing-profile-evidence"],
+      },
+    });
+    const bullets = buildResumeBullets(input, evidenceFor(input));
+
+    for (const bullet of bullets) {
+      expect(bullet.text).not.toMatch(
+        /Ruby|React migration|revenue|global scale|millions/
+      );
+    }
+  });
+
+  it("keeps complete resume output byte-stable and inspectable", () => {
+    const input = inputWith();
+    const evidence = evidenceFor(input);
+    const bullets = buildResumeBullets(input, evidence);
+    const knownIds = new Set(evidence.refs.map((ref) => ref.id));
+
+    expect(bullets[0].text).toBe(
+      "Analyzed summary-fixture with RepoAtlas-style static signals, mapping 1 reading candidates, 1 risk-ranked files, 1 run commands, and 1 architecture nodes into an interview-ready technical brief."
+    );
+    expect(bullets[0].evidence_refs.every((id) => knownIds.has(id))).toBe(true);
+    expect(bullets[1]).toEqual({
+      audience: "linkedin",
+      text: bullets[0].text,
+      evidence_refs: bullets[0].evidence_refs,
+    });
   });
 });
