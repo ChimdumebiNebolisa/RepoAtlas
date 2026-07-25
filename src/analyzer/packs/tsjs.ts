@@ -216,7 +216,16 @@ export function runTsJsPack(
     maxNesting.set(f, complexitySignals.maxNesting);
     testProximity.set(f, computeTestProximityScore(f, testFiles));
 
-    const { refs } = extractModuleRefsFromSource(f, content, scriptKind);
+    const { refs, parseFailed } = extractModuleRefsFromSource(
+      f,
+      content,
+      scriptKind
+    );
+    if (parseFailed) {
+      warnings.push(
+        `Skipped module references in ${normalizeRelPath(f)} because the file has syntax errors.`
+      );
+    }
     const fromId = fileNodeId(f);
 
     for (const ref of refs) {

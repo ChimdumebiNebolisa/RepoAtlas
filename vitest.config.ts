@@ -230,6 +230,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/packs/tsjsExtract.ts": {
+          branches: 95,
+          lines: 90,
+        },
         "src/analyzer/{index,analysisTypes,analysisDeadline,languagePacks,partialReport,reportAssembly,reportPersistence}.ts":
           {
             branches: 80,
