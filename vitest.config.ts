@@ -192,6 +192,10 @@ export default defineConfig({
           branches: 90,
           lines: 90,
         },
+        "src/analyzer/packs/python/architecture.ts": {
+          branches: 95,
+          lines: 95,
+        },
         "src/analyzer/packs/java{,Architecture,Metrics,Modules,Semantic,Shared,Sources}.ts":
           {
             branches: 80,
