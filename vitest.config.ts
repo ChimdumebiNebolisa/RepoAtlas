@@ -235,6 +235,10 @@ export default defineConfig({
           branches: 90,
           lines: 85,
         },
+        "src/analyzer/boundaries.ts": {
+          branches: 95,
+          lines: 95,
+        },
         "src/analyzer/runIsolatedAnalysis.ts": {
           branches: 80,
           lines: 85,
