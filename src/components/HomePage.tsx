@@ -32,17 +32,31 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   useEffect(() => {
     if (!report) return;
 
+    let restoreFrame: number | null = null;
+    let documentElement: HTMLElement | null = null;
+    let previousScrollBehavior: string | null = null;
+
     const frame = requestAnimationFrame(() => {
-      const documentElement = document.documentElement;
-      const previousScrollBehavior = documentElement.style.scrollBehavior;
+      documentElement = document.documentElement;
+      previousScrollBehavior = documentElement.style.scrollBehavior;
 
       documentElement.style.scrollBehavior = "auto";
       reportSectionRef.current?.scrollIntoView({ block: "start" });
       reportHeadingRef.current?.focus({ preventScroll: true });
-      documentElement.style.scrollBehavior = previousScrollBehavior;
+      restoreFrame = requestAnimationFrame(() => {
+        if (documentElement && previousScrollBehavior !== null) {
+          documentElement.style.scrollBehavior = previousScrollBehavior;
+        }
+      });
     });
 
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (restoreFrame !== null) cancelAnimationFrame(restoreFrame);
+      if (documentElement && previousScrollBehavior !== null) {
+        documentElement.style.scrollBehavior = previousScrollBehavior;
+      }
+    };
   }, [report]);
 
   const openSampleReport = () => {

@@ -236,6 +236,8 @@ describe("HomePage completion coordination", () => {
 
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     expect(heading).toHaveFocus();
+    expect(document.documentElement.style.scrollBehavior).toBe("auto");
+    runNextFrame();
     expect(document.documentElement.style.scrollBehavior).toBe("smooth");
   });
 
@@ -253,6 +255,20 @@ describe("HomePage completion coordination", () => {
     expect(animationFrames).toHaveLength(1);
     unmount();
     expect(cancelAnimationFrame).toHaveBeenCalledWith(2);
+    expect(animationFrames).toHaveLength(0);
+  });
+
+  it("restores smooth scrolling if a completed brief is cleared before the restore frame", () => {
+    document.documentElement.style.scrollBehavior = "smooth";
+    render(<HomePage sampleReport={buildSampleReport()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
+    runNextFrame();
+    expect(document.documentElement.style.scrollBehavior).toBe("auto");
+
+    fireEvent.click(screen.getByRole("button", { name: "Start analysis" }));
+
+    expect(document.documentElement.style.scrollBehavior).toBe("smooth");
     expect(animationFrames).toHaveLength(0);
   });
 });
