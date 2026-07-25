@@ -113,6 +113,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/lib/exportNames.ts": {
+          branches: 80,
+          lines: 85,
+        },
         "src/components/useReportActions.ts": {
           statements: 80,
           branches: 80,

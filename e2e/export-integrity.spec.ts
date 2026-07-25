@@ -6,6 +6,7 @@ import { PNG } from "pngjs";
 import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { Report } from "../src/types/report";
 import { buildSampleReport } from "../src/lib/buildSampleReport";
+import { buildExportFilename } from "../src/lib/exportNames";
 import { MAX_PNG_CANVAS_DIMENSION } from "../src/components/ReportTabs";
 import { expectCompletedReportInViewport } from "./helpers";
 
@@ -32,7 +33,11 @@ async function readDownload(download: Download): Promise<Buffer> {
   return buffer;
 }
 
-async function openControlledInlineReport(page: Page, controlledReport?: Report) {
+async function openControlledInlineReport(
+  page: Page,
+  controlledReport?: Report
+): Promise<Report> {
+  let report = controlledReport;
   if (controlledReport) {
     await page.route("**/api/analyze", async (route) => {
       await route.fulfill({
@@ -45,7 +50,7 @@ async function openControlledInlineReport(page: Page, controlledReport?: Report)
         }),
       });
     });
-  } else if (!process.env.PLAYWRIGHT_EXTERNAL_URL) {
+  } else {
     const analyze = await page.request.post("/api/analyze", { data: { sample: true } });
     expect(analyze.ok()).toBeTruthy();
     const body = (await analyze.json()) as {
@@ -53,7 +58,7 @@ async function openControlledInlineReport(page: Page, controlledReport?: Report)
       report?: Report;
       persisted?: boolean;
     };
-    const report = body.report
+    report = body.report
       ? body.report
       : ((await (await page.request.get(`/api/reports/${body.reportId}`)).json()) as Report);
 
@@ -78,6 +83,7 @@ async function openControlledInlineReport(page: Page, controlledReport?: Report)
       /Markdown and saved server links require saved report storage, which is currently unavailable/i
     )
   ).toBeVisible();
+  return report!;
 }
 
 function nonWhitePixelRatio(png: PNG): number {
@@ -100,10 +106,16 @@ function nonWhitePixelRatio(png: PNG): number {
 
 test("inline Candidate Brief exports valid, readable PDF and PNG files", async ({ page }) => {
   test.setTimeout(240_000);
-  await openControlledInlineReport(page);
+  const report = await openControlledInlineReport(page);
 
   const pdfDownload = await downloadFromButton(page, "Export PDF");
-  expect(pdfDownload.suggestedFilename()).toMatch(/\.pdf$/);
+  expect(pdfDownload.suggestedFilename()).toBe(
+    buildExportFilename({
+      repoName: report.repo_metadata.name,
+      analyzedAt: report.repo_metadata.analyzed_at,
+      ext: "pdf",
+    })
+  );
   const pdfBuffer = await readDownload(pdfDownload);
   expect(pdfBuffer.subarray(0, PDF_SIGNATURE.length)).toEqual(PDF_SIGNATURE);
   expect(pdfBuffer.byteLength).toBeGreaterThan(10_000);
@@ -130,7 +142,13 @@ test("inline Candidate Brief exports valid, readable PDF and PNG files", async (
   await pdf.destroy();
 
   const pngDownload = await downloadFromButton(page, "Export PNG");
-  expect(pngDownload.suggestedFilename()).toMatch(/\.png$/);
+  expect(pngDownload.suggestedFilename()).toBe(
+    buildExportFilename({
+      repoName: report.repo_metadata.name,
+      analyzedAt: report.repo_metadata.analyzed_at,
+      ext: "png",
+    })
+  );
   const pngBuffer = await readDownload(pngDownload);
   expect(pngBuffer.subarray(0, PNG_SIGNATURE.length)).toEqual(PNG_SIGNATURE);
   expect(pngBuffer.byteLength).toBeGreaterThan(10_000);
