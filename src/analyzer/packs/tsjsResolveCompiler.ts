@@ -29,10 +29,35 @@ function defaultCompilerOptions(workspacePath: string): ts.CompilerOptions {
   };
 }
 
+function containedExistingFile(
+  workspacePath: string,
+  candidatePath: string
+): string | null {
+  const lexicalRel = absToWorkspaceRel(workspacePath, candidatePath);
+  if (lexicalRel === null) return null;
+  try {
+    const realWorkspace = fs.realpathSync(workspacePath);
+    const realCandidate = fs.realpathSync(candidatePath);
+    return absToWorkspaceRel(realWorkspace, realCandidate) === null
+      ? null
+      : lexicalRel;
+  } catch {
+    return null;
+  }
+}
+
+function findRootConfig(workspacePath: string): string | null {
+  for (const fileName of ["tsconfig.json", "jsconfig.json"]) {
+    const candidate = path.join(workspacePath, fileName);
+    if (containedExistingFile(workspacePath, candidate) !== null) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 function loadCompilerOptions(workspacePath: string): CompilerResolution {
-  const configName =
-    ts.findConfigFile(workspacePath, ts.sys.fileExists, "tsconfig.json") ??
-    ts.findConfigFile(workspacePath, ts.sys.fileExists, "jsconfig.json");
+  const configName = findRootConfig(workspacePath);
   if (!configName) return { options: defaultCompilerOptions(workspacePath), warnings: [] };
 
   const configFile = ts.readConfigFile(configName, ts.sys.readFile);
@@ -119,10 +144,10 @@ export function createCompilerResolver({
         return { status: "unresolved", reason: "module_not_found" };
       }
 
-      const rel = absToWorkspaceRel(workspacePath, resolvedName);
+      const rel = containedExistingFile(workspacePath, resolvedName);
       if (!rel) {
         const packageName = packageNameFromSpecifier(specifier);
-        return packageName
+        return packageName && resolved.resolvedModule?.isExternalLibraryImport
           ? { status: "resolved_external", packageName }
           : { status: "unresolved", reason: "outside_workspace" };
       }
