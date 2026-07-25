@@ -143,6 +143,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/components/EvidenceLinks.tsx": {
+          branches: 80,
+          lines: 85,
+        },
         "src/components/ElkArchitectureGraph.tsx": {
           branches: 80,
           lines: 85,
