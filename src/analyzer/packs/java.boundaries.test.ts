@@ -221,6 +221,70 @@ describe("Java source classification boundaries", () => {
 });
 
 describe("Java architecture caps", () => {
+  it("returns stable package evidence for sparse and duplicate inputs", () => {
+    const files = [
+      "Main.java",
+      "src/main/java/app/Service.java",
+      "src/main/java/app/Service.java",
+      "src/main/java/worker/Job.java",
+    ];
+
+    const result = buildJavaArchitecture(files, new Map());
+
+    expect(result.architecture).toEqual({
+      nodes: [
+        { id: ".", label: ".", type: "folder" },
+        { id: "app", label: "app", type: "folder" },
+        { id: "worker", label: "worker", type: "folder" },
+      ],
+      edges: [],
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("rejects unresolved and unindexed import endpoints", () => {
+    const app = "src/main/java/app/App.java";
+    const service = "src/main/java/service/Service.java";
+    const imports = new Map<string, Set<string>>([
+      ["../outside/src/main/java/app/Forged.java", new Set([service])],
+      [app, new Set(["../outside/src/main/java/service/Forged.java"])],
+    ]);
+
+    const result = buildJavaArchitecture([app, service], imports);
+
+    expect(result.architecture.nodes.map((node) => node.id)).toEqual([
+      "app",
+      "service",
+    ]);
+    expect(result.architecture.edges).toEqual([]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("orders tied packages and edges deterministically", () => {
+    const files = [
+      "src/main/java/alpha/A.java",
+      "src/main/java/beta/B.java",
+      "src/main/java/gamma/C.java",
+    ];
+    const imports = new Map<string, Set<string>>([
+      [files[2], new Set([files[1], files[0]])],
+      [files[1], new Set([files[0]])],
+    ]);
+
+    const result = buildJavaArchitecture(files, imports);
+
+    expect(result.architecture.nodes.map((node) => node.id)).toEqual([
+      "alpha",
+      "beta",
+      "gamma",
+    ]);
+    expect(result.architecture.edges).toEqual([
+      { from: "beta", to: "alpha", type: "import" },
+      { from: "gamma", to: "alpha", type: "import" },
+      { from: "gamma", to: "beta", type: "import" },
+    ]);
+  });
+
   it("caps package nodes and edges deterministically", () => {
     const files = Array.from(
       { length: 51 },
