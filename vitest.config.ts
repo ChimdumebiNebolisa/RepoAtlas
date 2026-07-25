@@ -53,6 +53,10 @@ export default defineConfig({
           functions: 100,
           lines: 100,
         },
+        "src/lib/homepageSamplePreview.ts": {
+          branches: 90,
+          lines: 90,
+        },
         "src/components/TrackedAnalysisLink.tsx": {
           functions: 100,
           lines: 100,

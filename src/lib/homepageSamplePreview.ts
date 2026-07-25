@@ -33,25 +33,57 @@ function resolveEvidence(
   return null;
 }
 
+function hasText(value: string | undefined): value is string {
+  return Boolean(value?.trim());
+}
+
 export function buildHomepageSamplePreview(report: Report): HomepageSamplePreview | null {
   const brief = report.candidate_brief;
   const walkthrough = brief?.walkthrough_script;
-  const readingStep = brief?.reading_path[0];
 
-  if (!brief || !walkthrough || !readingStep) return null;
+  if (
+    !brief ||
+    !walkthrough ||
+    !hasText(walkthrough.thirty_second) ||
+    !brief.repo_summary ||
+    !hasText(brief.repo_summary.plain_english)
+  ) {
+    return null;
+  }
 
-  const evidenceById = new Map(brief.evidence_refs.map((evidence) => [evidence.id, evidence]));
+  const evidenceById = new Map(
+    (brief.evidence_refs ?? []).map((evidence) => [evidence.id, evidence])
+  );
+  const readingStep = brief.reading_path?.find(
+    (step) =>
+      hasText(step.path) &&
+      hasText(step.why) &&
+      resolveEvidence(evidenceById, step.evidence_refs) !== null
+  );
+
+  if (!readingStep) return null;
+
   const architectureEvidence =
-    walkthrough.evidence_refs
+    (walkthrough.evidence_refs ?? [])
       .map((evidenceRef) => evidenceById.get(evidenceRef))
-      .find((evidence) => evidence?.kind === "architecture") ??
-    brief.evidence_refs.find((evidence) => evidence.kind === "architecture") ??
+      .find((evidence) => evidence?.kind === "architecture" && hasText(evidence.detail)) ??
+    (brief.evidence_refs ?? []).find(
+      (evidence) => evidence.kind === "architecture" && hasText(evidence.detail)
+    ) ??
     null;
+  const interviewQuestions = brief.interview_questions ?? [];
   const evidenceBackedQuestion =
-    brief.interview_questions?.find(
+    interviewQuestions.find(
       (question) =>
-        !question.generic && question.evidence_refs.some((evidenceRef) => evidenceById.has(evidenceRef))
-    ) ?? brief.interview_questions?.[0];
+        !question.generic &&
+        hasText(question.question) &&
+        hasText(question.rationale) &&
+        resolveEvidence(evidenceById, question.evidence_refs) !== null
+    ) ??
+    interviewQuestions.find(
+      (question) =>
+        question.generic && hasText(question.question) && hasText(question.rationale)
+    );
 
   if (!evidenceBackedQuestion) return null;
 
@@ -74,7 +106,9 @@ export function buildHomepageSamplePreview(report: Report): HomepageSamplePrevie
     interviewerQuestion: {
       question: evidenceBackedQuestion.question,
       rationale: evidenceBackedQuestion.rationale,
-      evidence: resolveEvidence(evidenceById, evidenceBackedQuestion.evidence_refs),
+      evidence: evidenceBackedQuestion.generic
+        ? null
+        : resolveEvidence(evidenceById, evidenceBackedQuestion.evidence_refs),
     },
   };
 }
