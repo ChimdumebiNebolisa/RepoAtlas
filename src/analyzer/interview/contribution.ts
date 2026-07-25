@@ -3,13 +3,65 @@ import { canonicalizeKeyDocs } from "../docs";
 import {
   confidenceFor,
   firstAvailableRef,
-  refValues,
 } from "./evidence";
 import type {
   BuildCandidateBriefInput,
   EvidenceIndex,
   PrIdea,
 } from "./types";
+
+function validEvidenceIds(evidence: EvidenceIndex): Set<string> {
+  return new Set(evidence.refs.map((ref) => ref.id));
+}
+
+function validMapEntries(
+  map: Map<string, string>,
+  evidence: EvidenceIndex
+): Array<[string, string]> {
+  const validIds = validEvidenceIds(evidence);
+  return Array.from(map.entries()).filter(([, id]) => validIds.has(id));
+}
+
+function evidenceBackedPaths(
+  paths: string[],
+  map: Map<string, string>,
+  evidence: EvidenceIndex
+): string[] {
+  const validEntries = new Map(validMapEntries(map, evidence));
+  return Array.from(new Set(paths)).filter((path) => validEntries.has(path));
+}
+
+function evidenceBackedCommands(
+  input: BuildCandidateBriefInput,
+  evidence: EvidenceIndex
+): BuildCandidateBriefInput["runCommands"] {
+  const validEntries = new Map(validMapEntries(evidence.commandRefs, evidence));
+  const seenCommands = new Set<string>();
+  return input.runCommands.filter((command) => {
+    const key = `${command.source}:${command.command}`;
+    if (!validEntries.has(key) || seenCommands.has(command.command)) return false;
+    seenCommands.add(command.command);
+    return true;
+  });
+}
+
+function evidenceRefsForKeys(
+  keys: string[],
+  map: Map<string, string>,
+  evidence: EvidenceIndex,
+  limit?: number
+): string[] {
+  const validEntries = new Map(validMapEntries(map, evidence));
+  const refs = keys
+    .map((key) => validEntries.get(key))
+    .filter((ref): ref is string => Boolean(ref));
+  return typeof limit === "number" ? refs.slice(0, limit) : refs;
+}
+
+function validWarningRefs(evidence: EvidenceIndex): string[] {
+  const validIds = validEvidenceIds(evidence);
+  return evidence.warningRefs.filter((id) => validIds.has(id));
+}
 
 function pushUniqueIdea(ideas: PrIdea[], idea: PrIdea): void {
   if (!ideas.some((existing) => existing.title === idea.title)) {
@@ -34,16 +86,33 @@ export function buildFirstPrPlan(
     input.contributeSignals.key_docs,
     input.documentInventory
   );
-  const docs = canonicalDocs.slice(0, 2);
+  const availableDocs = evidenceBackedPaths(
+    canonicalDocs,
+    evidence.docRefs,
+    evidence
+  );
+  const docs = availableDocs.slice(0, 2);
+  const commands = evidenceBackedCommands(input, evidence);
+  const commandKeys = commands.map(
+    (command) => `${command.source}:${command.command}`
+  );
+  const ciConfigs = evidenceBackedPaths(
+    input.contributeSignals.ci_configs,
+    evidence.ciRefs,
+    evidence
+  );
+  const warnings = validWarningRefs(evidence);
 
-  if (input.runCommands.length === 0) {
+  if (commands.length === 0) {
     pushUniqueIdea(ideas, {
       title: "Document the local run workflow",
       rationale:
-        "No run commands were detected, so a small contributor-facing improvement is to document how to install, run, or test the project after confirming the workflow locally.",
+        input.runCommands.length === 0
+          ? "No run commands were detected, so a small contributor-facing improvement is to document how to install, run, or test the project after confirming the workflow locally."
+          : "Run-command metadata was present without inspectable evidence, so confirm the workflow locally before documenting how to install, run, or test the project.",
       suggested_files: docs,
       evidence_refs: [
-        ...refValues(evidence.docRefs, 2),
+        ...evidenceRefsForKeys(docs, evidence.docRefs, evidence, 2),
         evidence.architectureRef,
       ],
       risk: "low",
@@ -55,14 +124,19 @@ export function buildFirstPrPlan(
         "The report found run commands; a realistic first PR is to confirm they work and improve nearby setup notes if the current docs are thin.",
       suggested_files: docs,
       evidence_refs: [
-        ...refValues(evidence.commandRefs, 3),
-        ...refValues(evidence.docRefs, 2),
+        ...evidenceRefsForKeys(
+          commandKeys,
+          evidence.commandRefs,
+          evidence,
+          3
+        ),
+        ...evidenceRefsForKeys(docs, evidence.docRefs, evidence, 2),
       ],
       risk: "low",
     });
   }
 
-  const hasContributionGuide = input.contributeSignals.key_docs.some((doc) =>
+  const hasContributionGuide = availableDocs.some((doc) =>
     /(^|\/)CONTRIBUTING(\.[^.]+)?$/i.test(doc)
   );
   if (!hasContributionGuide) {
@@ -72,8 +146,13 @@ export function buildFirstPrPlan(
         "No CONTRIBUTING guide was detected. A focused first PR can clarify setup, test commands, and how contributors should validate changes.",
       suggested_files: docs,
       evidence_refs: [
-        ...refValues(evidence.docRefs, 2),
-        ...refValues(evidence.commandRefs, 2),
+        ...evidenceRefsForKeys(docs, evidence.docRefs, evidence, 2),
+        ...evidenceRefsForKeys(
+          commandKeys,
+          evidence.commandRefs,
+          evidence,
+          2
+        ),
       ],
       risk: "low",
     });
@@ -99,14 +178,16 @@ export function buildFirstPrPlan(
     });
   }
 
-  if (input.contributeSignals.ci_configs.length === 0) {
+  if (ciConfigs.length === 0) {
     pushUniqueIdea(ideas, {
       title: "Document or add validation checks",
       rationale:
-        "No CI config was detected, so a first contribution could document the expected validation command or add a minimal automated check if that matches maintainer expectations.",
+        input.contributeSignals.ci_configs.length === 0
+          ? "No CI config was detected, so a first contribution could document the expected validation command or add a minimal automated check if that matches maintainer expectations."
+          : "CI metadata was present without inspectable config evidence, so confirm the validation workflow before documenting it or proposing an automated check.",
       suggested_files: docs,
       evidence_refs: [
-        ...refValues(evidence.docRefs, 2),
+        ...evidenceRefsForKeys(docs, evidence.docRefs, evidence, 2),
         evidence.architectureRef,
       ],
       risk: "medium",
@@ -118,36 +199,41 @@ export function buildFirstPrPlan(
         "CI config is present, so contributor docs can point candidates to the same validation path used by automation.",
       suggested_files: [
         ...docs,
-        ...input.contributeSignals.ci_configs.slice(0, 1),
+        ...ciConfigs.slice(0, 1),
       ],
       evidence_refs: [
-        ...refValues(evidence.docRefs, 2),
-        ...refValues(evidence.ciRefs, 2),
+        ...evidenceRefsForKeys(docs, evidence.docRefs, evidence, 2),
+        ...evidenceRefsForKeys(ciConfigs, evidence.ciRefs, evidence, 2),
       ],
       risk: "low",
     });
   }
 
-  if (input.warnings.length > 0) {
+  if (warnings.length > 0) {
     pushUniqueIdea(ideas, {
       title: "Clarify analysis gaps in project docs",
       rationale:
         "The analyzer emitted warnings, so a useful first PR is to clarify repository structure, language support, or validation expectations where the static analysis had limited coverage.",
       suggested_files: docs,
       evidence_refs: [
-        ...evidence.warningRefs,
-        ...refValues(evidence.docRefs, 2),
+        ...warnings,
+        ...evidenceRefsForKeys(docs, evidence.docRefs, evidence, 2),
       ].slice(0, 4),
       risk: "low",
     });
   }
 
+  const validIds = validEvidenceIds(evidence);
   return ideas.slice(0, 3).map((idea) => ({
     ...idea,
-    evidence_refs:
-      idea.evidence_refs.length > 0
-        ? idea.evidence_refs
-        : [firstAvailableRef(evidence)],
+    evidence_refs: (() => {
+      const directRefs = idea.evidence_refs.filter((id) => validIds.has(id));
+      if (directRefs.length > 0) return directRefs;
+      const fallback = firstAvailableRef(evidence);
+      return validIds.has(fallback)
+        ? [fallback]
+        : evidence.refs.slice(0, 1).map((ref) => ref.id);
+    })(),
   }));
 }
 
@@ -170,8 +256,29 @@ export function buildFirstWeekAnswer(
   evidence: EvidenceIndex,
   firstPrPlan: CandidateBrief["first_pr_plan"]
 ): BriefAnswer {
-  const firstRead = input.startHere[0]?.path;
-  const firstPr = firstPrPlan[0];
+  const startHereRefs = new Map(
+    validMapEntries(evidence.startHereRefs, evidence)
+  );
+  const firstRead = input.startHere.find((item) =>
+    startHereRefs.has(item.path)
+  )?.path;
+  const commands = evidenceBackedCommands(input, evidence);
+  const commandKeys = commands.map(
+    (command) => `${command.source}:${command.command}`
+  );
+  const dangerZoneRefs = new Map(
+    validMapEntries(evidence.dangerZoneRefs, evidence)
+  );
+  const topRisk = input.dangerZones.find((item) =>
+    dangerZoneRefs.has(item.path)
+  );
+  const warnings = validWarningRefs(evidence);
+  const validIds = validEvidenceIds(evidence);
+  const firstPr = firstPrPlan.find(
+    (idea) =>
+      idea.evidence_refs.length > 0 &&
+      idea.evidence_refs.every((id) => validIds.has(id))
+  );
   return {
     answer:
       "In the first week, use the reading path to build context, validate the run workflow, inspect the highest-risk files, and propose one small documentation, test, or validation PR.",
@@ -179,25 +286,44 @@ export function buildFirstWeekAnswer(
       firstRead
         ? `Day 1: read \`${firstRead}\` and the next ranked files.`
         : "Day 1: inspect the folder map and any available docs.",
-      input.runCommands.length > 0
-        ? `Validate the detected command path: ${input.runCommands
+      commands.length > 0
+        ? `Validate the detected command path: ${commands
             .slice(0, 2)
             .map((command) => `\`${command.command}\``)
             .join(", ")}.`
-        : "Identify and document the expected local run or test command.",
-      input.dangerZones[0]
-        ? `Review the top risk-ranked file: \`${input.dangerZones[0].path}\`.`
-        : "Use warnings to understand where deep analysis was unavailable.",
+        : input.runCommands.length > 0
+          ? "Confirm the local run or test workflow before documenting it."
+          : "Identify and document the expected local run or test command.",
+      topRisk
+        ? `Review the top risk-ranked file: \`${topRisk.path}\`.`
+        : warnings.length > 0
+          ? "Use warnings to understand where deep analysis was unavailable."
+          : "Use the folder map and confidence notes to choose a well-supported area.",
       firstPr
         ? `Open with a scoped PR idea: ${firstPr.title}.`
         : "Keep the first PR small and evidence-backed.",
     ],
     evidence_refs: [
-      ...refValues(evidence.startHereRefs, 2),
-      ...refValues(evidence.commandRefs, 2),
-      ...refValues(evidence.dangerZoneRefs, 1),
-      ...firstPrPlan.slice(0, 1).flatMap((idea) => idea.evidence_refs),
-      ...evidence.warningRefs.slice(0, 1),
+      ...evidenceRefsForKeys(
+        input.startHere.map((item) => item.path),
+        evidence.startHereRefs,
+        evidence,
+        2
+      ),
+      ...evidenceRefsForKeys(
+        commandKeys,
+        evidence.commandRefs,
+        evidence,
+        2
+      ),
+      ...evidenceRefsForKeys(
+        topRisk ? [topRisk.path] : [],
+        evidence.dangerZoneRefs,
+        evidence,
+        1
+      ),
+      ...(firstPr?.evidence_refs ?? []),
+      ...warnings.slice(0, 1),
     ],
     confidence: confidenceFor(input),
   };

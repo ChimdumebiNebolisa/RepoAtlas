@@ -243,6 +243,24 @@ describe("first-contribution guidance boundary", () => {
     expect(plan[2].evidence_refs).toContain(evidence.warningRefs[0]);
   });
 
+  it("recognizes an evidenced contribution guide beyond the suggested-file cap", () => {
+    const input = inputWith({
+      dangerZones: [],
+      contributeSignals: {
+        key_docs: ["README.md", "docs/setup.md", "CONTRIBUTING.md"],
+        ci_configs: [".github/workflows/ci.yml"],
+      },
+    });
+    const evidence = evidenceFor(input);
+    const plan = buildFirstPrPlan(input, evidence);
+
+    expect(plan.map((idea) => idea.title)).toEqual([
+      "Verify and document the detected run commands",
+      "Align contributor docs with CI validation",
+    ]);
+    expect(plan[0].suggested_files).toEqual(["README.md", "docs/setup.md"]);
+  });
+
   it("does not name a risk-ranked file when its direct evidence is missing", () => {
     const input = inputWith();
     const evidence = evidenceFor(input);
@@ -257,6 +275,113 @@ describe("first-contribution guidance boundary", () => {
     expect(
       plan.flatMap((idea) => idea.suggested_files)
     ).not.toContain("src/risky.ts");
+  });
+
+  it("does not name docs, commands, CI, warnings, or ranked files after their evidence disappears", () => {
+    const input = inputWith({
+      contributeSignals: {
+        key_docs: ["README.md", "CONTRIBUTING.md"],
+        ci_configs: [".github/workflows/ci.yml"],
+      },
+      warnings: ["Deep analysis was unavailable."],
+    });
+    const evidence = evidenceFor(input);
+    evidence.startHereRefs.clear();
+    evidence.dangerZoneRefs.clear();
+    evidence.commandRefs.clear();
+    evidence.docRefs.clear();
+    evidence.ciRefs.clear();
+    evidence.warningRefs = [];
+
+    const plan = buildFirstPrPlan(input, evidence);
+    const firstWeek = buildFirstWeekAnswer(input, evidence, plan);
+
+    expect(plan.map((idea) => idea.title)).toEqual([
+      "Document the local run workflow",
+      "Add or expand contributor guidance",
+      "Document or add validation checks",
+    ]);
+    expect(plan.every((idea) => idea.suggested_files.length === 0)).toBe(true);
+    expect(plan.flatMap((idea) => idea.evidence_refs)).toEqual([
+      evidence.architectureRef,
+      evidence.architectureRef,
+      evidence.architectureRef,
+    ]);
+    expect(firstWeek.bullets).toEqual([
+      "Day 1: inspect the folder map and any available docs.",
+      "Confirm the local run or test workflow before documenting it.",
+      "Use the folder map and confidence notes to choose a well-supported area.",
+      "Open with a scoped PR idea: Document the local run workflow.",
+    ]);
+    expect(firstWeek.evidence_refs).toEqual([evidence.architectureRef]);
+    expect(JSON.stringify({ plan, firstWeek })).not.toMatch(
+      /README\.md|CONTRIBUTING\.md|npm test|ci\.yml|risky\.ts/i
+    );
+  });
+
+  it("deduplicates conflicting command and CI evidence deterministically", () => {
+    const input = inputWith({
+      dangerZones: [],
+      runCommands: [
+        ...baseInput.runCommands,
+        ...baseInput.runCommands,
+        {
+          source: "Makefile",
+          command: "npm test",
+          description: "same visible command",
+        },
+      ],
+      contributeSignals: {
+        key_docs: ["README.md", "README.md", "CONTRIBUTING.md"],
+        ci_configs: [
+          ".github/workflows/ci.yml",
+          ".github/workflows/ci.yml",
+        ],
+      },
+    });
+    const evidence = evidenceFor(input);
+    const plan = buildFirstPrPlan(input, evidence);
+    const firstWeek = buildFirstWeekAnswer(input, evidence, plan);
+
+    expect(plan[0].suggested_files).toEqual([
+      "README.md",
+      "CONTRIBUTING.md",
+    ]);
+    expect(plan[1].suggested_files).toEqual([
+      "README.md",
+      "CONTRIBUTING.md",
+      ".github/workflows/ci.yml",
+    ]);
+    expect(firstWeek.bullets[1]).toBe(
+      "Validate the detected command path: `npm test`."
+    );
+  });
+
+  it("rejects map entries whose evidence IDs are absent from the index", () => {
+    const input = inputWith();
+    const evidence = evidenceFor(input);
+    evidence.commandRefs.set(
+      "package.json:npm test",
+      "missing-command-evidence"
+    );
+    evidence.ciRefs.set(".github/workflows/ci.yml", "missing-ci-evidence");
+
+    const plan = buildFirstPrPlan(input, evidence);
+    const firstWeek = buildFirstWeekAnswer(input, evidence, plan);
+
+    expect(plan.map((idea) => idea.title)).toEqual([
+      "Document the local run workflow",
+      "Add or expand contributor guidance",
+      "Add tests near src/risky.ts",
+    ]);
+    expect(plan.flatMap((idea) => idea.suggested_files)).not.toContain(
+      ".github/workflows/ci.yml"
+    );
+    expect(firstWeek.bullets[1]).toBe(
+      "Confirm the local run or test workflow before documenting it."
+    );
+    expect(firstWeek.evidence_refs).not.toContain("missing-command-evidence");
+    expect(firstWeek.evidence_refs).not.toContain("missing-ci-evidence");
   });
 
   it("deduplicates answer evidence and lowers confidence for sparse plans", () => {
