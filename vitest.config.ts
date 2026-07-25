@@ -275,6 +275,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/interview/contribution.ts": {
+          branches: 90,
+          lines: 90,
+        },
         "src/analyzer/commands/index.ts": {
           branches: 80,
           lines: 85,
