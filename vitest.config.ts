@@ -243,6 +243,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/symbols.ts": {
+          branches: 90,
+          lines: 90,
+        },
         "src/analyzer/ignoreRules.ts": {
           branches: 80,
           lines: 85,
