@@ -279,6 +279,10 @@ export default defineConfig({
           branches: 95,
           lines: 95,
         },
+        "src/analyzer/purpose.ts": {
+          branches: 90,
+          lines: 90,
+        },
         "src/analyzer/ignoreRules.ts": {
           branches: 80,
           lines: 85,
