@@ -66,6 +66,44 @@ function stableGraphJson(result: ReturnType<typeof runTsJsPack>): string {
 }
 
 describe("TS/JS semantic graph fixture matrix", () => {
+  it.each([
+    [".ts", 'import { value } from "./target";\nfunction broken( {\n'],
+    [".tsx", 'import { value } from "./target";\nexport const Broken = () => <div>\n'],
+    [".js", 'import { value } from "./target";\nfunction broken( {\n'],
+    [".jsx", 'import { value } from "./target";\nexport const Broken = () => <div>\n'],
+    [".mjs", 'import { value } from "./target";\nfunction broken( {\n'],
+    [".cjs", 'const value = require("./target");\nfunction broken( {\n'],
+  ])(
+    "keeps malformed %s references out of the semantic graph",
+    (extension, source) => {
+      const brokenFile = relKey("src", `broken${extension}`);
+      const targetFile = relKey("src", `target${extension}`);
+      const workspace = writeWorkspace({
+        [brokenFile]: source,
+        [targetFile]: "export const value = 1;\n",
+      });
+
+      try {
+        const result = runTsJsPack(
+          workspace,
+          buildPipeline([brokenFile, targetFile])
+        );
+
+        expect(
+          result.semanticGraph?.edges.filter(
+            (edge) => edge.from === `file:${normalizeKey(brokenFile)}`
+          )
+        ).toHaveLength(0);
+        expect(result.imports.get(brokenFile)).toEqual(new Set());
+        expect(result.warnings).toContain(
+          `Skipped module references in ${normalizeKey(brokenFile)} because the file has syntax errors.`
+        );
+      } finally {
+        fs.rmSync(workspace, { recursive: true, force: true });
+      }
+    }
+  );
+
   it("ignores fake imports in comments and strings", () => {
     const workspace = writeWorkspace({
       "src/index.ts": [

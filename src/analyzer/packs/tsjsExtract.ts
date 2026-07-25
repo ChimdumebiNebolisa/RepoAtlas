@@ -17,6 +17,10 @@ export interface ExtractedModuleRef {
   reason?: string;
 }
 
+interface ParserSourceFile extends ts.SourceFile {
+  readonly parseDiagnostics: readonly ts.Diagnostic[];
+}
+
 function lineOf(sourceFile: ts.SourceFile, pos: number): number {
   return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
 }
@@ -89,10 +93,14 @@ export function extractModuleRefsFromSource(
     ts.ScriptTarget.Latest,
     true,
     scriptKind
-  );
+  ) as ParserSourceFile;
 
-  // createSourceFile always returns a tree; parse diagnostics are attached when
-  // using the language service. For malformed files we still walk what we can.
+  // TypeScript can recover a partial tree from malformed input. Recovered module
+  // references are not reliable enough for candidate-facing architecture evidence.
+  if (sourceFile.parseDiagnostics.length > 0) {
+    return { refs: [], parseFailed: true };
+  }
+
   const refs: ExtractedModuleRef[] = [];
 
   const visit = (node: ts.Node): void => {
@@ -177,6 +185,47 @@ export function scriptKindForPath(relPath: string): ts.ScriptKind {
   return ts.ScriptKind.TS;
 }
 
+function countSourceLines(
+  sourceFile: ts.SourceFile,
+  content: string,
+  scriptKind: ts.ScriptKind
+): number {
+  const scanner = ts.createScanner(
+    ts.ScriptTarget.Latest,
+    false,
+    scriptKind === ts.ScriptKind.TSX || scriptKind === ts.ScriptKind.JSX
+      ? ts.LanguageVariant.JSX
+      : ts.LanguageVariant.Standard,
+    content
+  );
+  const sourceLines = new Set<number>();
+
+  for (
+    let token = scanner.scan();
+    token !== ts.SyntaxKind.EndOfFileToken;
+    token = scanner.scan()
+  ) {
+    if (
+      token === ts.SyntaxKind.WhitespaceTrivia ||
+      token === ts.SyntaxKind.NewLineTrivia ||
+      token === ts.SyntaxKind.SingleLineCommentTrivia ||
+      token === ts.SyntaxKind.MultiLineCommentTrivia
+    ) {
+      continue;
+    }
+
+    const tokenStart = scanner.getTokenPos();
+    const tokenEnd = Math.max(tokenStart, scanner.getTextPos() - 1);
+    const startLine = sourceFile.getLineAndCharacterOfPosition(tokenStart).line;
+    const endLine = sourceFile.getLineAndCharacterOfPosition(tokenEnd).line;
+    for (let line = startLine; line <= endLine; line += 1) {
+      sourceLines.add(line);
+    }
+  }
+
+  return sourceLines.size;
+}
+
 /** Structural complexity from AST decision points + nesting depth + LOC. */
 export function computeAstComplexity(content: string, fileName: string, scriptKind: ts.ScriptKind): {
   loc: number;
@@ -193,17 +242,7 @@ export function computeAstComplexity(content: string, fileName: string, scriptKi
     scriptKind
   );
 
-  const loc = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(
-      (line) =>
-        line.length > 0 &&
-        !line.startsWith("//") &&
-        !line.startsWith("/*") &&
-        !line.startsWith("*") &&
-        !line.startsWith("*/")
-    ).length;
+  const loc = countSourceLines(sourceFile, content, scriptKind);
 
   let branchCount = 0;
   let maxNesting = 0;
