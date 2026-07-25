@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -89,6 +89,97 @@ describe("discoverDocuments", () => {
     expect(inv.duplicate_groups[0].canonical).toBe("README.md");
   });
 
+  it("rejects unsafe candidate paths and symlinks outside the repository", () => {
+    const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), "docs-outside-"));
+    const outsideReadme = path.join(outsideRoot, "README.md");
+    fs.writeFileSync(outsideReadme, "# Outside\n\nThis must not become repository evidence.\n");
+    write("README.md", "# Inside\n\nRepository documentation.\n");
+    fs.mkdirSync(path.join(root, "packages/link"), { recursive: true });
+    fs.symlinkSync(outsideReadme, path.join(root, "packages/link/README.md"));
+
+    const inv = discoverDocuments(root, [
+      path.relative(root, outsideReadme),
+      "/tmp/README.md",
+      "C:\\temp\\README.md",
+      "docs/../README.md",
+      "packages/link/README.md",
+      "README.md",
+    ]);
+
+    expect(inv.documents.map((document) => document.path)).toEqual(["README.md"]);
+    fs.rmSync(outsideRoot, { recursive: true, force: true });
+  });
+
+  it("skips unreadable, empty, and unsupported document candidates", () => {
+    write("README.md", "# Project\n\nUsable documentation.\n");
+    write("docs/empty.md", " \n\t\r\n");
+    write("README.exe", "not documentation");
+    write("CONTRIBUTING.json", "{}");
+    write("docs/image.png", "not documentation");
+    write("docs/unreadable.md", "# Hidden");
+    const readFileSync = fs.readFileSync.bind(fs);
+    vi.spyOn(fs, "readFileSync").mockImplementation((file, ...args) => {
+      if (String(file).endsWith("docs/unreadable.md")) {
+        throw new Error("simulated read failure");
+      }
+      return readFileSync(file, ...args);
+    });
+
+    const inv = discoverDocuments(root, [
+      "docs/unreadable.md",
+      "README.exe",
+      "docs/empty.md",
+      "CONTRIBUTING.json",
+      "docs/image.png",
+      "README.md",
+    ]);
+
+    expect(inv.documents.map((document) => document.path)).toEqual(["README.md"]);
+  });
+
+  it("rejects missing paths, directories, and non-directory parents", () => {
+    expect(discoverDocuments(root, ["README.md"]).documents).toEqual([]);
+
+    fs.mkdirSync(path.join(root, "docs/README.md"), { recursive: true });
+    expect(discoverDocuments(root, ["docs/README.md"]).documents).toEqual([]);
+    fs.rmSync(path.join(root, "docs"), { recursive: true, force: true });
+
+    fs.writeFileSync(path.join(root, "docs"), "not a directory");
+    expect(discoverDocuments(root, ["docs/README.md"]).documents).toEqual([]);
+  });
+
+  it("recognizes supported names, extensions, casing, categories, and scopes", () => {
+    write("rEaDmE.MDX", "# Read me");
+    write("CONTRIBUTING.rst", "Contributing");
+    write("docs/Architecture.AdOc", "Architecture");
+    write("docs/guide.TXT", "Guide");
+    write("CHANGELOG.md", "Changes");
+    write("COPYING", "License");
+
+    const inv = discoverDocuments(root, [
+      "docs/guide.TXT",
+      "COPYING",
+      "CHANGELOG.md",
+      "docs/Architecture.AdOc",
+      "CONTRIBUTING.rst",
+      "rEaDmE.MDX",
+    ]);
+
+    expect(inv.documents.map(({ path: documentPath, category, scope }) => ({
+      path: documentPath,
+      category,
+      scope,
+    }))).toEqual([
+      { path: "rEaDmE.MDX", category: "readme", scope: "root" },
+      { path: "CONTRIBUTING.rst", category: "contributing", scope: "root" },
+      { path: "docs/Architecture.AdOc", category: "architecture", scope: "docs" },
+      { path: "docs/guide.TXT", category: "docs", scope: "docs" },
+      { path: "CHANGELOG.md", category: "changelog", scope: "root" },
+      { path: "COPYING", category: "license", scope: "root" },
+    ]);
+    expect(inv.canonical_readme).toBe("rEaDmE.MDX");
+  });
+
   it("treats different nested package READMEs as legitimate (no duplicate group)", () => {
     write("README.md", "# Monorepo root\n\nTop level workspace.\n");
     write("packages/api/README.md", "# API package\n\nThe REST API service.\n");
@@ -121,6 +212,88 @@ describe("discoverDocuments", () => {
       expect(g.similarity).toBeGreaterThanOrEqual(0.85);
       expect(g.similarity).toBeLessThan(1);
     }
+  });
+
+  it("keeps documents below the similarity threshold separate", () => {
+    const shared = Array.from({ length: 11 }, (_, i) => `Shared line ${i}`);
+    write("docs/a.md", [...shared, "Only A"].join("\n"));
+    write("docs/b.md", [...shared, "Only B"].join("\n"));
+
+    const inv = discoverDocuments(root, ["docs/a.md", "docs/b.md"]);
+
+    expect(inv.similar_groups).toEqual([]);
+    expect(inv.documents.every((document) => document.canonical)).toBe(true);
+  });
+
+  it("uses category, scope, depth, and path as deterministic canonical tie-breakers", () => {
+    const body = "# Shared\n\nSame documentation.\n";
+    write("packages/b/README.md", body);
+    write("packages/a/README.md", body);
+    write("docs/README.md", body);
+    write("README.md", body);
+
+    const candidates = [
+      "packages/b/README.md",
+      "packages/a/README.md",
+      "docs/README.md",
+      "README.md",
+      "README.md",
+    ];
+    const forward = discoverDocuments(root, candidates);
+    const reverse = discoverDocuments(root, [...candidates].reverse());
+
+    expect(forward).toEqual(reverse);
+    expect(forward.duplicate_groups).toEqual([
+      {
+        canonical: "README.md",
+        duplicates: [
+          "docs/README.md",
+          "packages/a/README.md",
+          "packages/b/README.md",
+        ],
+        reason: "identical",
+      },
+    ]);
+  });
+
+  it("prefers shallower equivalent paths before lexicographic order", () => {
+    write("packages/z/README.md", "# Z\n\nDistinct package.\n");
+    write("packages/a/nested/README.md", "# A\n\nAnother package.\n");
+
+    const inv = discoverDocuments(root, [
+      "packages/a/nested/README.md",
+      "packages/z/README.md",
+    ]);
+
+    expect(inv.documents.map((document) => document.path)).toEqual([
+      "packages/z/README.md",
+      "packages/a/nested/README.md",
+    ]);
+  });
+
+  it("labels mixed exact and normalized copies as normalized-identical", () => {
+    write("README.md", "# Shared\n\nContent\n");
+    write("docs/a.md", "# Shared\n\nContent\n");
+    write("docs/b.md", "\uFEFF# Shared\r\n\r\nContent   \r\n");
+
+    const inv = discoverDocuments(root, ["docs/b.md", "docs/a.md", "README.md"]);
+
+    expect(inv.duplicate_groups).toEqual([
+      {
+        canonical: "README.md",
+        duplicates: ["docs/a.md", "docs/b.md"],
+        reason: "normalized-identical",
+      },
+    ]);
+  });
+
+  it("returns an empty inventory when no candidate document is usable", () => {
+    expect(discoverDocuments(root, [])).toEqual({
+      documents: [],
+      duplicate_groups: [],
+      similar_groups: [],
+      canonical_readme: undefined,
+    });
   });
 
   it("handles repositories without a README", () => {
@@ -175,5 +348,29 @@ describe("canonicalizeKeyDocs", () => {
   it("returns docs unchanged when no inventory is provided", () => {
     const { canonicalDocs } = canonicalizeKeyDocs(["a", "b"], undefined);
     expect(canonicalDocs).toEqual(["a", "b"]);
+  });
+
+  it("preserves the first occurrence of canonical and distinct documents", () => {
+    const body = "# Project\n\nMeaningful description.\n";
+    write("README.md", body);
+    write("packages/api/README.md", body);
+    write("CONTRIBUTING.md", "# Contributing\n\nDifferent guidance.\n");
+    const inv = discoverDocuments(root, [
+      "README.md",
+      "packages/api/README.md",
+      "CONTRIBUTING.md",
+    ]);
+
+    const { canonicalDocs } = canonicalizeKeyDocs(
+      [
+        "packages/api/README.md",
+        "README.md",
+        "CONTRIBUTING.md",
+        "CONTRIBUTING.md",
+      ],
+      inv
+    );
+
+    expect(canonicalDocs).toEqual(["README.md", "CONTRIBUTING.md"]);
   });
 });

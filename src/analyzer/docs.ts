@@ -47,23 +47,77 @@ const SIMILARITY_THRESHOLD = 0.85;
 
 function classify(relPath: string): { category: DocCategory; scope: DocScope } | null {
   const normalized = relPath.replace(/\\/g, "/");
-  const name = normalized.split("/").pop() ?? normalized;
+  const name = normalized.split("/").pop() as string;
   const upper = name.toUpperCase();
   const ext = path.extname(name).toLowerCase();
   const isRoot = !normalized.includes("/");
   const inDocsDir = /^docs\//i.test(normalized);
   const scope: DocScope = isRoot ? "root" : inDocsDir ? "docs" : "nested";
+  const hasSupportedExtension = ext === "" || DOC_EXTENSIONS.has(ext);
 
-  if (/^README(\.[^.]+)?$/i.test(name)) return { category: "readme", scope };
-  if (/^CONTRIBUTING(\.[^.]+)?$/i.test(name)) return { category: "contributing", scope };
-  if (/^CHANGELOG(\.[^.]+)?$/i.test(name)) return { category: "changelog", scope };
-  if (/^(LICENSE|LICENCE|COPYING)(\.[^.]+)?$/i.test(name)) return { category: "license", scope };
+  if (/^README(\.[^.]+)?$/i.test(name) && hasSupportedExtension) {
+    return { category: "readme", scope };
+  }
+  if (/^CONTRIBUTING(\.[^.]+)?$/i.test(name) && hasSupportedExtension) {
+    return { category: "contributing", scope };
+  }
+  if (/^CHANGELOG(\.[^.]+)?$/i.test(name) && hasSupportedExtension) {
+    return { category: "changelog", scope };
+  }
+  if (/^(LICENSE|LICENCE|COPYING)(\.[^.]+)?$/i.test(name) && hasSupportedExtension) {
+    return { category: "license", scope };
+  }
   if (/^(ARCHITECTURE|DESIGN|ADR)/i.test(upper) && DOC_EXTENSIONS.has(ext)) {
     return { category: "architecture", scope };
   }
   // Any documentation-extension file inside a docs/ directory.
   if (inDocsDir && DOC_EXTENSIONS.has(ext)) return { category: "docs", scope };
   return null;
+}
+
+function isInsideWorkspace(workspaceRoot: string, candidatePath: string): boolean {
+  const relative = path.relative(workspaceRoot, candidatePath);
+  return (
+    relative !== "" &&
+    relative !== ".." &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
+}
+
+function safeDocumentPath(
+  workspacePath: string,
+  candidatePath: string
+): { fullPath: string; relativePath: string } | null {
+  const normalized = candidatePath.replace(/\\/g, "/");
+  if (
+    path.posix.isAbsolute(normalized) ||
+    /^[a-zA-Z]:\//.test(normalized) ||
+    path.posix.normalize(normalized) !== normalized
+  ) {
+    return null;
+  }
+
+  try {
+    const workspaceRoot = fs.realpathSync(workspacePath);
+    const fullPath = path.resolve(workspaceRoot, normalized);
+    if (!isInsideWorkspace(workspaceRoot, fullPath)) return null;
+
+    const relative = path.relative(workspaceRoot, fullPath);
+    let current = workspaceRoot;
+    const segments = relative.split(path.sep);
+    for (const [index, segment] of segments.entries()) {
+      current = path.join(current, segment);
+      const stat = fs.lstatSync(current);
+      if (stat.isSymbolicLink()) return null;
+      const isFile = index === segments.length - 1;
+      if (isFile ? !stat.isFile() : !stat.isDirectory()) return null;
+    }
+
+    return { fullPath, relativePath: normalized };
+  } catch {
+    return null;
+  }
 }
 
 /** Normalize text for duplicate detection (BOM, CRLF/LF, trailing + surrounding whitespace). */
@@ -108,11 +162,9 @@ function normalizedLineSet(text: string): Set<string> {
 }
 
 function jaccard(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 && b.size === 0) return 1;
   let intersection = 0;
   for (const item of a) if (b.has(item)) intersection++;
-  const union = a.size + b.size - intersection;
-  return union === 0 ? 0 : intersection / union;
+  return intersection / (a.size + b.size - intersection);
 }
 
 /**
@@ -128,25 +180,30 @@ export function discoverDocuments(
 ): DocumentInventory {
   const items: DocumentInventoryItem[] = [];
   const rawByPath = new Map<string, string>();
+  const seenPaths = new Set<string>();
 
   for (const rel of candidatePaths) {
     const classified = classify(rel);
     if (!classified) continue;
-    const full = path.join(workspacePath, rel);
+    const safePath = safeDocumentPath(workspacePath, rel);
+    if (!safePath || seenPaths.has(safePath.relativePath)) continue;
     let raw: string;
     try {
-      raw = fs.readFileSync(full, "utf-8");
+      raw = fs.readFileSync(safePath.fullPath, "utf-8");
     } catch {
       continue;
     }
-    rawByPath.set(rel, raw);
+    const normalizedContent = normalizeDocContent(raw);
+    if (!normalizedContent) continue;
+    seenPaths.add(safePath.relativePath);
+    rawByPath.set(safePath.relativePath, raw);
     items.push({
-      path: rel,
+      path: safePath.relativePath,
       category: classified.category,
       scope: classified.scope,
       bytes: Buffer.byteLength(raw, "utf-8"),
       content_hash: sha256(raw),
-      normalized_hash: sha256(normalizeDocContent(raw)),
+      normalized_hash: sha256(normalizedContent),
       canonical: false,
     });
   }
@@ -191,20 +248,15 @@ export function discoverDocuments(
   // Flag similar-but-different canonical docs (never suppress them).
   const canonicalItems = items.filter((i) => i.canonical);
   const similarGroups: SimilarDocGroup[] = [];
-  const seenSimilar = new Set<string>();
   for (let i = 0; i < canonicalItems.length; i++) {
     for (let j = i + 1; j < canonicalItems.length; j++) {
       const a = canonicalItems[i];
       const b = canonicalItems[j];
       if (a.category !== b.category) continue;
-      const raw_a = rawByPath.get(a.path);
-      const raw_b = rawByPath.get(b.path);
-      if (raw_a == null || raw_b == null) continue;
+      const raw_a = rawByPath.get(a.path) as string;
+      const raw_b = rawByPath.get(b.path) as string;
       const score = jaccard(normalizedLineSet(raw_a), normalizedLineSet(raw_b));
       if (score >= SIMILARITY_THRESHOLD && score < 1) {
-        const key = [a.path, b.path].sort().join("|");
-        if (seenSimilar.has(key)) continue;
-        seenSimilar.add(key);
         similarGroups.push({
           paths: [a.path, b.path].sort((x, y) => x.localeCompare(y)),
           similarity: Math.round(score * 100) / 100,
