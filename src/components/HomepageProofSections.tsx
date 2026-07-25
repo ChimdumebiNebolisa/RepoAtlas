@@ -1,6 +1,10 @@
 import type { RefObject } from "react";
 import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
-import { homepageFaqItems, homepageTrustBoundaries } from "@/lib/homepageContent";
+import {
+  homepageFaqItems,
+  homepageInterviewGuides,
+  homepageTrustBoundaries,
+} from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
 import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import type { Report } from "@/types/report";
@@ -248,6 +252,25 @@ export function HomepageTrustAndFaq() {
           ))}
         </div>
       </div>
+      <nav
+        className="page-container homepage-guide-nav"
+        aria-labelledby="homepage-guide-nav-heading"
+      >
+        <div className="homepage-guide-intro">
+          <p className="section-kicker">Interview guides</p>
+          <h3 id="homepage-guide-nav-heading">Prepare for the walkthrough question.</h3>
+          <p>Choose the guide that matches the repository you need to explain.</p>
+        </div>
+        {homepageInterviewGuides.map(({ title, description, href }) => (
+          <a key={href} href={href} className="homepage-guide-link" aria-label={title}>
+            <span>
+              <strong>{title}</strong>
+              <small>{description}</small>
+            </span>
+            <Arrow />
+          </a>
+        ))}
+      </nav>
     </section>
   );
 }
