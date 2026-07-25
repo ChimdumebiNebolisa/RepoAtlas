@@ -87,3 +87,62 @@ test("repository walkthrough guide is included in the sitemap", async ({ request
   expect(response.ok()).toBe(true);
   await expect(response.text()).resolves.toContain("/repository-walkthrough-interview");
 });
+
+test("authored project guide separates candidate intent from repository evidence", async ({ page }) => {
+  await page.goto("/how-to-walk-through-a-project-in-an-interview");
+
+  await expect(page).toHaveTitle(/How to Walk Through a Project in an Interview/);
+  await expect(
+    page.getByRole("heading", { name: "How to walk through a project in an interview" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Pick a project with decisions you can defend." })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Separate your intent from file evidence." })
+  ).toBeVisible();
+  await expect(page.getByText("Only you can supply")).toBeVisible();
+  await expect(page.getByText("The repository can support")).toBeVisible();
+  await expect(page.getByText(/cannot know why you made a decision/)).toBeVisible();
+  await expect(page.getByText(/does not execute code or call AI/)).toBeVisible();
+  await expect(page.getByText(/TypeScript\/JavaScript, Python, and Java/)).toBeVisible();
+
+  const primaryAction = page.getByRole("link", { name: "Run the bundled sample" });
+  await expect(primaryAction).toHaveCount(1);
+  await expect(primaryAction).toHaveAttribute(
+    "href",
+    "/?source=interview_preparation#analyze"
+  );
+  await primaryAction.click();
+
+  await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
+  await expect(
+    page.getByRole("heading", { name: "Start with the sample or your repository." })
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+  await expect(page.getByTestId("completed-report-heading")).toBeVisible({ timeout: 90_000 });
+});
+
+test("authored project guide fits a narrow mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/how-to-walk-through-a-project-in-an-interview");
+
+  await expect(
+    page.getByRole("heading", { name: "How to walk through a project in an interview" })
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Run the bundled sample" })).toBeVisible();
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test("authored project guide is included in the sitemap", async ({ request }) => {
+  const response = await request.get("/sitemap.xml");
+
+  expect(response.ok()).toBe(true);
+  await expect(response.text()).resolves.toContain(
+    "/how-to-walk-through-a-project-in-an-interview"
+  );
+});
