@@ -79,6 +79,68 @@ describe("InputForm", () => {
     expect(within(form).queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("accepts a ZIP at the exact hosted limit", async () => {
+    const user = userEvent.setup();
+    const inlineReport = { report_version: 3 } as unknown as Report;
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          reportId: "11111111-1111-4111-8111-111111111111",
+          report: inlineReport,
+          persisted: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    const exactLimit = new File(["zip"], "exact-limit.zip", {
+      type: "application/zip",
+    });
+    Object.defineProperty(exactLimit, "size", { value: clientMaxZipBytes() });
+
+    const { form } = renderForm();
+    await user.click(within(form).getByRole("tab", { name: /upload zip/i }));
+    await user.upload(
+      within(form).getByLabelText(/choose repository zip file/i),
+      exactLimit
+    );
+
+    expect(within(form).queryByRole("alert")).not.toBeInTheDocument();
+    expect(within(form).getByText("exact-limit.zip")).toBeInTheDocument();
+
+    await user.click(within(form).getByRole("button", { name: /analyze uploaded zip/i }));
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const request = fetchMock.mock.calls[0]?.[1];
+    const body = request?.body as FormData;
+    expect((body.get("file") as File).size).toBe(clientMaxZipBytes());
+  });
+
+  it("rechecks the hosted limit at submit time before sending a request", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(global, "fetch");
+    const chosen = new File(["zip"], "changed-after-selection.zip", {
+      type: "application/zip",
+    });
+    Object.defineProperty(chosen, "size", {
+      configurable: true,
+      value: clientMaxZipBytes(),
+    });
+
+    const { form } = renderForm();
+    await user.click(within(form).getByRole("tab", { name: /upload zip/i }));
+    await user.upload(
+      within(form).getByLabelText(/choose repository zip file/i),
+      chosen
+    );
+    Object.defineProperty(chosen, "size", { value: clientMaxZipBytes() + 1 });
+    await user.click(within(form).getByRole("button", { name: /analyze uploaded zip/i }));
+
+    expect(within(form).getByRole("alert")).toHaveTextContent(
+      "Zip file must be 4MB or smaller."
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("shows GitHub first and validates the public URL", async () => {
     const user = userEvent.setup();
     const { form } = renderForm();
