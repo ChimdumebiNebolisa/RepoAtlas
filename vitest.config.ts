@@ -197,6 +197,10 @@ export default defineConfig({
             branches: 80,
             lines: 85,
           },
+        "src/analyzer/packs/javaArchitecture.ts": {
+          branches: 90,
+          lines: 90,
+        },
         "src/analyzer/packs/tsjsResolve{,Compiler,Packages,Shared,Workspaces}.ts":
           {
             branches: 80,

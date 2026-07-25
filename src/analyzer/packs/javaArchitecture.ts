@@ -18,16 +18,20 @@ export function buildJavaArchitecture(
   imports: Map<string, Set<string>>
 ): { architecture: Architecture; warnings: string[] } {
   const warnings: string[] = [];
+  const indexedFiles = new Set(files.map(normalizeJavaPath));
+  const uniqueFiles = [...indexedFiles];
   const packageFileCounts = new Map<string, number>();
-  for (const file of files) {
+  for (const file of uniqueFiles) {
     const packagePath = toPackagePath(file);
     packageFileCounts.set(packagePath, (packageFileCounts.get(packagePath) ?? 0) + 1);
   }
 
   const edgeWeights = new Map<string, number>();
   for (const [fromFile, toFiles] of imports) {
+    if (!indexedFiles.has(normalizeJavaPath(fromFile))) continue;
     const fromPackage = toPackagePath(fromFile);
     for (const toFile of toFiles) {
+      if (!indexedFiles.has(normalizeJavaPath(toFile))) continue;
       const key = `${fromPackage}=>${toPackagePath(toFile)}`;
       edgeWeights.set(key, (edgeWeights.get(key) ?? 0) + 1);
     }
@@ -44,10 +48,10 @@ export function buildJavaArchitecture(
   }
 
   const sortedPackages = [...packageFileCounts.keys()].sort((left, right) => {
-    const degreeDelta = (packageDegree.get(right) ?? 0) - (packageDegree.get(left) ?? 0);
+    const degreeDelta = packageDegree.get(right)! - packageDegree.get(left)!;
     if (degreeDelta !== 0) return degreeDelta;
     const countDelta =
-      (packageFileCounts.get(right) ?? 0) - (packageFileCounts.get(left) ?? 0);
+      packageFileCounts.get(right)! - packageFileCounts.get(left)!;
     return countDelta !== 0 ? countDelta : left.localeCompare(right);
   });
   const selectedPackages = sortedPackages.slice(0, ARCH_NODE_CAP);
@@ -56,9 +60,9 @@ export function buildJavaArchitecture(
       `Architecture nodes capped at ${ARCH_NODE_CAP} packages (from ${sortedPackages.length}).`
     );
   }
-  if (files.length > selectedPackages.length) {
+  if (uniqueFiles.length > selectedPackages.length) {
     warnings.push(
-      `Architecture reduced from file-level (${files.length} files) to package-level (${selectedPackages.length} packages).`
+      `Architecture reduced from file-level (${uniqueFiles.length} files) to package-level (${selectedPackages.length} packages).`
     );
   }
 
