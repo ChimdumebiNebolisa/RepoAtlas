@@ -184,6 +184,10 @@ export default defineConfig({
           branches: 85,
           lines: 90,
         },
+        "src/analyzer/packs/python/entrypoints.ts": {
+          branches: 90,
+          lines: 90,
+        },
         "src/analyzer/packs/java{,Architecture,Metrics,Modules,Semantic,Shared,Sources}.ts":
           {
             branches: 80,
