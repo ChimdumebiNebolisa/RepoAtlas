@@ -8,6 +8,7 @@ const TEST_PATTERNS = [
 ];
 const COMPLEXITY_RE =
   /\b(if|elif|else|for|while|try|except|finally|with|and|or|match|case)\b/g;
+const STRING_PREFIX_RE = /(?:^|[^\w])([rRuUbBfF]{1,3})$/;
 
 function stripExtension(relPath: string): string {
   return relPath.replace(/\.py$/i, "");
@@ -68,17 +69,10 @@ export function computeComplexitySignals(content: string): {
   maxNesting: number;
   score: number;
 } {
-  const lines = content.split(/\r?\n/);
-  const loc = lines
-    .map((line) => line.trim())
-    .filter(
-      (line) =>
-        line.length > 0 &&
-        !line.startsWith("#") &&
-        !line.startsWith('"""') &&
-        !line.startsWith("'''")
-    ).length;
-  const branchCount = content.match(COMPLEXITY_RE)?.length ?? 0;
+  const code = stripPythonCommentsAndStrings(content);
+  const lines = code.split(/\r?\n/);
+  const loc = lines.filter((line) => line.trim().length > 0).length;
+  const branchCount = code.match(COMPLEXITY_RE)?.length ?? 0;
 
   let maxNesting = 0;
   for (const line of lines) {
@@ -91,3 +85,77 @@ export function computeComplexitySignals(content: string): {
   return { loc, branchCount, maxNesting, score };
 }
 
+function stripPythonCommentsAndStrings(content: string): string {
+  const output: string[] = Array.from(content, (character) =>
+    character === "\n" || character === "\r" ? character : " "
+  );
+  let quote: "'" | '"' | null = null;
+  let tripleQuoted = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+
+    if (quote) {
+      if (character === "\\") {
+        const next = content[index + 1];
+        if (next !== undefined) {
+          if (next === "\n" || next === "\r") output[index + 1] = next;
+          index += 1;
+        }
+        continue;
+      }
+
+      if (
+        tripleQuoted &&
+        character === quote &&
+        content[index + 1] === quote &&
+        content[index + 2] === quote
+      ) {
+        index += 2;
+        quote = null;
+        tripleQuoted = false;
+        continue;
+      }
+
+      if (!tripleQuoted && character === quote) {
+        quote = null;
+        continue;
+      }
+
+      if (!tripleQuoted && (character === "\n" || character === "\r")) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (character === "#") {
+      while (
+        index + 1 < content.length &&
+        content[index + 1] !== "\n" &&
+        content[index + 1] !== "\r"
+      ) {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (character !== "'" && character !== '"') {
+      output[index] = character;
+      continue;
+    }
+
+    const prefix = content.slice(0, index).match(STRING_PREFIX_RE)?.[1];
+    if (prefix) {
+      for (let prefixIndex = index - prefix.length; prefixIndex < index; prefixIndex += 1) {
+        output[prefixIndex] = " ";
+      }
+    }
+
+    quote = character;
+    tripleQuoted =
+      content[index + 1] === character && content[index + 2] === character;
+    if (tripleQuoted) index += 2;
+  }
+
+  return output.join("");
+}

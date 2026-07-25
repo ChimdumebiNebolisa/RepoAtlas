@@ -289,7 +289,7 @@ describe("detectEntrypoints", () => {
 });
 
 describe("computeComplexitySignals", () => {
-  it("counts branches and nesting", () => {
+  it("keeps established executable branch and nesting values", () => {
     const content = `
 def complex_function(x):
     if x > 0:
@@ -300,16 +300,91 @@ def complex_function(x):
         return 0
 `;
     const result = computeComplexitySignals(content);
-    expect(result.branchCount).toBeGreaterThan(2);
-    expect(result.maxNesting).toBeGreaterThan(1);
-    expect(result.loc).toBeGreaterThan(0);
-    expect(result.score).toBeGreaterThan(0);
+    expect(result).toEqual({
+      loc: 7,
+      branchCount: 4,
+      maxNesting: 4,
+      score: 20,
+    });
   });
 
   it("excludes comment lines from LOC", () => {
     const content = "# comment\n# another\nx = 1\n";
     const result = computeComplexitySignals(content);
     expect(result.loc).toBe(1);
+  });
+
+  it("excludes comments from every complexity signal", () => {
+    const executable = "def f():\n    return 1\n";
+    const withComments = [
+      "# if for while try except with and or",
+      "def f():",
+      "    # if nested:",
+      "                    # while deeply nested:",
+      "    return 1  # else case finally",
+      "",
+    ].join("\n");
+
+    expect(computeComplexitySignals(withComments)).toEqual(
+      computeComplexitySignals(executable)
+    );
+  });
+
+  it("excludes triple-quoted docstrings from every complexity signal", () => {
+    const executable = "def f():\n    return 1\n";
+    const withDocstring = [
+      "def f():",
+      '    """if nested:',
+      "            for item in values:",
+      "                while item:",
+      '                    case"""',
+      "    '''try:",
+      "            except RuntimeError:",
+      "                finally'''",
+      "    return 1",
+      "",
+    ].join("\n");
+
+    expect(computeComplexitySignals(withDocstring)).toEqual(
+      computeComplexitySignals(executable)
+    );
+  });
+
+  it("excludes string-only lines from every complexity signal", () => {
+    const executable = "def f():\n    return 1\n";
+    const withStrings = [
+      "def f():",
+      '    "if for while try except with and or"',
+      "    r'else finally match case'",
+      '    f"if {1} else {2}"',
+      "    return 1",
+      "",
+    ].join("\n");
+
+    expect(computeComplexitySignals(withStrings)).toEqual(
+      computeComplexitySignals(executable)
+    );
+  });
+
+  it("keeps executable code around escaped strings and comment markers", () => {
+    const executable = [
+      "def f(value):",
+      "    label = None",
+      "    if value:",
+      "        return value",
+      "",
+    ].join("\n");
+    const withString = [
+      "def f(value):",
+      '    label = "if # else \\"for\\""',
+      "    if value:",
+      "        return value",
+      "",
+    ].join("\n");
+
+    expect(computeComplexitySignals(withString)).toEqual(
+      computeComplexitySignals(executable)
+    );
   });
 });
 
