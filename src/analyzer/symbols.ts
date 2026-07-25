@@ -35,7 +35,7 @@ export function extractSymbols(workspacePath: string, filePaths: string[]): Code
           });
         }
       }
-      if (rel.includes("/api/") && rel.includes("route.")) {
+      if (rel.includes("/api/") && path.basename(rel, ext) === "route") {
         symbols.push({ name: path.basename(rel, ext), kind: "route", path: rel });
       }
     } else if (ext === ".py") {
