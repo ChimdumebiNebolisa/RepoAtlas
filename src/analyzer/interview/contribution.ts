@@ -1,4 +1,5 @@
 import type { BriefAnswer, CandidateBrief } from "@/types/report";
+import { canonicalizeKeyDocs } from "../docs";
 import {
   confidenceFor,
   firstAvailableRef,
@@ -21,11 +22,19 @@ export function buildFirstPrPlan(
   evidence: EvidenceIndex
 ): CandidateBrief["first_pr_plan"] {
   const ideas: PrIdea[] = [];
-  const topRisk = input.dangerZones[0];
-  const weakTestRisk = input.dangerZones.find(
-    (item) => (item.metrics.test_proximity ?? 100) < 80
+  const topRisk = input.dangerZones.find((item) =>
+    evidence.dangerZoneRefs.has(item.path)
   );
-  const docs = input.contributeSignals.key_docs.slice(0, 2);
+  const weakTestRisk = input.dangerZones.find(
+    (item) =>
+      evidence.dangerZoneRefs.has(item.path) &&
+      (item.metrics.test_proximity ?? 100) < 80
+  );
+  const { canonicalDocs } = canonicalizeKeyDocs(
+    input.contributeSignals.key_docs,
+    input.documentInventory
+  );
+  const docs = canonicalDocs.slice(0, 2);
 
   if (input.runCommands.length === 0) {
     pushUniqueIdea(ideas, {
@@ -76,10 +85,7 @@ export function buildFirstPrPlan(
       rationale:
         `This file is risk-ranked and has test proximity ${weakTestRisk.metrics.test_proximity ?? 0} (a static signal, not measured coverage), making it a concrete candidate for a small test-focused contribution.`,
       suggested_files: [weakTestRisk.path],
-      evidence_refs: [
-        evidence.dangerZoneRefs.get(weakTestRisk.path) ??
-          firstAvailableRef(evidence),
-      ],
+      evidence_refs: [evidence.dangerZoneRefs.get(weakTestRisk.path)!],
       risk: weakTestRisk.score >= 75 ? "medium" : "low",
     });
   } else if (topRisk) {
@@ -88,9 +94,7 @@ export function buildFirstPrPlan(
       rationale:
         "The top danger-zone file is a useful place to add clarifying tests or notes after reading its callers and dependencies.",
       suggested_files: [topRisk.path],
-      evidence_refs: [
-        evidence.dangerZoneRefs.get(topRisk.path) ?? firstAvailableRef(evidence),
-      ],
+      evidence_refs: [evidence.dangerZoneRefs.get(topRisk.path)!],
       risk: topRisk.score >= 75 ? "medium" : "low",
     });
   }
