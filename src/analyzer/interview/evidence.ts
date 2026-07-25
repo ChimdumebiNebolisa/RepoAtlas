@@ -11,6 +11,9 @@ import type {
   EvidenceIndex,
 } from "./types";
 
+const GENERATED_EVIDENCE_ID =
+  /^(?:arch|sem|start|risk|cmd|doc|ci|warn)-\d+$/;
+
 export function basename(filePath: string): string {
   const normalized = filePath.replace(/\\/g, "/");
   return normalized.split("/").filter(Boolean).pop() ?? normalized;
@@ -93,13 +96,37 @@ export function buildEvidenceIndex(input: BuildCandidateBriefInput): EvidenceInd
     1
   );
 
-  for (const decisionRef of input.technicalDecisionEvidence ?? []) {
-    if (refs.some((ref) => ref.id === decisionRef.id)) continue;
-    const snippet =
-      decisionRef.path && input.workspacePath
-        ? readFileHeaderSnippet(input.workspacePath, decisionRef.path)
-        : undefined;
-    refs.push({ ...decisionRef, ...snippet });
+  const decisionEvidence = input.technicalDecisionEvidence ?? [];
+  const decisionEvidenceIdCounts = new Map<string, number>();
+  for (const decisionRef of decisionEvidence) {
+    decisionEvidenceIdCounts.set(
+      decisionRef.id,
+      (decisionEvidenceIdCounts.get(decisionRef.id) ?? 0) + 1
+    );
+  }
+  for (const decisionRef of decisionEvidence) {
+    if (
+      typeof decisionRef.id !== "string" ||
+      decisionRef.id.trim().length === 0 ||
+      GENERATED_EVIDENCE_ID.test(decisionRef.id) ||
+      decisionEvidenceIdCounts.get(decisionRef.id) !== 1 ||
+      decisionRef.kind !== "decision" ||
+      typeof decisionRef.path !== "string" ||
+      decisionRef.path.trim().length === 0
+    ) {
+      continue;
+    }
+
+    if (input.workspacePath) {
+      const snippet = readFileHeaderSnippet(
+        input.workspacePath,
+        decisionRef.path
+      );
+      if (!snippet) continue;
+      refs.push({ ...decisionRef, ...snippet });
+    } else {
+      refs.push(decisionRef);
+    }
   }
 
   if (input.semanticGraph) {
@@ -264,8 +291,24 @@ export function decisionsWithDirectEvidence(
   input: BuildCandidateBriefInput,
   evidence: EvidenceIndex
 ): TechnicalDecision[] {
+  const uniqueEvidenceById = new Map<string, EvidenceRef | null>();
+  for (const ref of evidence.refs) {
+    uniqueEvidenceById.set(
+      ref.id,
+      uniqueEvidenceById.has(ref.id) ? null : ref
+    );
+  }
   const decisionEvidenceIds = new Set(
-    evidence.refs.filter((ref) => ref.kind === "decision").map((ref) => ref.id)
+    Array.from(uniqueEvidenceById.entries())
+      .filter(
+        (
+          entry
+        ): entry is [string, EvidenceRef] =>
+          entry[1]?.kind === "decision" &&
+          typeof entry[1].path === "string" &&
+          entry[1].path.trim().length > 0
+      )
+      .map(([id]) => id)
   );
   return (input.technicalDecisions ?? []).filter(
     (decision) =>
