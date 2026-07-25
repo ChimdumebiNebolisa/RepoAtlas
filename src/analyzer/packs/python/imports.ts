@@ -56,7 +56,13 @@ export function detectPackageRoots(workspacePath: string): string[] {
   }
 
   const srcPath = path.join(workspacePath, "src");
-  if (fs.existsSync(srcPath) && fs.statSync(srcPath).isDirectory()) {
+  let hasSrcDirectory = false;
+  try {
+    hasSrcDirectory = fs.existsSync(srcPath) && fs.statSync(srcPath).isDirectory();
+  } catch {
+    // An unreadable src marker does not stop repository analysis.
+  }
+  if (hasSrcDirectory) {
     if (containsPackageInit(srcPath) && !roots.includes("src/")) roots.push("src/");
   }
 
@@ -74,6 +80,14 @@ function resolveModulePath(
   const relativePath = modulePath.split(".").join("/");
 
   const asFile = path.join(workspacePath, normalized, relativePath + ".py");
+  const fileRelativePath = path.relative(workspacePath, asFile);
+  if (
+    fileRelativePath === ".." ||
+    fileRelativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(fileRelativePath)
+  ) {
+    return null;
+  }
   if (fs.existsSync(asFile)) return normalizeRelPath(path.relative(workspacePath, asFile));
 
   const asPackage = path.join(workspacePath, normalized, relativePath, "__init__.py");
@@ -101,7 +115,6 @@ export function resolveImport(
     const baseDir = path.normalize(up).replace(/\\/g, "/");
     const resolved = resolveModulePath(baseDir, rest || "", workspacePath);
     if (resolved && fileSet.has(resolved)) return resolved;
-    if (resolved) return resolved;
     if (!rest) {
       const initPath = path.normalize(path.join(up, "__init__.py")).replace(/\\/g, "/");
       if (fileSet.has(initPath)) return initPath;

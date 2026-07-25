@@ -176,6 +176,14 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/packs/python/extract.ts": {
+          branches: 85,
+          lines: 90,
+        },
+        "src/analyzer/packs/python/imports.ts": {
+          branches: 85,
+          lines: 90,
+        },
         "src/analyzer/packs/java{,Architecture,Metrics,Modules,Semantic,Shared,Sources}.ts":
           {
             branches: 80,
