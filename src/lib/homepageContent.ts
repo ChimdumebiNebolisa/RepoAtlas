@@ -48,3 +48,17 @@ export const homepageTrustBoundaries = [
   "Risk signals identify structural hotspots, not confirmed bugs or vulnerabilities.",
   "PDF and PNG remain available when saved report storage is unavailable.",
 ] as const;
+
+export const homepageInterviewGuides = [
+  {
+    title: "Explain an unfamiliar repository",
+    description: "Use an evidence-first reading order for code you did not build.",
+    href: "/repository-walkthrough-interview",
+  },
+  {
+    title: "Explain a project you built",
+    description:
+      "Separate your decisions from the repository evidence that supports them.",
+    href: "/how-to-walk-through-a-project-in-an-interview",
+  },
+] as const;

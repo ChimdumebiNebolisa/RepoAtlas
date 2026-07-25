@@ -88,6 +88,20 @@ test("repository walkthrough guide is included in the sitemap", async ({ request
   await expect(response.text()).resolves.toContain("/repository-walkthrough-interview");
 });
 
+test("repository walkthrough guide has its exact search-result promise", async ({
+  page,
+}) => {
+  await page.goto("/repository-walkthrough-interview");
+
+  await expect(page).toHaveTitle(
+    "Repository Walkthrough Interview Guide | RepoAtlas"
+  );
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    "Learn how to explain an unfamiliar repository with a defensible reading order, architecture map, risk signals, and file-backed talking points."
+  );
+});
+
 test("authored project guide separates candidate intent from repository evidence", async ({ page }) => {
   await page.goto("/how-to-walk-through-a-project-in-an-interview");
 
@@ -143,6 +157,42 @@ test("authored project guide is included in the sitemap", async ({ request }) =>
 
   expect(response.ok()).toBe(true);
   await expect(response.text()).resolves.toContain(
+    "/how-to-walk-through-a-project-in-an-interview"
+  );
+});
+
+test("authored project guide has its exact search-result promise", async ({
+  page,
+}) => {
+  await page.goto("/how-to-walk-through-a-project-in-an-interview");
+
+  await expect(page).toHaveTitle(
+    "How to Walk Through a Project in an Interview | RepoAtlas"
+  );
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    "Use a practical project interview structure for your contribution, architecture, technical decisions, tradeoffs, results, and next improvement."
+  );
+});
+
+test("homepage connects both interview guides without replacing the sample action", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("button", { name: /Try bundled sample/ })
+  ).toBeVisible();
+  const guideNav = page.getByRole("navigation", {
+    name: "Prepare for the walkthrough question.",
+  });
+  await expect(
+    guideNav.getByRole("link", { name: /Explain an unfamiliar repository/ })
+  ).toHaveAttribute("href", "/repository-walkthrough-interview");
+  await expect(
+    guideNav.getByRole("link", { name: /Explain a project you built/ })
+  ).toHaveAttribute(
+    "href",
     "/how-to-walk-through-a-project-in-an-interview"
   );
 });

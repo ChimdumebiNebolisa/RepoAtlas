@@ -4,7 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildSampleReport } from "@/lib/buildSampleReport";
 import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
-import { homepageFaqItems, homepageTrustBoundaries } from "@/lib/homepageContent";
+import {
+  homepageFaqItems,
+  homepageInterviewGuides,
+  homepageTrustBoundaries,
+} from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
 import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import {
@@ -213,7 +217,7 @@ describe("HomepageSampleProof", () => {
 });
 
 describe("HomepageTrustAndFaq", () => {
-  it("renders every trust boundary, privacy route, and expandable FAQ answer", async () => {
+  it("renders every trust boundary, guide route, and expandable FAQ answer", async () => {
     const user = userEvent.setup();
 
     render(<HomepageTrustAndFaq />);
@@ -226,6 +230,14 @@ describe("HomepageTrustAndFaq", () => {
       "href",
       "/privacy"
     );
+    const guideNav = screen.getByRole("navigation", {
+      name: "Prepare for the walkthrough question.",
+    });
+    homepageInterviewGuides.forEach(({ title, description, href }) => {
+      const link = within(guideNav).getByRole("link", { name: title });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveTextContent(description);
+    });
 
     const faqItems = screen.getAllByTestId("homepage-faq-item");
     expect(faqItems).toHaveLength(homepageFaqItems.length);
