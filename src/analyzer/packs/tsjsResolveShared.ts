@@ -66,13 +66,34 @@ export function readJson(abs: string): unknown | null {
 }
 
 export function packageNameFromSpecifier(specifier: string): string | null {
-  if (specifier.startsWith(".") || specifier.startsWith("/")) return null;
+  if (
+    !specifier ||
+    specifier !== specifier.trim() ||
+    specifier.includes("\\") ||
+    specifier.startsWith(".") ||
+    specifier.startsWith("/")
+  ) {
+    return null;
+  }
+  const parts = specifier.split("/");
+  if (
+    parts.some(
+      (part) =>
+        !part ||
+        part === "." ||
+        part === ".." ||
+        /\s/.test(part)
+    )
+  ) {
+    return null;
+  }
   if (specifier.startsWith("@")) {
-    const parts = specifier.split("/");
-    if (parts.length < 2) return null;
+    if (parts.length < 2 || parts[0] === "@" || parts[1].startsWith(".")) {
+      return null;
+    }
     return `${parts[0]}/${parts[1]}`;
   }
-  return specifier.split("/")[0] || null;
+  return parts[0];
 }
 
 export function absToWorkspaceRel(

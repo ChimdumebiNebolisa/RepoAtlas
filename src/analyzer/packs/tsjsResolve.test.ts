@@ -1,8 +1,15 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTsJsResolver, discoverWorkspacePackages } from "./tsjsResolve";
+import {
+  absToWorkspaceRel,
+  existsDir,
+  existsFile,
+  packageNameFromSpecifier,
+  readJson,
+} from "./tsjsResolveShared";
 
 function writeWorkspace(files: Record<string, string>): string {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "repoatlas-ts-resolve-"));
@@ -19,6 +26,10 @@ function fileIndex(...files: string[]): Set<string> {
 }
 
 describe("TypeScript resolution boundaries", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("keeps every resolution module within the structural limit", () => {
     for (const fileName of [
       "tsjsResolve.ts",
@@ -73,9 +84,70 @@ describe("TypeScript resolution boundaries", () => {
         status: "unresolved",
         reason: "module_not_found",
       });
+      expect(resolver.resolve("src/index.ts", " ")).toEqual({
+        status: "unresolved",
+        reason: "module_not_found",
+      });
+      expect(resolver.resolve("src/index.ts", "@broken/")).toEqual({
+        status: "unresolved",
+        reason: "module_not_found",
+      });
+      expect(resolver.resolve("src/index.ts", "react/../private")).toEqual({
+        status: "unresolved",
+        reason: "module_not_found",
+      });
     } finally {
       fs.rmSync(workspace, { recursive: true, force: true });
     }
+  });
+
+  it("rejects malformed package specifiers instead of inventing external packages", () => {
+    for (const specifier of [
+      "",
+      " ",
+      "@broken",
+      "@broken/",
+      "@/package",
+      "react//jsx-runtime",
+      "react/../private",
+      "@scope/package/../../private",
+      "react\\jsx-runtime",
+    ]) {
+      expect(packageNameFromSpecifier(specifier), specifier).toBeNull();
+    }
+    expect(packageNameFromSpecifier("react/jsx-runtime")).toBe("react");
+    expect(packageNameFromSpecifier("@scope/package/subpath")).toBe(
+      "@scope/package"
+    );
+  });
+
+  it("fails closed when shared filesystem probes throw or return malformed JSON", () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "statSync").mockImplementation(() => {
+      throw new Error("unreadable");
+    });
+    expect(existsFile("/unreadable/file.ts")).toBe(false);
+    expect(existsDir("/unreadable/directory")).toBe(false);
+
+    vi.restoreAllMocks();
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("unreadable");
+    });
+    expect(readJson("/unreadable/package.json")).toBeNull();
+
+    vi.restoreAllMocks();
+    vi.spyOn(fs, "readFileSync").mockReturnValue("{not-json");
+    expect(readJson("/malformed/package.json")).toBeNull();
+  });
+
+  it("contains resolved paths to the analyzed workspace", () => {
+    const workspace = path.join(path.sep, "tmp", "repoatlas-workspace");
+    expect(absToWorkspaceRel(workspace, path.join(workspace, "src/index.ts"))).toBe(
+      "src/index.ts"
+    );
+    expect(absToWorkspaceRel(workspace, workspace)).toBe("");
+    expect(absToWorkspaceRel(workspace, path.join(workspace, "..", "outside.ts"))).toBeNull();
+    expect(absToWorkspaceRel(workspace, path.join(workspace, "..", "repoatlas-workspace-copy", "index.ts"))).toBeNull();
   });
 
   it("keeps compiler configuration warnings deterministic", () => {
