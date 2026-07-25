@@ -194,6 +194,10 @@ export default defineConfig({
             branches: 80,
             lines: 85,
           },
+        "src/analyzer/packs/tsjsResolveShared.ts": {
+          branches: 90,
+          lines: 90,
+        },
         "src/analyzer/packs/tsjsEntrypoints.ts": {
           branches: 80,
           lines: 85,
