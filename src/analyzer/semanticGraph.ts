@@ -126,6 +126,7 @@ export function deriveArchitectureFromSemantic(
 ): { architecture: Architecture; warnings: string[] } {
   const warnings: string[] = [];
   const folderFileCounts = new Map<string, number>();
+  const indexedFiles = new Set(files.map(normalizeRelPath));
 
   for (const file of files) {
     const folder = toFolderPath(file);
@@ -136,8 +137,9 @@ export function deriveArchitectureFromSemantic(
   for (const edge of graph.edges) {
     if (edge.resolution !== "resolved_internal" || !edge.to) continue;
     if (!edge.from.startsWith("file:") || !edge.to.startsWith("file:")) continue;
-    const fromFile = edge.from.slice("file:".length);
-    const toFile = edge.to.slice("file:".length);
+    const fromFile = normalizeRelPath(edge.from.slice("file:".length));
+    const toFile = normalizeRelPath(edge.to.slice("file:".length));
+    if (!indexedFiles.has(fromFile) || !indexedFiles.has(toFile)) continue;
     const fromFolder = toFolderPath(fromFile);
     const toFolder = toFolderPath(toFile);
     const key = `${fromFolder}=>${toFolder}`;

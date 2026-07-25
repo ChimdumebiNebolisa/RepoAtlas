@@ -195,6 +195,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/analyzer/semanticGraph.ts": {
+          branches: 90,
+          lines: 85,
+        },
         "src/analyzer/runIsolatedAnalysis.ts": {
           branches: 80,
           lines: 85,
