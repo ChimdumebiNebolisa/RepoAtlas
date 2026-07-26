@@ -1,6 +1,13 @@
 import fs from "fs";
 import path from "path";
 import type { DangerZoneItem, TestInventory } from "@/types/report";
+import {
+  gradleDeclaresJUnit,
+  pomDeclaresJUnit,
+  pyprojectHasDependency,
+  pytestIniDeclaresPytest,
+  requirementsHasDependency,
+} from "./dependencyEvidence";
 
 const TEST_DIRECTORY_PATTERN = /^(?:tests?|__tests__)$/i;
 const PYTHON_TEST_PREFIX_PATTERN = /(^|\/)test_(?=[^/]+\.py$)/i;
@@ -25,16 +32,41 @@ function isReportableTestFile(filePath: string): boolean {
   return !PYTHON_PACKAGE_MARKER_PATTERN.test(filePath.replaceAll("\\", "/"));
 }
 
-function readWorkspaceFile(workspacePath: string, fileName: string): string {
+function readWorkspaceFile(workspacePath: string, fileName: string): string | undefined {
   try {
-    return fs.readFileSync(path.join(workspacePath, fileName), "utf-8");
+    const workspaceRoot = fs.realpathSync(workspacePath);
+    const candidate = path.join(workspaceRoot, fileName);
+    const stats = fs.lstatSync(candidate);
+    if (stats.isSymbolicLink() || !stats.isFile()) return undefined;
+    return fs.readFileSync(candidate, "utf-8");
   } catch {
-    return "";
+    return undefined;
   }
 }
 
-function hasDependency(content: string, dependency: string): boolean {
-  return new RegExp(`(^|[^a-z0-9])${dependency}([^a-z0-9]|$)`, "i").test(content);
+function pythonManifestDeclaresPytest(workspacePath: string): boolean {
+  const pyproject = readWorkspaceFile(workspacePath, "pyproject.toml");
+  if (pyproject && pyprojectHasDependency(pyproject, "pytest")) return true;
+
+  for (const fileName of ["requirements.txt", "requirements-dev.txt"]) {
+    const requirements = readWorkspaceFile(workspacePath, fileName);
+    if (requirements && requirementsHasDependency(requirements, "pytest")) return true;
+  }
+
+  const pytestConfig = readWorkspaceFile(workspacePath, "pytest.ini");
+  return pytestConfig ? pytestIniDeclaresPytest(pytestConfig) : false;
+}
+
+function javaManifestDeclaresJUnit(workspacePath: string): boolean {
+  const pom = readWorkspaceFile(workspacePath, "pom.xml");
+  if (pom && pomDeclaresJUnit(pom)) return true;
+
+  for (const fileName of ["build.gradle", "build.gradle.kts"]) {
+    const gradle = readWorkspaceFile(workspacePath, fileName);
+    if (gradle && gradleDeclaresJUnit(gradle)) return true;
+  }
+
+  return false;
 }
 
 export function buildTestInventory(input: {
@@ -70,19 +102,7 @@ export function detectTestFrameworks(workspacePath: string, deps: Record<string,
   if (deps.vitest) frameworks.push("Vitest");
   if (deps.jest || deps["@jest/globals"]) frameworks.push("Jest");
   if (deps.mocha) frameworks.push("Mocha");
-  const pythonManifests = [
-    readWorkspaceFile(workspacePath, "pyproject.toml"),
-    readWorkspaceFile(workspacePath, "requirements.txt"),
-    readWorkspaceFile(workspacePath, "requirements-dev.txt"),
-    readWorkspaceFile(workspacePath, "pytest.ini"),
-  ].join("\n");
-  if (deps.pytest || hasDependency(pythonManifests, "pytest")) frameworks.push("pytest");
-
-  const javaManifests = [
-    readWorkspaceFile(workspacePath, "pom.xml"),
-    readWorkspaceFile(workspacePath, "build.gradle"),
-    readWorkspaceFile(workspacePath, "build.gradle.kts"),
-  ].join("\n");
-  if (deps.junit || hasDependency(javaManifests, "junit")) frameworks.push("JUnit");
+  if (deps.pytest || pythonManifestDeclaresPytest(workspacePath)) frameworks.push("pytest");
+  if (deps.junit || javaManifestDeclaresJUnit(workspacePath)) frameworks.push("JUnit");
   return frameworks;
 }
