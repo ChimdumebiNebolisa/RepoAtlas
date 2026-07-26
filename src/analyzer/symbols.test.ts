@@ -82,6 +82,54 @@ describe("extractSymbols", () => {
     ]);
   });
 
+  it("ignores TypeScript and JavaScript symbols inside comments and literals", () => {
+    const workspace = createWorkspace();
+    writeFile(
+      workspace,
+      "src/typescript.tsx",
+      [
+        "// export function CommentedFunction() {}",
+        "/* export const BlockCommented = () => {}; */",
+        "const stringExample = \"export function StringFunction() {}\";",
+        "const templateExample = `export default function TemplateComponent() {}`;",
+        "export function RealTypeScriptFunction() {}",
+        "export const RealTypeScriptComponent = () => null;",
+      ].join("\n")
+    );
+    writeFile(
+      workspace,
+      "src/javascript.jsx",
+      [
+        "// export default function CommentedComponent() {}",
+        "const example = 'export const StringConstant = () => {}';",
+        "export default function RealJavaScriptComponent() { return null; }",
+      ].join("\n")
+    );
+
+    expect(
+      extractSymbols(workspace, [
+        "src/typescript.tsx",
+        "src/javascript.jsx",
+      ])
+    ).toEqual([
+      {
+        name: "RealTypeScriptFunction",
+        kind: "component",
+        path: "src/typescript.tsx",
+      },
+      {
+        name: "RealTypeScriptComponent",
+        kind: "component",
+        path: "src/typescript.tsx",
+      },
+      {
+        name: "RealJavaScriptComponent",
+        kind: "component",
+        path: "src/javascript.jsx",
+      },
+    ]);
+  });
+
   it("labels only exact API route modules as routes", () => {
     const workspace = createWorkspace();
     writeFile(
@@ -114,6 +162,28 @@ describe("extractSymbols", () => {
     ]);
   });
 
+  it("fails closed on malformed TypeScript while preserving route classification", () => {
+    const workspace = createWorkspace();
+    writeFile(
+      workspace,
+      "src/app/api/reports/route.ts",
+      [
+        "export function recoveredFromInvalidSource() {}",
+        "const broken = \"unterminated;",
+      ].join("\n")
+    );
+
+    expect(
+      extractSymbols(workspace, ["src/app/api/reports/route.ts"])
+    ).toEqual([
+      {
+        name: "route",
+        kind: "route",
+        path: "src/app/api/reports/route.ts",
+      },
+    ]);
+  });
+
   it("extracts Python functions and classes across files", () => {
     const workspace = createWorkspace();
     writeFile(
@@ -136,6 +206,31 @@ describe("extractSymbols", () => {
     ]);
   });
 
+  it("ignores Python symbols inside comments, strings, and docstrings", () => {
+    const workspace = createWorkspace();
+    writeFile(
+      workspace,
+      "src/non_code.py",
+      [
+        "# def commented_function():",
+        "\"def string_function():\"",
+        "'''",
+        "class DocstringClass:",
+        "    pass",
+        "'''",
+        "def real_function():",
+        "    return None",
+        "class RealClass:",
+        "    pass",
+      ].join("\n")
+    );
+
+    expect(extractSymbols(workspace, ["src/non_code.py"])).toEqual([
+      { name: "real_function", kind: "function", path: "src/non_code.py" },
+      { name: "RealClass", kind: "class", path: "src/non_code.py" },
+    ]);
+  });
+
   it("extracts public Java classes", () => {
     const workspace = createWorkspace();
     writeFile(
@@ -153,6 +248,36 @@ describe("extractSymbols", () => {
         name: "Application",
         kind: "class",
         path: "src/main/java/com/example/Application.java",
+      },
+    ]);
+  });
+
+  it("ignores Java classes inside comments, literals, and text blocks", () => {
+    const workspace = createWorkspace();
+    writeFile(
+      workspace,
+      "src/main/java/com/example/RealApplication.java",
+      [
+        "// public class LineCommentClass {}",
+        "/* public class BlockCommentClass {} */",
+        "String example = \"public class StringClass {}\";",
+        "char marker = 'x'; // public class CharacterCommentClass {}",
+        'String textBlock = """',
+        "public class TextBlockClass {}",
+        '""";',
+        "public class RealApplication {}",
+      ].join("\n")
+    );
+
+    expect(
+      extractSymbols(workspace, [
+        "src/main/java/com/example/RealApplication.java",
+      ])
+    ).toEqual([
+      {
+        name: "RealApplication",
+        kind: "class",
+        path: "src/main/java/com/example/RealApplication.java",
       },
     ]);
   });

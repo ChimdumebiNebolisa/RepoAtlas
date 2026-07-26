@@ -1,14 +1,97 @@
 import fs from "fs";
 import path from "path";
+import ts from "typescript";
 import type { CodeSymbol } from "@/types/report";
 import { shouldIndexFileContent } from "./ignoreRules";
+import { stripJavaCommentsAndLiterals } from "./packs/javaShared";
+import { stripPythonCommentsAndStrings } from "./packs/python/signals";
+import { scriptKindForPath } from "./packs/tsjsExtract";
 
-const EXPORT_FN = /export\s+(?:async\s+)?function\s+(\w+)/g;
-const EXPORT_CONST = /export\s+(?:const|function)\s+(\w+)/g;
-const REACT_COMP = /export\s+(?:default\s+)?function\s+([A-Z]\w+)/g;
 const PY_DEF = /^def\s+(\w+)\s*\(/gm;
 const PY_CLASS = /^class\s+(\w+)/gm;
 const JAVA_CLASS = /public\s+class\s+(\w+)/g;
+
+interface ParserSourceFile extends ts.SourceFile {
+  readonly parseDiagnostics: readonly ts.Diagnostic[];
+}
+
+function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
+  return ts.canHaveModifiers(node)
+    ? Boolean(ts.getModifiers(node)?.some((modifier) => modifier.kind === kind))
+    : false;
+}
+
+function pushTypeScriptSymbols(
+  symbols: CodeSymbol[],
+  content: string,
+  rel: string
+): void {
+  const sourceFile = ts.createSourceFile(
+    rel,
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKindForPath(rel)
+  ) as ParserSourceFile;
+  if (sourceFile.parseDiagnostics.length > 0) return;
+
+  const exportedFunctions = sourceFile.statements.filter(
+    (statement): statement is ts.FunctionDeclaration =>
+      ts.isFunctionDeclaration(statement) &&
+      hasModifier(statement, ts.SyntaxKind.ExportKeyword) &&
+      !hasModifier(statement, ts.SyntaxKind.DefaultKeyword) &&
+      !hasModifier(statement, ts.SyntaxKind.DeclareKeyword) &&
+      Boolean(statement.name)
+  );
+
+  for (const statement of exportedFunctions) {
+    const name = statement.name?.text;
+    if (!name) continue;
+    symbols.push({
+      name,
+      kind: /^[A-Z]/.test(name) ? "component" : "function",
+      path: rel,
+    });
+  }
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isVariableStatement(statement) ||
+      !hasModifier(statement, ts.SyntaxKind.ExportKeyword) ||
+      hasModifier(statement, ts.SyntaxKind.DefaultKeyword) ||
+      hasModifier(statement, ts.SyntaxKind.DeclareKeyword) ||
+      !(statement.declarationList.flags & ts.NodeFlags.Const)
+    ) {
+      continue;
+    }
+    const declaration = statement.declarationList.declarations[0];
+    if (!declaration || !ts.isIdentifier(declaration.name)) continue;
+    const name = declaration.name.text;
+    symbols.push({
+      name,
+      kind: /^[A-Z]/.test(name) ? "component" : "function",
+      path: rel,
+    });
+  }
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isFunctionDeclaration(statement) ||
+      !statement.name ||
+      !/^[A-Z]/.test(statement.name.text) ||
+      !hasModifier(statement, ts.SyntaxKind.ExportKeyword) ||
+      hasModifier(statement, ts.SyntaxKind.DeclareKeyword) ||
+      hasModifier(statement, ts.SyntaxKind.AsyncKeyword)
+    ) {
+      continue;
+    }
+    symbols.push({
+      name: statement.name.text,
+      kind: "component",
+      path: rel,
+    });
+  }
+}
 
 export function extractSymbols(workspacePath: string, filePaths: string[]): CodeSymbol[] {
   const symbols: CodeSymbol[] = [];
@@ -23,32 +106,27 @@ export function extractSymbols(workspacePath: string, filePaths: string[]): Code
     } catch {
       continue;
     }
-  if ([".ts", ".tsx", ".js", ".jsx"].includes(ext)) {
-      for (const re of [EXPORT_FN, EXPORT_CONST, REACT_COMP]) {
-        let m;
-        re.lastIndex = 0;
-        while ((m = re.exec(content)) !== null) {
-          symbols.push({
-            name: m[1],
-            kind: /^[A-Z]/.test(m[1]) ? "component" : "function",
-            path: rel,
-          });
-        }
-      }
+    if ([".ts", ".tsx", ".js", ".jsx"].includes(ext)) {
+      pushTypeScriptSymbols(symbols, content, rel);
       if (rel.includes("/api/") && path.basename(rel, ext) === "route") {
         symbols.push({ name: path.basename(rel, ext), kind: "route", path: rel });
       }
     } else if (ext === ".py") {
+      const code = stripPythonCommentsAndStrings(content);
       let m;
-      while ((m = PY_DEF.exec(content)) !== null) {
+      PY_DEF.lastIndex = 0;
+      while ((m = PY_DEF.exec(code)) !== null) {
         symbols.push({ name: m[1], kind: "function", path: rel });
       }
-      while ((m = PY_CLASS.exec(content)) !== null) {
+      PY_CLASS.lastIndex = 0;
+      while ((m = PY_CLASS.exec(code)) !== null) {
         symbols.push({ name: m[1], kind: "class", path: rel });
       }
     } else if (ext === ".java") {
+      const code = stripJavaCommentsAndLiterals(content);
       let m;
-      while ((m = JAVA_CLASS.exec(content)) !== null) {
+      JAVA_CLASS.lastIndex = 0;
+      while ((m = JAVA_CLASS.exec(code)) !== null) {
         symbols.push({ name: m[1], kind: "class", path: rel });
       }
     }

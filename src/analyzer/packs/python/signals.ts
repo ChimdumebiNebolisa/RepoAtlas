@@ -85,7 +85,7 @@ export function computeComplexitySignals(content: string): {
   return { loc, branchCount, maxNesting, score };
 }
 
-function stripPythonCommentsAndStrings(content: string): string {
+export function stripPythonCommentsAndStrings(content: string): string {
   const output: string[] = Array.from(content, (character) =>
     character === "\n" || character === "\r" ? character : " "
   );
