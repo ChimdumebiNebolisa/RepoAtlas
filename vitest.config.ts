@@ -196,6 +196,10 @@ export default defineConfig({
           branches: 95,
           lines: 95,
         },
+        "src/analyzer/decisions.ts": {
+          branches: 80,
+          lines: 90,
+        },
         "src/analyzer/packs/java{,Architecture,Metrics,Modules,Semantic,Shared,Sources}.ts":
           {
             branches: 80,
