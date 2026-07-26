@@ -159,6 +159,65 @@ describe("Java source classification boundaries", () => {
     }
   });
 
+  it("ignores entrypoint-looking signals inside non-code text", () => {
+    const workspace = temporaryWorkspace();
+    const files = {
+      "src/main/java/app/CommentOnly.java": `class CommentOnly {
+  // @RestController
+  /*
+   * @RequestMapping
+   * public static void main(String[] args) {}
+   */
+}`,
+      "src/main/java/app/StringOnly.java": `class StringOnly {
+  String controller = "@Controller";
+  String runner = "SpringApplication.run(";
+  char annotation = '@';
+}`,
+      "src/main/java/app/TextBlockOnly.java": `class TextBlockOnly {
+  String guide = """
+    @SpringBootApplication
+    @Path("/items")
+    public static void main(String[] args) {}
+    """;
+}`,
+    };
+    writeFiles(workspace, files);
+    try {
+      const result = runJavaPack(workspace, buildPipeline(Object.keys(files)));
+      expect(result.entrypoints).toEqual(new Set());
+      expect(result.warnings).not.toContainEqual(expect.stringContaining("Multiple main()"));
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps every supported executable entrypoint recognizer exact", () => {
+    const workspace = temporaryWorkspace();
+    const files = {
+      "src/main/java/app/Main.java":
+        "class Main { public static void main(String[] args) {} }",
+      "src/main/java/app/Boot.java":
+        "@SpringBootApplication class Boot {}",
+      "src/main/java/app/Runner.java":
+        "class Runner { void start() { SpringApplication.run(Runner.class); } }",
+      "src/main/java/app/Controller.java":
+        "@RestController class Controller {}",
+      "src/main/java/app/Mapped.java":
+        "@RequestMapping class Mapped {}",
+      "src/main/java/app/Resource.java":
+        '@Path("/items") class Resource {}',
+    };
+    writeFiles(workspace, files);
+    try {
+      const result = runJavaPack(workspace, buildPipeline(Object.keys(files)));
+      expect([...result.entrypoints]).toEqual(Object.keys(files));
+      expect(result.warnings).not.toContainEqual(expect.stringContaining("Multiple main()"));
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("returns bounded empty signals for unreadable source files", () => {
     const workspace = temporaryWorkspace();
     const missing = "src/main/java/com/example/Missing.java";

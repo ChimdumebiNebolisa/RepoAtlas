@@ -6,6 +6,7 @@ import {
   normalizeJavaPath,
   packageNameFromSource,
   readJavaSource,
+  stripJavaCommentsAndLiterals,
 } from "./javaShared";
 
 const TEST_NAME_PATTERNS = [
@@ -81,15 +82,16 @@ export function detectJavaEntrypoints(
   for (const filePath of files) {
     const content = readJavaSource(workspacePath, filePath);
     if (content === null) continue;
+    const code = stripJavaCommentsAndLiterals(content);
     if (
-      SPRING_BOOT_APP_RE.test(content) ||
-      SPRING_RUN_RE.test(content) ||
-      SPRING_CONTROLLER_RE.test(content) ||
-      REQUEST_MAPPING_RE.test(content) ||
-      JAXRS_RE.test(content)
+      SPRING_BOOT_APP_RE.test(code) ||
+      SPRING_RUN_RE.test(code) ||
+      SPRING_CONTROLLER_RE.test(code) ||
+      REQUEST_MAPPING_RE.test(code) ||
+      JAXRS_RE.test(code)
     ) {
       entrypoints.add(filePath);
-    } else if (MAIN_METHOD_RE.test(content)) {
+    } else if (MAIN_METHOD_RE.test(code)) {
       mainClasses.push(filePath);
       entrypoints.add(filePath);
     }
