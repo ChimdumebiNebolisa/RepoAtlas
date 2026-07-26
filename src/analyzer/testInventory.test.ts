@@ -137,11 +137,161 @@ describe("detectTestFrameworks", () => {
     expect(detectTestFrameworks(workspacePath, {})).toEqual(["pytest"]);
   });
 
+  it.each([
+    [
+      "pyproject comments and unrelated strings",
+      {
+        "pyproject.toml": [
+          "[project]",
+          'name = "fixture"',
+          'description = "pytest appears in the contributor guide"',
+          '# dependencies = ["pytest>=8"]',
+        ].join("\n"),
+      },
+    ],
+    [
+      "requirements comments and examples",
+      {
+        "requirements.txt": "# pytest>=8\ncoverage==7 # try pytest locally",
+        "requirements-dev.txt": "--find-links https://example.test/pytest",
+      },
+    ],
+    [
+      "an unrelated pytest ini section",
+      {
+        "pytest.ini": "[tooling]\nexample = pytest\n",
+      },
+    ],
+    [
+      "malformed Python declarations",
+      {
+        "pyproject.toml": '[project]\ndependencies = ["pytest>=8"\n',
+        "requirements-dev.txt": '"pytest>=8"\n',
+      },
+    ],
+  ])("ignores pytest found only in %s", (_label, files) => {
+    for (const [relativePath, content] of Object.entries(files)) {
+      write(relativePath, content);
+    }
+
+    expect(detectTestFrameworks(workspacePath, {})).toEqual([]);
+  });
+
+  it.each([
+    ["requirements.txt", "pytest[testing]>=8 # supported extra"],
+    ["requirements-dev.txt", "coverage==7\npytest~=8.0"],
+    ["pytest.ini", "[pytest]\naddopts = -q"],
+    [
+      "pyproject.toml",
+      [
+        "[project]",
+        "dependencies = [",
+        '  "pytest>=8",',
+        "]",
+      ].join("\n"),
+    ],
+    [
+      "pyproject.toml",
+      [
+        "[tool.poetry.group.test.dependencies]",
+        'pytest = "^8.0"',
+      ].join("\n"),
+    ],
+  ])("recognizes a valid pytest declaration in %s", (relativePath, content) => {
+    write(relativePath, content);
+
+    expect(detectTestFrameworks(workspacePath, {})).toEqual(["pytest"]);
+  });
+
   it("detects JUnit from Java dependency manifests", () => {
     write(
       "pom.xml",
-      "<dependencies><dependency><artifactId>junit-jupiter</artifactId></dependency></dependencies>"
+      [
+        "<dependencies><dependency>",
+        "<groupId>org.junit.jupiter</groupId>",
+        "<artifactId>junit-jupiter</artifactId>",
+        "</dependency></dependencies>",
+      ].join("")
     );
+
+    expect(detectTestFrameworks(workspacePath, {})).toEqual(["JUnit"]);
+  });
+
+  it.each([
+    [
+      "Maven comments and unrelated elements",
+      {
+        "pom.xml": [
+          "<project>",
+          "<!-- <dependency><artifactId>junit-jupiter</artifactId></dependency> -->",
+          "<description>junit example</description>",
+          "<description><![CDATA[",
+          "<dependencies><dependency>",
+          "<groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId>",
+          "</dependency></dependencies>",
+          "]]></description>",
+          "</project>",
+        ].join("\n"),
+      },
+    ],
+    [
+      "Gradle comments and unrelated strings",
+      {
+        "build.gradle": [
+          "// testImplementation 'junit:junit:4.13.2'",
+          "/* testImplementation('org.junit.jupiter:junit-jupiter:5.10.0') */",
+          'def example = "junit"',
+        ].join("\n"),
+      },
+    ],
+    [
+      "Kotlin examples and malformed declarations",
+      {
+        "build.gradle.kts": [
+          'val example = "testImplementation(\\"org.junit.jupiter:junit-jupiter:5.10.0\\")"',
+          'val guide = """',
+          'testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")',
+          '"""',
+          'testImplementation("org.junit.jupiter:junit-jupiter:5.10.0"',
+        ].join("\n"),
+      },
+    ],
+    [
+      "malformed Maven dependencies",
+      {
+        "pom.xml": [
+          "<dependencies>",
+          "<dependency><groupId>org.junit.jupiter</groupId></dependency>",
+          "<dependency><artifactId>junit-jupiter</artifactId></dependencies>",
+        ].join("\n"),
+      },
+    ],
+  ])("ignores JUnit found only in %s", (_label, files) => {
+    for (const [relativePath, content] of Object.entries(files)) {
+      write(relativePath, content);
+    }
+
+    expect(detectTestFrameworks(workspacePath, {})).toEqual([]);
+  });
+
+  it.each([
+    [
+      "pom.xml",
+      [
+        "<project><dependencies><dependency>",
+        "<groupId>org.junit.jupiter</groupId>",
+        "<artifactId>junit-jupiter</artifactId>",
+        "<version>5.10.0</version>",
+        "</dependency></dependencies></project>",
+      ].join("\n"),
+    ],
+    ["build.gradle", "testImplementation 'junit:junit:4.13.2'"],
+    [
+      "build.gradle.kts",
+      'testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")',
+    ],
+  ])("recognizes a valid JUnit declaration in %s", (relativePath, content) => {
+    write(relativePath, content);
 
     expect(detectTestFrameworks(workspacePath, {})).toEqual(["JUnit"]);
   });
