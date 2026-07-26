@@ -2,7 +2,7 @@ import React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Report } from "@/types/report";
+import { buildSampleReport } from "@/lib/buildSampleReport";
 import { clientMaxZipBytes } from "@/lib/ingestLimitsClient";
 
 const captureAnalysisEvent = vi.hoisted(() => vi.fn());
@@ -81,7 +81,7 @@ describe("InputForm", () => {
 
   it("accepts a ZIP at the exact hosted limit", async () => {
     const user = userEvent.setup();
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -159,7 +159,7 @@ describe("InputForm", () => {
 
   it("supports the existing imperative sample trigger", async () => {
     const ref = React.createRef<React.ElementRef<typeof InputForm>>();
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -236,7 +236,7 @@ describe("InputForm", () => {
 
   it("sends the selected bounded intent with the sample analysis", async () => {
     const user = userEvent.setup();
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -262,7 +262,7 @@ describe("InputForm", () => {
 
   it("sends the selected bounded intent with a GitHub analysis", async () => {
     const user = userEvent.setup();
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -307,7 +307,7 @@ describe("InputForm", () => {
   });
 
   it("submits the current GitHub controls before controlled state settles", async () => {
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -342,7 +342,7 @@ describe("InputForm", () => {
   });
 
   it("retains the latest GitHub values when a controlled input rerenders stale", async () => {
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -382,7 +382,7 @@ describe("InputForm", () => {
 
   it("sends the selected bounded intent with a ZIP analysis", async () => {
     const user = userEvent.setup();
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -426,7 +426,7 @@ describe("InputForm", () => {
 
   it("attributes an analysis started from the interview-preparation page", async () => {
     const user = userEvent.setup();
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     window.history.replaceState({}, "", "/?source=interview_preparation#analyze");
     vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
@@ -460,7 +460,7 @@ describe("InputForm", () => {
 
   it("preserves an accepted Cycle 3 source through completion", async () => {
     const user = userEvent.setup();
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     window.history.replaceState({}, "", "/?source=c3p1#analyze");
     vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
@@ -528,7 +528,7 @@ describe("InputForm", () => {
 
   it("drops an unknown source before analysis events are captured", async () => {
     const user = userEvent.setup();
-    const inlineReport = { report_version: 3 } as unknown as Report;
+    const inlineReport = buildSampleReport();
     window.history.replaceState({}, "", "/?source=private-repository-name#analyze");
     vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
@@ -563,7 +563,7 @@ describe("InputForm", () => {
   it("completes from an inline report when persistence is unavailable", async () => {
     const user = userEvent.setup();
     const onAnalyzeComplete = vi.fn();
-    const inlineReport = { report_version: "1" } as unknown as Report;
+    const inlineReport = buildSampleReport();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({

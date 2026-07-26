@@ -139,6 +139,10 @@ export default defineConfig({
           branches: 80,
           lines: 90,
         },
+        "src/components/useAnalysisRequest.ts": {
+          branches: 90,
+          lines: 90,
+        },
         "src/components/CandidateBriefPanel.tsx": {
           branches: 80,
           lines: 85,
