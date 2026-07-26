@@ -201,6 +201,10 @@ export default defineConfig({
             branches: 80,
             lines: 85,
           },
+        "src/analyzer/packs/javaSources.ts": {
+          branches: 95,
+          lines: 100,
+        },
         "src/analyzer/packs/javaArchitecture.ts": {
           branches: 90,
           lines: 90,
