@@ -61,9 +61,17 @@ function javaManifestDeclaresJUnit(workspacePath: string): boolean {
   const pom = readWorkspaceFile(workspacePath, "pom.xml");
   if (pom && pomDeclaresJUnit(pom)) return true;
 
-  for (const fileName of ["build.gradle", "build.gradle.kts"]) {
+  for (const fileName of ["build.gradle", "build.gradle.kts"] as const) {
     const gradle = readWorkspaceFile(workspacePath, fileName);
-    if (gradle && gradleDeclaresJUnit(gradle)) return true;
+    if (
+      gradle &&
+      gradleDeclaresJUnit(
+        gradle,
+        fileName === "build.gradle" ? "groovy" : "kotlin"
+      )
+    ) {
+      return true;
+    }
   }
 
   return false;

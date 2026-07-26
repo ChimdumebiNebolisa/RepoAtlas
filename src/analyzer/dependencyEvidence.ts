@@ -296,7 +296,10 @@ function stripScriptComments(content: string): string {
   return result;
 }
 
-export function gradleDeclaresJUnit(content: string): boolean {
+export function gradleDeclaresJUnit(
+  content: string,
+  dialect: "groovy" | "kotlin"
+): boolean {
   const configuration =
     "(?:test|androidTest|testFixtures)(?:Implementation|Api|CompileOnly|RuntimeOnly)";
   const callPattern = new RegExp(
@@ -318,7 +321,7 @@ export function gradleDeclaresJUnit(content: string): boolean {
       const match =
         line.match(callPattern) ??
         line.match(platformCallPattern) ??
-        line.match(groovyPattern);
+        (dialect === "groovy" ? line.match(groovyPattern) : null);
       return match ? junitCoordinate(match[2]) : false;
     });
 }
