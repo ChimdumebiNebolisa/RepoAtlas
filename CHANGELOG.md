@@ -4,6 +4,47 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [2026-07-26] - Language evidence and response validation
+
+### Analysis
+
+- Python and Java complexity now excludes comments and literal contents before measuring executable lines, branches, and nesting. Java `&&`, `||`, and ternary expressions each count as one static branch.
+- Java import, package, sibling-type, and application-entry-point detection now uses code-aware source boundaries, so examples in comments, strings, character literals, and text blocks cannot create architecture links or starting points.
+- TypeScript and JavaScript, Python, and Java symbol extraction now ignores non-code text before naming functions, constants, components, and classes.
+
+### Candidate Brief
+
+- Technical tradeoff answers accept Python and file-backed decisions only from supported declarations in readable, repository-contained configuration files.
+- Test guidance names pytest or JUnit only when a supported root manifest contains a valid declaration, including the correct Groovy and Kotlin Gradle dialect.
+- Both inline and stored successful analysis responses now validate the complete Candidate Brief before the interface records completion or displays the report.
+
+### Reliability
+
+- The shared header, footer, information-page shell, Privacy, Terms, and Contact surfaces now have direct rendering contracts for their established navigation, support, and repository-handling boundaries.
+
+## [2026-07-25] - Evidence containment and candidate guidance
+
+### Candidate Brief
+
+- Architecture reduction across TypeScript and JavaScript, Python, and Java now rejects relationships unless both endpoints exist in the indexed repository, normalizes path variants, removes duplicates, and preserves deterministic caps and ordering.
+- TypeScript workspace discovery and resolution now contain compiler aliases, package exports, malformed specifiers, and filesystem fallbacks within the analyzed repository.
+- Python import and entry-point analysis now ignores guard examples in comments and strings, resolves every supported configured script, and skips absent, unreadable, or out-of-repository targets without losing the brief.
+- Documentation inventory, project-purpose extraction, and the bundled-sample preview now accept only readable, nonblank, repository-contained evidence with valid references.
+- First-contribution, first-week, resume, and profile guidance now names repository-specific files, commands, workflows, and claims only when the Candidate Brief contains direct evidence of the correct kind.
+- The shared evidence index now rejects ambiguous, reserved, wrong-kind, missing-source, and stale records before they can support a claim.
+
+### Analysis
+
+- TypeScript and JavaScript parsing now fails closed across all six supported extensions: malformed files emit one bounded syntax warning and contribute no recovered module relationships.
+- TypeScript and JavaScript source-line measurement now excludes multiline comment bodies while preserving executable code at comment boundaries.
+- Java package architecture excludes unindexed inputs, and duplicate indexed files no longer inflate package relationships.
+
+### Customer-visible behavior
+
+- Two candidate guides now cover unfamiliar-repository walkthroughs and authored-project explanations, with distinct evidence boundaries and one route from the homepage to each guide.
+- Export filenames remain deterministic and filesystem-safe across blank, Unicode-only, punctuation-heavy, long, and malformed-date inputs.
+- Browser ZIP preflight enforces the visible 4 MB hosted limit before upload, and completed reports scroll into view deterministically after analysis.
+
 ## [2026-07-24] - Walkthrough text integrity
 
 ### Candidate Brief
