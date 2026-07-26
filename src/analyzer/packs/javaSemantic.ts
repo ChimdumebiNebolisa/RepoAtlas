@@ -6,6 +6,7 @@ import {
   JAVA_EXTENSION,
   packageNameFromSource,
   readJavaSource,
+  stripJavaCommentsAndLiterals,
 } from "./javaShared";
 
 const IMPORT_RE = /^\s*import\s+(static\s+)?([\w.]+(?:\.\*)?)\s*;/gm;
@@ -17,11 +18,12 @@ export interface JavaSemanticGraph {
 }
 
 export function extractImportSpecifiers(content: string): string[] {
+  const code = stripJavaCommentsAndLiterals(content);
   const specs: string[] = [];
   const seen = new Set<string>();
   IMPORT_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
-  while ((match = IMPORT_RE.exec(content))) {
+  while ((match = IMPORT_RE.exec(code))) {
     const isStatic = Boolean(match[1]);
     let spec = match[2].trim();
     if (isStatic && spec.endsWith(".*")) spec = spec.slice(0, -2);
@@ -56,13 +58,10 @@ export function collectSamePackageRefs(
   selfPath: string,
   siblings: string[]
 ): string[] {
-  const body = content
+  const body = stripJavaCommentsAndLiterals(content)
     .split("\n")
     .filter((line) => !/^\s*(?:package|import)\s+/.test(line))
-    .join("\n")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/\/\/[^\n]*/g, " ")
-    .replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, " ");
+    .join("\n");
   const refs: string[] = [];
   for (const sibling of siblings) {
     if (sibling === selfPath) continue;
