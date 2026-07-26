@@ -180,6 +180,14 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/components/{SiteHeader,SiteFooter,InfoPage}.tsx": {
+          branches: 80,
+          lines: 85,
+        },
+        "src/app/{privacy,terms,contact}/page.tsx": {
+          branches: 80,
+          lines: 85,
+        },
         "src/analyzer/packs/python{,/**}.ts": {
           branches: 80,
           lines: 85,
