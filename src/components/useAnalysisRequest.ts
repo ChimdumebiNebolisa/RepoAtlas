@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { AnalysisIntent, Report } from "@/types/report";
 import { clientFailureDiagnostic } from "@/lib/clientFailureDiagnostics";
 import { ERROR_CODES } from "@/lib/errors";
+import { validateReport } from "@/lib/reportSchema";
 import {
   analysisEntrySource,
   captureAnalysisEvent,
@@ -19,6 +20,9 @@ interface UseAnalysisRequestOptions {
   onAnalyzeComplete: (report: Report, reportId: string | null) => void;
   onAnalyzeError: (message: string) => void;
 }
+
+const INVALID_REPORT_MESSAGE =
+  "Invalid response: incomplete or malformed report data.";
 
 export function useAnalysisRequest({
   analysisIntent,
@@ -47,7 +51,7 @@ export function useAnalysisRequest({
 
       const { reportId, report: inlineReport, persisted } = data as {
         reportId?: unknown;
-        report?: Report;
+        report?: unknown;
         persisted?: boolean;
       };
       if (!isValidReportId(reportId)) {
@@ -60,9 +64,19 @@ export function useAnalysisRequest({
         return;
       }
 
-      if (persisted === false && inlineReport) {
+      if (persisted === false) {
+        const validated = validateReport(inlineReport);
+        if (!validated.ok) {
+          captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
+            ...entryProperties,
+            stage: "analysis_response",
+            error_code: ERROR_CODES.ANALYSIS_FAILED,
+          });
+          onAnalyzeError(INVALID_REPORT_MESSAGE);
+          return;
+        }
         captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
-        onAnalyzeComplete(inlineReport, null);
+        onAnalyzeComplete(validated.report, null);
         return;
       }
 
@@ -85,8 +99,19 @@ export function useAnalysisRequest({
         return;
       }
 
+      const validated = validateReport(reportPayload);
+      if (!validated.ok) {
+        captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
+          ...entryProperties,
+          stage: "report_load",
+          error_code: ERROR_CODES.ANALYSIS_FAILED,
+        });
+        onAnalyzeError(INVALID_REPORT_MESSAGE);
+        return;
+      }
+
       captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
-      onAnalyzeComplete(reportPayload as Report, reportId);
+      onAnalyzeComplete(validated.report, reportId);
     } catch {
       const diagnostic = clientFailureDiagnostic("network");
       captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
