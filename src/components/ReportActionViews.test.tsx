@@ -288,9 +288,37 @@ describe("ReportExportPanel", () => {
 });
 
 describe("ReportActionFeedback", () => {
-  it("announces an export failure", () => {
-    render(<ReportActionFeedback actions={makeActions({ exportError: "PDF export failed." })} />);
-    expect(screen.getByText("PDF export failed.")).toBeInTheDocument();
+  it.each([
+    ["PDF", "PDF export failed."],
+    ["PNG", "PNG export failed."],
+    ["Markdown", "Markdown export failed."],
+  ])("announces a %s export failure as one alert", (_format, exportError) => {
+    const { rerender } = render(
+      <ReportActionFeedback actions={makeActions({ exportError })} />
+    );
+    const alert = screen.getByRole("alert");
+
+    expect(alert).toHaveTextContent(exportError);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+
+    rerender(<ReportActionFeedback actions={makeActions({ exportError })} />);
+    expect(screen.getByRole("alert")).toBe(alert);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+  });
+
+  it("clears a failure before retry and does not announce healthy progress as an error", () => {
+    const { rerender } = render(
+      <ReportActionFeedback actions={makeActions({ exportError: "PDF export failed." })} />
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("PDF export failed.");
+
+    rerender(
+      <ReportActionFeedback actions={makeActions({ exportError: null, exporting: "pdf" })} />
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    rerender(<ReportActionFeedback actions={makeActions({ exportError: null })} />);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("renders nothing when exports are healthy", () => {
