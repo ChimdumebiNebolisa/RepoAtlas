@@ -1,6 +1,7 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { buildSampleReport } from "@/lib/buildSampleReport";
 import type {
   ArchitectureInsights,
@@ -282,27 +283,48 @@ describe("FolderMapTree", () => {
     ],
   };
 
-  it("expands nested folders and collapses them from an accessible button", () => {
+  it("exposes nested list relationships and connects directory controls to their groups", async () => {
+    const user = userEvent.setup();
     render(<FolderMapTree node={folderMap} defaultExpandDepth={1} />);
 
-    const src = screen.getByText("src").closest("button");
-    expect(src).not.toBeNull();
-    expect(src).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("deep")).not.toBeInTheDocument();
+    const hierarchy = screen.getByRole("list", { name: "Repository folder hierarchy" });
+    const rootItem = within(hierarchy).getAllByRole("listitem")[0];
+    const rootChildren = within(rootItem).getAllByRole("list")[0];
+    expect(rootChildren.children).toHaveLength(3);
 
-    fireEvent.click(src!);
+    const src = screen.getByRole("button", { name: "src, 2 items" });
+    expect(src).toHaveAttribute("aria-expanded", "false");
+    const childGroupId = src.getAttribute("aria-controls");
+    expect(childGroupId).toBeTruthy();
+    const childGroup = document.getElementById(childGroupId!);
+    expect(childGroup).toHaveAttribute("aria-labelledby", src.id);
+    expect(childGroup).not.toBeVisible();
+    expect(screen.queryByText("deep")).not.toBeVisible();
+
+    await user.click(src);
     expect(src).toHaveAttribute("aria-expanded", "true");
+    expect(src).toHaveFocus();
+    expect(childGroup).toBeVisible();
     expect(screen.getByText("deep")).toBeInTheDocument();
+    expect(within(childGroup!).getAllByRole("listitem")).toHaveLength(2);
 
-    fireEvent.click(src!);
+    await user.click(src);
     expect(src).toHaveAttribute("aria-expanded", "false");
+    expect(src).toHaveFocus();
+    expect(childGroup).not.toBeVisible();
   });
 
-  it("identifies a depth-limited directory instead of presenting it as empty", () => {
+  it("keeps files, empty folders, and depth-limited folders truthful and non-interactive", () => {
     render(<FolderMapTree node={folderMap} defaultExpandDepth={1} />);
 
     fireEvent.click(screen.getByText("src").closest("button")!);
+    const readmeItem = screen.getAllByText("README.md")[0].closest("li");
+    expect(readmeItem).not.toBeNull();
+    expect(readmeItem).not.toHaveAttribute("tabindex");
+    expect(screen.getByText("empty").closest("button")).toBeNull();
+    expect(within(screen.getByText("empty").parentElement!).getByText("0")).toBeInTheDocument();
     expect(screen.getByText("limited")).toBeInTheDocument();
+    expect(screen.getByText("limited").closest("button")).toBeNull();
     expect(screen.getByText("RepoAtlas stopped mapping at this depth.")).toHaveAttribute(
       "data-folder-map-state",
       "truncated"
