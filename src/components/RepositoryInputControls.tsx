@@ -1,4 +1,4 @@
-import type { ChangeEvent, RefObject } from "react";
+import { useRef, type ChangeEvent, type KeyboardEvent, type RefObject } from "react";
 import type { InputMode } from "./inputFormSupport";
 
 interface RepositoryInputControlsProps {
@@ -32,33 +32,64 @@ export function RepositoryInputControls({
   onGithubUrlChange,
   onGithubRefChange,
 }: RepositoryInputControlsProps) {
+  const githubTabRef = useRef<HTMLButtonElement>(null);
+  const zipTabRef = useRef<HTMLButtonElement>(null);
+
+  const activateMode = (nextMode: InputMode) => {
+    if (loading) return;
+    onModeChange(nextMode);
+    (nextMode === "github" ? githubTabRef : zipTabRef).current?.focus();
+  };
+
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentMode: InputMode
+  ) => {
+    let nextMode: InputMode | null = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+      nextMode = currentMode === "github" ? "zip" : "github";
+    }
+    if (event.key === "Home") nextMode = "github";
+    if (event.key === "End") nextMode = "zip";
+    if (nextMode === null) return;
+    event.preventDefault();
+    activateMode(nextMode);
+  };
+
   return (
     <>
       <div
         role="tablist"
         aria-label="Repository input method"
+        aria-orientation="horizontal"
         className="input-mode-toggle"
       >
         <button
+          ref={githubTabRef}
           type="button"
           role="tab"
           id="input-mode-github"
           aria-selected={mode === "github"}
           aria-controls="input-panel-github"
+          tabIndex={mode === "github" ? 0 : -1}
           className={mode === "github" ? "input-mode-tab is-active" : "input-mode-tab"}
-          onClick={() => onModeChange("github")}
+          onClick={() => activateMode("github")}
+          onKeyDown={(event) => handleTabKeyDown(event, "github")}
           disabled={loading}
         >
           Public GitHub URL
         </button>
         <button
+          ref={zipTabRef}
           type="button"
           role="tab"
           id="input-mode-zip"
           aria-selected={mode === "zip"}
           aria-controls="input-panel-zip"
+          tabIndex={mode === "zip" ? 0 : -1}
           className={mode === "zip" ? "input-mode-tab is-active" : "input-mode-tab"}
-          onClick={() => onModeChange("zip")}
+          onClick={() => activateMode("zip")}
+          onKeyDown={(event) => handleTabKeyDown(event, "zip")}
           disabled={loading}
         >
           Upload ZIP
