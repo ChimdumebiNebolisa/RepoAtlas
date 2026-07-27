@@ -185,6 +185,52 @@ describe("DeepAnalysisSection", () => {
     expect(screen.getByRole("heading", { name: "Architecture boundaries" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Commit insights" })).toBeInTheDocument();
   });
+
+  it("preserves hostile long evidence across all six deep-analysis families", () => {
+    const hostileEvidence = {
+      projectSignal: `project-signal-${"p".repeat(220)}`,
+      untestedHighRisk: `untested-high-risk-${"u".repeat(220)}`,
+      suggestedTarget: `suggested-test-target-${"t".repeat(220)}`,
+      architecturePath: `architecture-path-${"a".repeat(220)}`,
+      recentArea: `recent-work-area-${"r".repeat(220)}`,
+      churnFile: `high-churn-file-${"c".repeat(220)}`,
+    };
+    const { container } = render(
+      <DeepAnalysisSection
+        projectProfile={{ ...projectProfile, signals: [hostileEvidence.projectSignal] }}
+        testInventory={{
+          ...testInventory,
+          untested_high_risk_files: [hostileEvidence.untestedHighRisk],
+          suggested_test_targets: [hostileEvidence.suggestedTarget],
+        }}
+        architectureInsights={{
+          layers: [hostileEvidence.architecturePath],
+          hubs: [],
+          violations: [],
+          circular_deps: [],
+        }}
+        commitInsights={{
+          ...commitInsights,
+          recent_work_areas: [hostileEvidence.recentArea],
+          high_churn_files: [hostileEvidence.churnFile],
+        }}
+      />
+    );
+
+    const families = container.querySelectorAll("[data-deep-analysis-evidence]");
+    expect(families).toHaveLength(6);
+    for (const family of families) {
+      const panel = family.closest("section");
+      expect(panel).toHaveClass("min-w-0");
+      expect(panel?.querySelector(":scope > div")).toHaveClass(
+        "min-w-0",
+        "[overflow-wrap:anywhere]"
+      );
+    }
+    for (const value of Object.values(hostileEvidence)) {
+      expect(container).toHaveTextContent(value);
+    }
+  });
 });
 
 describe("DocumentsPanel", () => {

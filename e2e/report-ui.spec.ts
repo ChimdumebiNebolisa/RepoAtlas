@@ -546,6 +546,113 @@ test.describe("Report UI flows", () => {
     }
   });
 
+  test("deep-analysis evidence remains exact and contained at 390px", async ({ page }) => {
+    const hostileEvidence = {
+      projectSignal: `project-signal-${"p".repeat(220)}`,
+      untestedHighRisk: `untested-high-risk-${"u".repeat(220)}`,
+      suggestedTarget: `suggested-test-target-${"t".repeat(220)}`,
+      architecturePath: `architecture-path-${"a".repeat(220)}`,
+      recentArea: `recent-work-area-${"r".repeat(220)}`,
+      churnFile: `high-churn-file-${"c".repeat(220)}`,
+    };
+    const report = minimalReport({
+      project_profile: {
+        type: "hostile-fixture",
+        label: "Hostile mobile evidence fixture",
+        confidence: "high",
+        signals: [hostileEvidence.projectSignal],
+        evidence_refs: [],
+      },
+      test_inventory: {
+        test_file_count: 2,
+        frameworks: [],
+        tested_areas: [],
+        untested_high_risk_files: [hostileEvidence.untestedHighRisk],
+        suggested_test_targets: [hostileEvidence.suggestedTarget],
+        evidence_refs: [],
+      },
+      architecture_insights: {
+        layers: [hostileEvidence.architecturePath],
+        hubs: [],
+        violations: [],
+        circular_deps: [],
+      },
+      commit_insights: {
+        mode: "local_git",
+        recent_work_areas: [hostileEvidence.recentArea],
+        high_churn_files: [hostileEvidence.churnFile],
+        co_changed_pairs: [],
+        evidence_refs: [],
+      },
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openControlledInlineReport(page, report, false);
+    await page
+      .getByRole("tablist", { name: "Report sections" })
+      .last()
+      .getByRole("tab", { name: "Overview", exact: true })
+      .click();
+
+    const reportPanel = page
+      .locator(".report-tabs")
+      .last()
+      .locator('[role="tabpanel"]:visible');
+    const families = reportPanel.locator("[data-deep-analysis-evidence]");
+    await expect(families).toHaveCount(6);
+    for (const value of Object.values(hostileEvidence)) {
+      await expect(reportPanel).toContainText(value);
+    }
+
+    const containment = await families.evaluateAll((elements) => {
+      const reportPanel = elements[0]?.closest('[role="tabpanel"]');
+      const reportPanelBounds = reportPanel?.getBoundingClientRect();
+
+      return elements.map((element) => {
+        const value = element as HTMLElement;
+        const valueRange = document.createRange();
+        valueRange.selectNodeContents(value);
+        const textRects = [...valueRange.getClientRects()];
+
+        return {
+          family: value.dataset.deepAnalysisEvidence,
+          escapesReport:
+            !reportPanelBounds ||
+            textRects.some(
+              (bounds) =>
+                bounds.left < reportPanelBounds.left - 1 ||
+                bounds.right > reportPanelBounds.right + 1
+            ),
+        };
+      });
+    });
+    expect(containment).toEqual(
+      expect.arrayContaining(
+        Object.values({
+          projectSignal: "project-signal",
+          untestedHighRisk: "untested-high-risk",
+          suggestedTarget: "suggested-test-target",
+          architecturePath: "architecture-paths",
+          recentArea: "recent-work-area",
+          churnFile: "high-churn-file",
+        }).map((family) => ({
+          family,
+          escapesReport: false,
+        }))
+      )
+    );
+    expect(containment.filter((family) => family.escapesReport), JSON.stringify(containment)).toHaveLength(
+      0
+    );
+
+    const pageOverflow = await page.evaluate(() => ({
+      document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      body: document.body.scrollWidth - document.body.clientWidth,
+    }));
+    expect(pageOverflow.document).toBeLessThanOrEqual(1);
+    expect(pageOverflow.body).toBeLessThanOrEqual(1);
+  });
+
   test("homepage preview disables Markdown export (no reportId)", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: /^Open sample report/i }).first().click();
