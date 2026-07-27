@@ -54,6 +54,10 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isDisplayedScore(value: unknown): value is number {
+  return isFiniteNumber(value) && value >= 0 && value <= 100;
+}
+
 function isNonNegativeInteger(value: unknown): value is number {
   return isFiniteNumber(value) && Number.isInteger(value) && value >= 0;
 }
@@ -127,7 +131,7 @@ function isStartHereItem(value: unknown): boolean {
   if (!isObject(value)) return false;
   return (
     typeof value.path === "string" &&
-    isFiniteNumber(value.score) &&
+    isDisplayedScore(value.score) &&
     typeof value.explanation === "string"
   );
 }
@@ -136,7 +140,7 @@ function isDangerZoneItem(value: unknown): boolean {
   if (!isObject(value)) return false;
   if (
     typeof value.path !== "string" ||
-    !isFiniteNumber(value.score) ||
+    !isDisplayedScore(value.score) ||
     typeof value.breakdown !== "string" ||
     !isObject(value.metrics)
   ) {
@@ -452,6 +456,200 @@ function isSemanticGraph(value: unknown): boolean {
   return true;
 }
 
+function uniqueIds(
+  items: Array<Record<string, unknown>>,
+): Set<string> | null {
+  const ids = new Set<string>();
+  for (const item of items) {
+    if (typeof item.id !== "string" || item.id.length === 0 || ids.has(item.id)) {
+      return null;
+    }
+    ids.add(item.id);
+  }
+  return ids;
+}
+
+function referencesExist(ids: Set<string>, references: unknown[]): boolean {
+  return references.every(
+    (reference) => typeof reference === "string" && ids.has(reference),
+  );
+}
+
+function candidateEvidenceReferences(
+  candidate: Record<string, unknown>,
+): unknown[] {
+  const repoSummary = candidate.repo_summary as Record<string, unknown>;
+  const talkingPoints = candidate.interview_talking_points as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const references: unknown[] = [
+    ...(repoSummary.primary_evidence as unknown[]),
+    ...(candidate.reading_path as Array<Record<string, unknown>>).flatMap(
+      (item) => item.evidence_refs as unknown[],
+    ),
+    ...Object.values(talkingPoints).flatMap(
+      (answer) => answer.evidence_refs as unknown[],
+    ),
+    ...(candidate.first_pr_plan as Array<Record<string, unknown>>).flatMap(
+      (item) => item.evidence_refs as unknown[],
+    ),
+    ...(candidate.resume_bullets as Array<Record<string, unknown>>).flatMap(
+      (item) => item.evidence_refs as unknown[],
+    ),
+    ...(candidate.warnings as Array<Record<string, unknown>>).flatMap(
+      (warning) => (warning.evidence_refs as unknown[] | undefined) ?? [],
+    ),
+  ];
+
+  const analysisFocus = candidate.analysis_focus;
+  if (isObject(analysisFocus)) {
+    references.push(
+      ...(analysisFocus.review_steps as Array<Record<string, unknown>>).flatMap(
+        (step) => step.evidence_refs as unknown[],
+      ),
+    );
+  }
+  const walkthroughScript = candidate.walkthrough_script;
+  if (isObject(walkthroughScript)) {
+    references.push(...(walkthroughScript.evidence_refs as unknown[]));
+  }
+  for (const key of ["behavioral_hooks", "interview_questions"] as const) {
+    const items = candidate[key];
+    if (Array.isArray(items)) {
+      references.push(
+        ...items.flatMap(
+          (item) => (item as Record<string, unknown>).evidence_refs as unknown[],
+        ),
+      );
+    }
+  }
+
+  return references;
+}
+
+function topLevelEvidenceReferences(report: Record<string, unknown>): unknown[] {
+  const references: unknown[] = [];
+  for (const key of [
+    "project_profile",
+    "project_purpose",
+    "test_inventory",
+    "commit_insights",
+  ] as const) {
+    const value = report[key];
+    if (isObject(value) && Array.isArray(value.evidence_refs)) {
+      references.push(...value.evidence_refs);
+    }
+  }
+  if (Array.isArray(report.technical_decisions)) {
+    for (const decision of report.technical_decisions) {
+      if (isObject(decision) && Array.isArray(decision.evidence_refs)) {
+        references.push(...decision.evidence_refs);
+      }
+    }
+  }
+  return references;
+}
+
+function hasValidCandidateBriefIntegrity(
+  report: Record<string, unknown>,
+): boolean {
+  const candidate = report.candidate_brief;
+  if (!isObject(candidate)) return true;
+
+  const evidence = candidate.evidence_refs as Array<Record<string, unknown>>;
+  const evidenceIds = uniqueIds(evidence);
+  if (!evidenceIds) return false;
+
+  for (const ref of evidence) {
+    if (
+      typeof ref.line_start === "number" &&
+      typeof ref.line_end === "number" &&
+      ref.line_start > ref.line_end
+    ) {
+      return false;
+    }
+  }
+
+  return referencesExist(evidenceIds, [
+    ...candidateEvidenceReferences(candidate),
+    ...topLevelEvidenceReferences(report),
+  ]);
+}
+
+function hasValidArchitectureIntegrity(
+  architecture: Record<string, unknown>,
+): boolean {
+  const nodes = architecture.nodes as Array<Record<string, unknown>>;
+  const nodeIds = uniqueIds(nodes);
+  if (!nodeIds) return false;
+  return (architecture.edges as Array<Record<string, unknown>>).every(
+    (edge) =>
+      typeof edge.from === "string" &&
+      typeof edge.to === "string" &&
+      nodeIds.has(edge.from) &&
+      nodeIds.has(edge.to),
+  );
+}
+
+function hasValidSemanticGraphIntegrity(
+  semanticGraph: Record<string, unknown>,
+): boolean {
+  const nodes = semanticGraph.nodes as Array<Record<string, unknown>>;
+  const edges = semanticGraph.edges as Array<Record<string, unknown>>;
+  const nodeIds = uniqueIds(nodes);
+  const edgeIds = uniqueIds(edges);
+  if (!nodeIds || !edgeIds) return false;
+
+  const resolutionCounts = new Map(
+    RESOLUTION_STATUSES.map((status) => [status, 0]),
+  );
+  for (const edge of edges) {
+    if (
+      typeof edge.from !== "string" ||
+      !nodeIds.has(edge.from) ||
+      (edge.to != null &&
+        (typeof edge.to !== "string" || !nodeIds.has(edge.to)))
+    ) {
+      return false;
+    }
+    const evidence = edge.evidence as Record<string, unknown>;
+    if (
+      (evidence.line_start as number) > (evidence.line_end as number)
+    ) {
+      return false;
+    }
+    const resolution = edge.resolution as (typeof RESOLUTION_STATUSES)[number];
+    resolutionCounts.set(resolution, (resolutionCounts.get(resolution) ?? 0) + 1);
+  }
+
+  const stats = semanticGraph.stats as Record<string, unknown>;
+  return (
+    stats.node_count === nodes.length &&
+    stats.edge_count === edges.length &&
+    RESOLUTION_STATUSES.every(
+      (status) => stats[status] === resolutionCounts.get(status),
+    ) &&
+    stats.entrypoint_count ===
+      nodes.filter((node) => node.kind === "entrypoint").length
+  );
+}
+
+function hasValidReportIntegrity(report: Record<string, unknown>): boolean {
+  if (
+    !hasValidArchitectureIntegrity(
+      report.architecture as Record<string, unknown>,
+    ) ||
+    !hasValidCandidateBriefIntegrity(report)
+  ) {
+    return false;
+  }
+  return (
+    !isObject(report.semantic_graph) ||
+    hasValidSemanticGraphIntegrity(report.semantic_graph)
+  );
+}
+
 /** Validate parsed JSON as a supported Report. */
 export function validateReport(data: unknown): ReportLoadResult {
   if (!isObject(data)) return { ok: false, reason: "corrupt" };
@@ -517,6 +715,9 @@ export function validateReport(data: unknown): ReportLoadResult {
     return { ok: false, reason: "corrupt" };
   }
   if (data.partial != null && typeof data.partial !== "boolean") {
+    return { ok: false, reason: "corrupt" };
+  }
+  if (!hasValidReportIntegrity(data)) {
     return { ok: false, reason: "corrupt" };
   }
 

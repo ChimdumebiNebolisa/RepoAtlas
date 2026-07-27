@@ -28,10 +28,16 @@ const semanticGraph = {
   nodes: [
     {
       id: "file:src/a.ts",
-      kind: "file",
+      kind: "entrypoint",
       label: "src/a.ts",
       language: "typescript",
       entrypoint_reason: "manifest target",
+    },
+    {
+      id: "file:src/b.ts",
+      kind: "file",
+      label: "src/b.ts",
+      language: "typescript",
     },
   ],
   edges: [
@@ -53,7 +59,7 @@ const semanticGraph = {
     },
   ],
   stats: {
-    node_count: 1,
+    node_count: 2,
     edge_count: 1,
     resolved_internal: 1,
     resolved_external: 0,
@@ -165,7 +171,10 @@ describe("reportSchema", () => {
           children: [{ path: "src/a.ts", type: "file" }],
         },
         architecture: {
-          nodes: [{ id: "src", label: "src", type: "folder" }],
+          nodes: [
+            { id: "src", label: "src", type: "folder" },
+            { id: "tests", label: "tests", type: "folder" },
+          ],
           edges: [{ from: "src", to: "tests", type: "dependency" }],
         },
         start_here: [{ path: "src/a.ts", score: 1, explanation: "entrypoint" }],
@@ -232,6 +241,32 @@ describe("reportSchema", () => {
     };
     (cyclic.children as unknown[]).push(cyclic);
     expectCorrupt({ ...minimalReport, folder_map: cyclic });
+  });
+
+  it("accepts displayed score boundaries and rejects scores outside them", () => {
+    expect(
+      validateReport({
+        ...minimalReport,
+        start_here: [
+          { path: "first.ts", score: 0, explanation: "lowest priority" },
+          { path: "last.ts", score: 100, explanation: "highest priority" },
+        ],
+        danger_zones: [
+          { path: "safe.ts", score: 0, breakdown: "lowest risk", metrics: {} },
+          { path: "risky.ts", score: 100, breakdown: "highest risk", metrics: {} },
+        ],
+      }).ok,
+    ).toBe(true);
+    for (const score of [-1, 101]) {
+      expectCorrupt({
+        ...minimalReport,
+        start_here: [{ path: "a.ts", score, explanation: "x" }],
+      });
+      expectCorrupt({
+        ...minimalReport,
+        danger_zones: [{ path: "a.ts", score, breakdown: "x", metrics: {} }],
+      });
+    }
   });
 
   it("rejects non-finite report scores and metrics", () => {
@@ -330,6 +365,56 @@ describe("reportSchema", () => {
     expectCorrupt(withBadLine.report);
   });
 
+  it("rejects duplicate, dangling, and reversed Candidate Brief evidence", () => {
+    const duplicate = mutableCandidate();
+    const duplicateRefs = duplicate.candidate.evidence_refs as Array<
+      Record<string, unknown>
+    >;
+    duplicateRefs[1].id = duplicateRefs[0].id;
+    expectCorrupt(duplicate.report);
+
+    const dangling = mutableCandidate();
+    (
+      dangling.candidate.reading_path as Array<Record<string, unknown>>
+    )[0].evidence_refs = ["missing-evidence"];
+    expectCorrupt(dangling.report);
+
+    const topLevelDangling = mutableCandidate();
+    topLevelDangling.report.technical_decisions = [
+      {
+        category: "framework",
+        decision: "Unknown",
+        signals: ["unknown"],
+        evidence_refs: ["missing-decision-evidence"],
+      },
+    ];
+    expectCorrupt(topLevelDangling.report);
+
+    const reversed = mutableCandidate();
+    const ref = (
+      reversed.candidate.evidence_refs as Array<Record<string, unknown>>
+    )[0];
+    ref.line_start = 9;
+    ref.line_end = 3;
+    expectCorrupt(reversed.report);
+  });
+
+  it("preserves evidence-free generic questions and valid legacy Candidate Briefs", () => {
+    const { report, candidate } = mutableCandidate();
+    candidate.interview_questions = [
+      {
+        question: "Where can static analysis be wrong?",
+        rationale: "Tests the candidate's judgment about tool limits.",
+        evidence_refs: [],
+        generic: true,
+      },
+    ];
+    expect(validateReport(report).ok).toBe(true);
+
+    const { report_version: _version, ...legacy } = report;
+    expect(validateReport(legacy).ok).toBe(true);
+  });
+
   it("validates every optional Candidate Brief section", () => {
     const mutations: Array<(candidate: Record<string, unknown>) => void> = [
       (candidate) => {
@@ -406,6 +491,26 @@ describe("reportSchema", () => {
     ).toBe(true);
   });
 
+  it("rejects duplicate and missing architecture node identities", () => {
+    expectCorrupt({
+      ...minimalReport,
+      architecture: {
+        nodes: [
+          { id: "same", label: "one" },
+          { id: "same", label: "two" },
+        ],
+        edges: [],
+      },
+    });
+    expectCorrupt({
+      ...minimalReport,
+      architecture: {
+        nodes: [{ id: "source", label: "source" }],
+        edges: [{ from: "source", to: "missing" }],
+      },
+    });
+  });
+
   it("rejects malformed semantic nodes, edges, enums, and non-finite counts", () => {
     expectCorrupt({
       ...minimalReport,
@@ -440,5 +545,57 @@ describe("reportSchema", () => {
         ],
       },
     });
+  });
+
+  it("rejects duplicate semantic IDs, missing endpoints, reversed evidence, and contradictory totals", () => {
+    expectCorrupt({
+      ...minimalReport,
+      semantic_graph: {
+        ...semanticGraph,
+        nodes: [semanticGraph.nodes[0], { ...semanticGraph.nodes[1], id: semanticGraph.nodes[0].id }],
+      },
+    });
+    expectCorrupt({
+      ...minimalReport,
+      semantic_graph: {
+        ...semanticGraph,
+        edges: [semanticGraph.edges[0], { ...semanticGraph.edges[0] }],
+        stats: { ...semanticGraph.stats, edge_count: 2, resolved_internal: 2 },
+      },
+    });
+    expectCorrupt({
+      ...minimalReport,
+      semantic_graph: {
+        ...semanticGraph,
+        edges: [{ ...semanticGraph.edges[0], to: "file:src/missing.ts" }],
+      },
+    });
+    expectCorrupt({
+      ...minimalReport,
+      semantic_graph: {
+        ...semanticGraph,
+        edges: [
+          {
+            ...semanticGraph.edges[0],
+            evidence: {
+              ...semanticGraph.edges[0].evidence,
+              line_start: 4,
+              line_end: 2,
+            },
+          },
+        ],
+      },
+    });
+    for (const stats of [
+      { ...semanticGraph.stats, node_count: 99 },
+      { ...semanticGraph.stats, edge_count: 99 },
+      { ...semanticGraph.stats, resolved_internal: 0 },
+      { ...semanticGraph.stats, entrypoint_count: 0 },
+    ]) {
+      expectCorrupt({
+        ...minimalReport,
+        semantic_graph: { ...semanticGraph, stats },
+      });
+    }
   });
 });
