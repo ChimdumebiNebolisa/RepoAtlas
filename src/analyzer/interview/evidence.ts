@@ -13,6 +13,10 @@ import type {
 
 const GENERATED_EVIDENCE_ID =
   /^(?:arch|sem|start|risk|cmd|doc|ci|warn)-\d+$/;
+const INFORMATIONAL_WARNING_PATTERNS = [
+  /^Architecture reduced from file-level \(\d+ files\) to (?:folder|package)-level \(\d+ (?:folders|packages)\)\.$/,
+  /^Commit history unavailable for zip uploads without \.git metadata\.$/,
+];
 
 export function basename(filePath: string): string {
   const normalized = filePath.replace(/\\/g, "/");
@@ -34,6 +38,10 @@ export function buildConfidenceAssessment(
 ): ConfidenceAssessment {
   const reasons: string[] = [];
   const gaps: string[] = [];
+  const materialWarningCount = input.warnings.filter(
+    (warning) =>
+      !INFORMATIONAL_WARNING_PATTERNS.some((pattern) => pattern.test(warning))
+  ).length;
 
   if (input.contributeSignals.key_docs.some((doc) => /readme/i.test(doc))) {
     reasons.push("README or key docs detected");
@@ -60,13 +68,25 @@ export function buildConfidenceAssessment(
     reasons.push(`Purpose extracted from ${input.projectPurpose.source}`);
   }
 
-  if (input.warnings.length > 3) {
+  if (input.partial) {
+    gaps.push("Analysis stopped before completion");
+  }
+
+  if (materialWarningCount > 1) {
     gaps.push("Multiple analysis warnings");
   }
 
   let level: Confidence = "low";
-  if (reasons.length >= 4 && gaps.length <= 1) level = "high";
-  else if (reasons.length >= 2) level = "medium";
+  if (
+    reasons.length >= 4 &&
+    gaps.length <= 1 &&
+    !input.partial &&
+    materialWarningCount <= 1
+  ) {
+    level = "high";
+  } else if (reasons.length >= 2) {
+    level = "medium";
+  }
 
   return { level, reasons, gaps };
 }

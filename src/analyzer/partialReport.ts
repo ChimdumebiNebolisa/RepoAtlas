@@ -38,6 +38,7 @@ export function buildPartialReport(input: PartialReportInput): Report {
 
   const candidate_brief = buildCandidateBrief({
     repoName: input.workspaceName,
+    partial: true,
     analysisIntent: input.analysisIntent,
     startHere,
     dangerZones,

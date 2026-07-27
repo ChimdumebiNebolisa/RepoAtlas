@@ -17,6 +17,12 @@ describe("analyzeRepository partial reports", () => {
     expect(result.report.folder_map).toBeDefined();
     expect(result.report.warnings.some((w) => w.includes("partial report"))).toBe(true);
     expect(result.report.candidate_brief).toBeDefined();
+    expect(result.report.candidate_brief?.confidence_assessment?.level).not.toBe(
+      "high"
+    );
+    expect(result.report.candidate_brief?.confidence_assessment?.gaps).toContain(
+      "Analysis stopped before completion"
+    );
     expect(consoleWarn).toHaveBeenCalledWith(
       JSON.stringify({
         level: "warn",
