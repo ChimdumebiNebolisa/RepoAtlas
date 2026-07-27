@@ -22,6 +22,7 @@ export type PrRisk = "low" | "medium" | "high";
 
 export interface BuildCandidateBriefInput {
   repoName: string;
+  partial?: boolean;
   analysisIntent?: AnalysisIntent;
   startHere: StartHereItem[];
   dangerZones: DangerZoneItem[];
