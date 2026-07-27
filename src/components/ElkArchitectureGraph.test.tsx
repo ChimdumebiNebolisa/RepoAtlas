@@ -192,6 +192,7 @@ describe("ElkArchitectureGraph states", () => {
       edges: [
         { from: "node-0", to: "node-0" },
         { from: "node-0", to: "node-1" },
+        { from: "node-49", to: "node-50" },
       ],
     };
     layoutGraph.mockResolvedValueOnce({ ...baseLayout, edges: [] });
@@ -206,18 +207,44 @@ describe("ElkArchitectureGraph states", () => {
   });
 
   it("recovers when a failed graph is replaced by a valid one", async () => {
+    const replacementLayout: LayoutResult = {
+      ...baseLayout,
+      nodes: [
+        {
+          id: "replacement",
+          label: "Replacement",
+          x: 0,
+          y: 0,
+          width: 120,
+          height: 40,
+        },
+      ],
+      edges: [],
+    };
     layoutGraph
       .mockRejectedValueOnce(new Error("ELK could not place this graph"))
-      .mockResolvedValueOnce(baseLayout);
-    const { rerender } = render(
+      .mockResolvedValueOnce(replacementLayout);
+    const { container, rerender } = render(
       <ElkArchitectureGraph architecture={baseArchitecture} />
     );
 
-    expect(await screen.findByText("Layout error: ELK could not place this graph")).toHaveAttribute(
-      "data-architecture-state",
-      "error"
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The visual map could not be arranged.");
+    expect(alert).toHaveTextContent(
+      "The same repository evidence remains available as text below."
     );
-    expect(screen.queryByText("Read architecture as text")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.queryByText(/ELK could not place this graph/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Available nodes (2)" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Available relationships (1)" })
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-architecture-text-node]")).toHaveLength(2);
+    expect(
+      container.querySelectorAll("[data-architecture-text-relationship]")
+    ).toHaveLength(1);
 
     const replacement = {
       nodes: [{ id: "replacement", label: "Replacement" }],
@@ -229,7 +256,58 @@ describe("ElkArchitectureGraph states", () => {
     expect(
       await screen.findByRole("img", { name: "Architecture dependency map" })
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Layout error:/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText("Read architecture as text")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Displayed nodes (1)" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Entry")).not.toBeInTheDocument();
+  });
+
+  it("retains the complete bounded evidence set when layout fails", async () => {
+    const architecture: Architecture = {
+      nodes: Array.from({ length: 52 }, (_, index) => ({
+        id: `node-${index}`,
+        label: `Node ${index}`,
+      })),
+      edges: [
+        { from: "node-0", to: "node-0" },
+        { from: "node-0", to: "node-49" },
+        { from: "node-49", to: "node-50" },
+        { from: "missing", to: "node-1" },
+      ],
+    };
+    layoutGraph.mockRejectedValueOnce(new Error("private layout details"));
+    const { container } = render(
+      <ElkArchitectureGraph architecture={architecture} />
+    );
+
+    await screen.findByRole("alert");
+
+    expect(layoutGraph).toHaveBeenCalledWith({
+      nodes: architecture.nodes.slice(0, 50),
+      edges: [{ from: "node-0", to: "node-49" }],
+    });
+    expect(
+      screen.getByText("The text fallback contains 50 of 52 repository nodes.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Available nodes (50)" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Available relationships (1)" })
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-architecture-text-node]")).toHaveLength(50);
+    expect(
+      container.querySelectorAll("[data-architecture-text-relationship]")
+    ).toHaveLength(1);
+    const nodesSection = screen
+      .getByRole("heading", { name: "Available nodes (50)" })
+      .closest("section");
+    expect(within(nodesSection!).getByText("Node 0")).toBeInTheDocument();
+    expect(within(nodesSection!).getByText("Node 49")).toBeInTheDocument();
+    expect(within(nodesSection!).queryByText("Node 50")).not.toBeInTheDocument();
+    expect(screen.queryByText(/private layout details/)).not.toBeInTheDocument();
   });
 
   it("ignores stale layout completion after the architecture changes", async () => {
@@ -277,7 +355,12 @@ describe("ElkArchitectureGraph states", () => {
 
     render(<ElkArchitectureGraph architecture={baseArchitecture} />);
 
-    expect(await screen.findByText("Layout error: Layout failed")).toBeInTheDocument();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The visual map could not be arranged.");
+    expect(alert).toHaveTextContent(
+      "The same repository evidence remains available as text below."
+    );
+    expect(screen.queryByText(/unstructured failure/)).not.toBeInTheDocument();
   });
 });
 

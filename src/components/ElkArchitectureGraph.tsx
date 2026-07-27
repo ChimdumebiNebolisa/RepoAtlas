@@ -1,13 +1,135 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
-import type { Architecture, SemanticGraph } from "@/types/report";
+import type {
+  Architecture,
+  ArchitectureEdge,
+  ArchitectureNode,
+  SemanticGraph,
+} from "@/types/report";
 import { layoutGraph, type LayoutResult } from "@/lib/elkLayout";
 
 interface ElkArchitectureGraphProps {
   architecture: Architecture;
   semanticGraph?: SemanticGraph;
+}
+
+interface TextRelationship<
+  Node extends Pick<ArchitectureNode, "id" | "label"> = Pick<
+    ArchitectureNode,
+    "id" | "label"
+  >,
+  Edge extends Pick<ArchitectureEdge, "from" | "to"> = Pick<
+    ArchitectureEdge,
+    "from" | "to"
+  >,
+> {
+  edge: Edge;
+  fromNode: Node;
+  toNode: Node;
+}
+
+interface ArchitectureEvidenceListsProps {
+  idPrefix: string;
+  nodes: Array<Pick<ArchitectureNode, "id" | "label">>;
+  relationships: TextRelationship[];
+  nodeHeading: string;
+  relationshipHeading: string;
+  emptyRelationshipCopy: string;
+}
+
+const MAX_LAYOUT_NODES = 50;
+const LAYOUT_FAILURE_HEADING = "The visual map could not be arranged.";
+const LAYOUT_FAILURE_DETAIL =
+  "The same repository evidence remains available as text below.";
+
+function getBoundedArchitecture(architecture: Architecture): Architecture {
+  const nodes = architecture.nodes.slice(0, MAX_LAYOUT_NODES);
+  const nodeIds = new Set(nodes.map((node) => node.id));
+
+  return {
+    nodes,
+    edges: architecture.edges.filter(
+      (edge) =>
+        edge.from !== edge.to &&
+        nodeIds.has(edge.from) &&
+        nodeIds.has(edge.to)
+    ),
+  };
+}
+
+function getTextRelationships<
+  Node extends Pick<ArchitectureNode, "id" | "label">,
+  Edge extends Pick<ArchitectureEdge, "from" | "to">,
+>(nodes: Node[], edges: Edge[]): Array<TextRelationship<Node, Edge>>;
+function getTextRelationships<
+  Node extends Pick<ArchitectureNode, "id" | "label">,
+  Edge extends Pick<ArchitectureEdge, "from" | "to">,
+>(nodes: Node[], edges: Edge[]): Array<TextRelationship<Node, Edge>> {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+  return edges.flatMap((edge) => {
+    const fromNode = nodeById.get(edge.from);
+    const toNode = nodeById.get(edge.to);
+    return fromNode && toNode ? [{ edge, fromNode, toNode }] : [];
+  });
+}
+
+function ArchitectureEvidenceLists({
+  idPrefix,
+  nodes,
+  relationships,
+  nodeHeading,
+  relationshipHeading,
+  emptyRelationshipCopy,
+}: ArchitectureEvidenceListsProps) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <section aria-labelledby={`${idPrefix}-nodes`}>
+        <h3 id={`${idPrefix}-nodes`} className="font-medium text-slate-900">
+          {nodeHeading} ({nodes.length})
+        </h3>
+        <ul className="mt-2 space-y-1">
+          {nodes.map((node, index) => (
+            <li
+              key={`${node.id}-${index}`}
+              className="break-all rounded bg-slate-50 px-2 py-1.5"
+              data-architecture-text-node
+            >
+              <code>{node.label}</code>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section aria-labelledby={`${idPrefix}-relationships`}>
+        <h3
+          id={`${idPrefix}-relationships`}
+          className="font-medium text-slate-900"
+        >
+          {relationshipHeading} ({relationships.length})
+        </h3>
+        {relationships.length > 0 ? (
+          <ul className="mt-2 space-y-1">
+            {relationships.map(({ edge, fromNode, toNode }, index) => (
+              <li
+                key={`${edge.from}-${edge.to}-${index}`}
+                className="break-all rounded bg-slate-50 px-2 py-1.5"
+                data-architecture-text-relationship
+              >
+                <code>{fromNode.label}</code>{" "}
+                <span aria-hidden="true">→</span>
+                <span className="sr-only"> to </span>{" "}
+                <code>{toNode.label}</code>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 leading-6">{emptyRelationshipCopy}</p>
+        )}
+      </section>
+    </div>
+  );
 }
 
 export function ElkArchitectureGraph({
@@ -21,30 +143,29 @@ export function ElkArchitectureGraph({
   const [layoutState, setLayoutState] = useState<{
     architecture: Architecture;
     layout: LayoutResult | null;
-    error: string | null;
+    error: boolean;
   } | null>(null);
+  const boundedArchitecture = useMemo(
+    () => getBoundedArchitecture(architecture),
+    [architecture]
+  );
 
   useEffect(() => {
     if (!architecture.nodes.length) return;
     let active = true;
 
-    const filteredArch = {
-      nodes: architecture.nodes.slice(0, 50),
-      edges: architecture.edges.filter((e) => e.from !== e.to),
-    };
-
-    layoutGraph(filteredArch)
+    layoutGraph(boundedArchitecture)
       .then((layout) => {
         if (active) {
-          setLayoutState({ architecture, layout, error: null });
+          setLayoutState({ architecture, layout, error: false });
         }
       })
-      .catch((err) => {
+      .catch(() => {
         if (active) {
           setLayoutState({
             architecture,
             layout: null,
-            error: err instanceof Error ? err.message : "Layout failed",
+            error: true,
           });
         }
       });
@@ -52,7 +173,7 @@ export function ElkArchitectureGraph({
     return () => {
       active = false;
     };
-  }, [architecture]);
+  }, [architecture, boundedArchitecture]);
 
   const currentLayoutState =
     layoutState?.architecture === architecture ? layoutState : null;
@@ -80,10 +201,45 @@ export function ElkArchitectureGraph({
   }
 
   if (error) {
+    const fallbackRelationships = getTextRelationships(
+      boundedArchitecture.nodes,
+      boundedArchitecture.edges
+    );
+
     return (
-      <pre data-architecture-state="error" className="text-red-600">
-        Layout error: {error}
-      </pre>
+      <div
+        data-architecture-state="error"
+        className="rounded border border-amber-200 bg-amber-50 p-4"
+      >
+        <div role="alert" aria-atomic="true">
+          <p className="font-medium text-amber-950">{LAYOUT_FAILURE_HEADING}</p>
+          <p className="mt-1 text-sm leading-6 text-amber-900">
+            {LAYOUT_FAILURE_DETAIL}
+          </p>
+        </div>
+        <div className="mt-4 rounded border border-amber-200 bg-white px-3 py-3">
+          <p className="text-sm leading-6 text-slate-700">
+            This text fallback preserves the repository nodes and supported
+            relationships supplied to the visual map.
+          </p>
+          {architecture.nodes.length > boundedArchitecture.nodes.length && (
+            <p className="mt-3 rounded bg-slate-100 px-3 py-2 text-xs leading-5 text-slate-600">
+              The text fallback contains {boundedArchitecture.nodes.length} of{" "}
+              {architecture.nodes.length} repository nodes.
+            </p>
+          )}
+          <div className="mt-4">
+            <ArchitectureEvidenceLists
+              idPrefix={graphTitleId}
+              nodes={boundedArchitecture.nodes}
+              relationships={fallbackRelationships}
+              nodeHeading="Available nodes"
+              relationshipHeading="Available relationships"
+              emptyRelationshipCopy="No supported relationships connect these nodes."
+            />
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -97,12 +253,7 @@ export function ElkArchitectureGraph({
 
   const padding = 20;
   const viewBox = `0 0 ${layout.width + padding * 2} ${layout.height + padding * 2}`;
-  const nodeById = new Map(layout.nodes.map((node) => [node.id, node]));
-  const displayedRelationships = layout.edges.flatMap((edge) => {
-    const fromNode = nodeById.get(edge.from);
-    const toNode = nodeById.get(edge.to);
-    return fromNode && toNode ? [{ edge, fromNode, toNode }] : [];
-  });
+  const displayedRelationships = getTextRelationships(layout.nodes, layout.edges);
   const relationshipCount = displayedRelationships.length;
   const graphDescription = `The map shows ${layout.nodes.length} repository node${
     layout.nodes.length === 1 ? "" : "s"
@@ -285,54 +436,14 @@ export function ElkArchitectureGraph({
                     {architecture.nodes.length} repository nodes.
                   </p>
                 )}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <section aria-labelledby={`${graphTitleId}-nodes`}>
-                    <h3 id={`${graphTitleId}-nodes`} className="font-medium text-slate-900">
-                      Displayed nodes ({layout.nodes.length})
-                    </h3>
-                    <ul className="mt-2 space-y-1">
-                      {layout.nodes.map((node, index) => (
-                        <li
-                          key={`${node.id}-${index}`}
-                          className="break-all rounded bg-slate-50 px-2 py-1.5"
-                          data-architecture-text-node
-                        >
-                          <code>{node.label}</code>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                  <section aria-labelledby={`${graphTitleId}-relationships`}>
-                    <h3
-                      id={`${graphTitleId}-relationships`}
-                      className="font-medium text-slate-900"
-                    >
-                      Displayed relationships ({relationshipCount})
-                    </h3>
-                    {relationshipCount > 0 ? (
-                      <ul className="mt-2 space-y-1">
-                        {displayedRelationships.map(
-                          ({ edge, fromNode, toNode }, index) => (
-                            <li
-                              key={`${edge.from}-${edge.to}-${index}`}
-                              className="break-all rounded bg-slate-50 px-2 py-1.5"
-                              data-architecture-text-relationship
-                            >
-                              <code>{fromNode.label}</code>{" "}
-                              <span aria-hidden="true">→</span>
-                              <span className="sr-only"> to </span>{" "}
-                              <code>{toNode.label}</code>
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    ) : (
-                      <p className="mt-2 leading-6">
-                        No relationships are displayed between these nodes.
-                      </p>
-                    )}
-                  </section>
-                </div>
+                <ArchitectureEvidenceLists
+                  idPrefix={graphTitleId}
+                  nodes={layout.nodes}
+                  relationships={displayedRelationships}
+                  nodeHeading="Displayed nodes"
+                  relationshipHeading="Displayed relationships"
+                  emptyRelationshipCopy="No relationships are displayed between these nodes."
+                />
               </div>
             </details>
           </div>
