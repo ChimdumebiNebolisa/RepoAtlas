@@ -392,6 +392,67 @@ describe("useReportActions", () => {
     );
   });
 
+  it("downloads every PDF page and records one successful export", async () => {
+    html2canvas.mockResolvedValueOnce(makeCanvas());
+    const originalCreateElement = document.createElement.bind(document);
+    const fillRect = vi.fn();
+    const drawImage = vi.fn();
+    vi.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const element = originalCreateElement(tagName);
+      if (tagName === "canvas") {
+        vi.spyOn(element as HTMLCanvasElement, "getContext").mockReturnValue({
+          fillStyle: "",
+          fillRect,
+          drawImage,
+        } as unknown as CanvasRenderingContext2D);
+        vi.spyOn(element as HTMLCanvasElement, "toBlob").mockImplementation(
+          (callback) => callback(new Blob(["page"]))
+        );
+      }
+      return element;
+    });
+    const { result } = renderHook(() =>
+      useReportActions({ report, variant: "live" })
+    );
+    attachExportNode(result.current.setExportNode);
+
+    await act(() => result.current.handleExportPdf());
+
+    expect(result.current.exportError).toBeNull();
+    expect(result.current.exporting).toBeNull();
+    expect(pdfSetProperties).toHaveBeenCalledWith({
+      title: `Repo Analysis: ${report.repo_metadata.name}`,
+      subject: "RepoAtlas Candidate Brief",
+      creator: "RepoAtlas",
+    });
+    expect(pdfAddImage).toHaveBeenCalledTimes(2);
+    expect(pdfAddPage).toHaveBeenCalledTimes(1);
+    expect(fillRect).toHaveBeenCalledTimes(2);
+    expect(drawImage).toHaveBeenCalledTimes(2);
+    expect(pdfOutput).toHaveBeenCalledWith("blob");
+    expect(captureProductEvent).toHaveBeenCalledWith("report_exported", {
+      format: "pdf",
+      report_variant: "live",
+    });
+  });
+
+  it("uses the deterministic Markdown filename when the server omits one", async () => {
+    fetchMock.mockResolvedValueOnce(response()).mockResolvedValueOnce(response());
+    const { result } = renderHook(() =>
+      useReportActions({ report, reportId: "report-1", variant: "live" })
+    );
+    await waitFor(() => expect(result.current.markdownSupport).toBe("available"));
+
+    await act(() => result.current.handleExportMarkdown());
+
+    expect(result.current.exportError).toBeNull();
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(captureProductEvent).toHaveBeenCalledWith("report_exported", {
+      format: "markdown",
+      report_variant: "live",
+    });
+  });
+
   it("creates a stored private link and counts a native share once", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window.navigator, "share", {
@@ -480,6 +541,41 @@ describe("useReportActions", () => {
     expect(execCommand).toHaveBeenCalledWith("copy");
     expect(document.querySelector("textarea")).toBeNull();
     expect(captureReportShared).toHaveBeenCalledWith("clipboard", "portable_link");
+  });
+
+  it("copies a portable link with the Clipboard API when it is available", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    createPortableShareLink.mockResolvedValueOnce({
+      url: "https://example.com/shared#payload",
+      expiresAt: "2026-07-28T00:00:00.000Z",
+    });
+    const { result } = renderHook(() =>
+      useReportActions({ report, variant: "live" })
+    );
+
+    await act(() => result.current.handleShareCandidateBrief());
+
+    expect(writeText).toHaveBeenCalledWith("https://example.com/shared#payload");
+    expect(result.current.shareMessage).toContain("Private link copied");
+    expect(captureReportShared).toHaveBeenCalledWith("clipboard", "portable_link");
+  });
+
+  it("uses the bounded share fallback for an unknown failure", async () => {
+    createPortableShareLink.mockRejectedValueOnce("unavailable");
+    const { result } = renderHook(() =>
+      useReportActions({ report, variant: "live" })
+    );
+
+    await act(() => result.current.handleShareCandidateBrief());
+
+    expect(result.current.shareError).toBe(
+      "Could not create a private link. Export PDF to share this brief."
+    );
+    expect(captureReportShared).not.toHaveBeenCalled();
   });
 
   it.each([
