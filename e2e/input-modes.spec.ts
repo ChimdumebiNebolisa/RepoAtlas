@@ -54,8 +54,31 @@ test.describe("Repository input modes", () => {
     await expect(zipTab).toBeVisible();
     await expect(githubTab).toBeVisible();
     await expect(githubTab).toHaveAttribute("aria-selected", "true");
+    await expect(githubTab).toHaveAttribute("tabindex", "0");
+    await expect(zipTab).toHaveAttribute("tabindex", "-1");
     await expect(page.getByLabel("Public GitHub repository URL")).toBeVisible();
     await expect(page.getByLabel(/Branch or tag/i)).toBeVisible();
+
+    await githubTab.focus();
+    await page.keyboard.press("End");
+    await expect(zipTab).toBeFocused();
+    await expect(zipTab).toHaveAttribute("aria-selected", "true");
+    await expect(zipTab).toHaveAttribute("tabindex", "0");
+    await expect(githubTab).toHaveAttribute("tabindex", "-1");
+    await expect(page.getByLabel("Choose repository zip file")).toBeVisible();
+
+    await page.keyboard.press("Home");
+    await expect(githubTab).toBeFocused();
+    await expect(githubTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByLabel("Public GitHub repository URL")).toBeVisible();
+
+    await page.keyboard.press("ArrowLeft");
+    await expect(zipTab).toBeFocused();
+    await expect(zipTab).toHaveAttribute("aria-selected", "true");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(githubTab).toBeFocused();
+    await expect(githubTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("radio", { name: /Interview walkthrough/i })).toBeChecked();
     await expect(
       page.getByRole("radio", { name: /Investigate a bug/i, includeHidden: true })
