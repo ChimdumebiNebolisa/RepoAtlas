@@ -39,7 +39,8 @@ export function StartHereTable({ items }: StartHereTableProps) {
           Use this to decide what to review first before an interview.
         </p>
         <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-          Priority 0–100; 100 is the top recommendation. Hover a score for details.
+          Priority 0–100 shows the relative reading order. A higher score means a
+          better place to start.
         </p>
       </div>
       <div className="overflow-x-auto">
@@ -84,7 +85,6 @@ export function StartHereTable({ items }: StartHereTableProps) {
                   <ScoreCircle
                     score={item.score}
                     variant="priority"
-                    tooltip={`Priority: ${item.score.toFixed(0)} — Relative onboarding priority; 100 = top place to start`}
                   />
                 </td>
                 <td className="px-4 py-2 text-gray-600 dark:text-gray-400">

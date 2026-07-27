@@ -39,7 +39,9 @@ export function DangerZonesTable({ items }: DangerZonesTableProps) {
           Prepare for questions about tradeoffs and future improvements.
         </p>
         <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-          Risk 0–100 from size, coupling, structural complexity, and test proximity. Hover a score for details.
+          Risk 0–100 combines size, coupling, structural complexity, and test
+          proximity. A higher score means more structural risk. This is a static
+          signal, not measured coverage.
         </p>
       </div>
       <div className="overflow-x-auto">
@@ -84,7 +86,6 @@ export function DangerZonesTable({ items }: DangerZonesTableProps) {
                   <ScoreCircle
                     score={item.score}
                     variant="risk"
-                    tooltip={`Risk: ${item.score.toFixed(0)} — Combined risk from size, coupling, complexity, and test proximity (a static signal, not measured coverage); higher = more risk`}
                   />
                 </td>
                 <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
