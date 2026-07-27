@@ -338,7 +338,19 @@ describe("StartHereTable", () => {
 
     const rows = () => screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[0].textContent);
     expect(rows()).toEqual(["a.ts", "z.ts"]);
-    expect(screen.getByTitle(/Priority: 100/i)).toBeInTheDocument();
+    const priorityScores = screen.getAllByRole("meter", { name: "Priority score" });
+    expect(priorityScores).toHaveLength(2);
+    expect(priorityScores[0]).toHaveAttribute("aria-valuemin", "0");
+    expect(priorityScores[0]).toHaveAttribute("aria-valuemax", "100");
+    expect(priorityScores[0]).toHaveAttribute("aria-valuenow", "100");
+    expect(priorityScores[0]).toHaveAttribute(
+      "aria-valuetext",
+      "100 out of 100. Relative reading order. Higher scores are better places to start."
+    );
+    expect(priorityScores[0]).not.toHaveAttribute("tabindex");
+    expect(
+      screen.getByText(/Priority 0–100 shows the relative reading order/i)
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Priority \(0–100\)/i }));
     expect(rows()).toEqual(["z.ts", "a.ts"]);
@@ -367,7 +379,19 @@ describe("DangerZonesTable", () => {
 
     const rows = () => screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[0].textContent);
     expect(rows()).toEqual(["a.ts", "z.ts"]);
-    expect(screen.getByTitle(/Risk: 101/i)).toBeInTheDocument();
+    const riskScores = screen.getAllByRole("meter", { name: "Risk score" });
+    expect(riskScores).toHaveLength(2);
+    expect(riskScores[0]).toHaveAttribute("aria-valuemin", "0");
+    expect(riskScores[0]).toHaveAttribute("aria-valuemax", "100");
+    expect(riskScores[0]).toHaveAttribute("aria-valuenow", "100");
+    expect(riskScores[0]).toHaveAttribute(
+      "aria-valuetext",
+      "100 out of 100. Combined structural risk from size, coupling, structural complexity, and test proximity. Higher scores mean more structural risk. This is a static signal, not measured coverage."
+    );
+    expect(riskScores[0]).not.toHaveAttribute("tabindex");
+    expect(
+      screen.getByText(/Risk 0–100 combines size, coupling, structural complexity/i)
+    ).toBeInTheDocument();
     expect(screen.getByText("100")).toBeInTheDocument();
     expect(screen.getByText("0")).toBeInTheDocument();
 
