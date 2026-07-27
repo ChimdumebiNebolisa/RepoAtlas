@@ -126,9 +126,20 @@ export default defineConfig({
           lines: 100,
         },
         "src/components/useReportActions.ts": {
-          statements: 80,
           branches: 80,
-          functions: 80,
+          lines: 85,
+        },
+        "src/components/useReportFormatExports.ts": {
+          branches: 80,
+          lines: 85,
+        },
+        "src/components/usePrivateReportSharing.ts": {
+          branches: 80,
+          lines: 85,
+        },
+        "src/components/reportActionState.ts": {
+          branches: 80,
+          lines: 85,
         },
         "src/components/{InputForm,AnalysisIntentSelector,RepositoryInputControls,useAnalysisRequest,inputFormSupport}.{ts,tsx}":
           {
