@@ -13,9 +13,11 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4">
+    <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4">
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      <div className="mt-3 text-sm text-slate-700">{children}</div>
+      <div className="mt-3 min-w-0 text-sm text-slate-700 [overflow-wrap:anywhere]">
+        {children}
+      </div>
     </section>
   );
 }
@@ -57,7 +59,7 @@ export function DeepAnalysisSection({
           {projectProfile.signals.length > 0 && (
             <ul className="mt-2 list-disc pl-5">
               {projectProfile.signals.map((s) => (
-                <li key={s}>
+                <li key={s} data-deep-analysis-evidence="project-signal">
                   <code className="text-xs">{s}</code>
                 </li>
               ))}
@@ -79,7 +81,7 @@ export function DeepAnalysisSection({
               <p className="text-xs font-medium text-amber-800">High-risk files without nearby tests</p>
               <ul className="mt-1 list-disc pl-5 text-xs">
                 {testInventory.untested_high_risk_files.slice(0, 5).map((f) => (
-                  <li key={f}>
+                  <li key={f} data-deep-analysis-evidence="untested-high-risk">
                     <code>{f}</code>
                   </li>
                 ))}
@@ -91,7 +93,7 @@ export function DeepAnalysisSection({
               <p className="text-xs font-medium text-slate-800">Suggested test targets</p>
               <ul className="mt-1 list-disc pl-5 text-xs">
                 {testInventory.suggested_test_targets.slice(0, 4).map((f) => (
-                  <li key={f}>
+                  <li key={f} data-deep-analysis-evidence="suggested-test-target">
                     <code>{f}</code>
                   </li>
                 ))}
@@ -103,28 +105,30 @@ export function DeepAnalysisSection({
 
       {architectureInsights && (
         <Panel title="Architecture boundaries">
-          {architectureInsights.layers.length > 0 && (
-            <p className="text-xs">Layers: {architectureInsights.layers.join(" → ")}</p>
-          )}
-          {architectureInsights.hubs.length > 0 && (
-            <p className="mt-2 text-xs">
-              Hubs: {architectureInsights.hubs.slice(0, 5).map((h) => `\`${h}\``).join(", ")}
-            </p>
-          )}
-          {architectureInsights.violations.length > 0 && (
-            <ul className="mt-2 list-disc pl-5 text-xs text-amber-800">
-              {architectureInsights.violations.slice(0, 4).map((v) => (
-                <li key={`${v.from}-${v.to}`}>
-                  {v.from} → {v.to}: {v.reason}
-                </li>
-              ))}
-            </ul>
-          )}
-          {architectureInsights.circular_deps.length > 0 && (
-            <p className="mt-2 text-xs text-amber-800">
-              {architectureInsights.circular_deps.length} circular dependency chain(s) detected
-            </p>
-          )}
+          <div data-deep-analysis-evidence="architecture-paths">
+            {architectureInsights.layers.length > 0 && (
+              <p className="text-xs">Layers: {architectureInsights.layers.join(" → ")}</p>
+            )}
+            {architectureInsights.hubs.length > 0 && (
+              <p className="mt-2 text-xs">
+                Hubs: {architectureInsights.hubs.slice(0, 5).map((h) => `\`${h}\``).join(", ")}
+              </p>
+            )}
+            {architectureInsights.violations.length > 0 && (
+              <ul className="mt-2 list-disc pl-5 text-xs text-amber-800">
+                {architectureInsights.violations.slice(0, 4).map((v) => (
+                  <li key={`${v.from}-${v.to}`}>
+                    {v.from} → {v.to}: {v.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {architectureInsights.circular_deps.length > 0 && (
+              <p className="mt-2 text-xs text-amber-800">
+                {architectureInsights.circular_deps.length} circular dependency chain(s) detected
+              </p>
+            )}
+          </div>
         </Panel>
       )}
 
@@ -132,14 +136,14 @@ export function DeepAnalysisSection({
         <Panel title="Commit insights">
           <p className="text-xs text-slate-500">Source: {commitInsights.mode.replace("_", " ")}</p>
           {commitInsights.recent_work_areas.length > 0 && (
-            <p className="mt-2">
+            <p className="mt-2" data-deep-analysis-evidence="recent-work-area">
               Recent areas: {commitInsights.recent_work_areas.join(", ")}
             </p>
           )}
           {commitInsights.high_churn_files.length > 0 && (
             <ul className="mt-2 list-disc pl-5 text-xs">
               {commitInsights.high_churn_files.map((f) => (
-                <li key={f}>
+                <li key={f} data-deep-analysis-evidence="high-churn-file">
                   <code>{f}</code>
                 </li>
               ))}
