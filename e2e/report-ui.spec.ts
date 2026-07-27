@@ -161,6 +161,35 @@ test.describe("Report UI flows", () => {
 
     await page.getByRole("tab", { name: "Folder Map", exact: true }).last().click();
     await expect(page.locator("section").filter({ hasText: "Generated report ready for" })).toBeVisible();
+    const folderHierarchy = page
+      .getByRole("list", { name: "Repository folder hierarchy" })
+      .last();
+    await expect(folderHierarchy).toBeVisible();
+    const rootDirectory = folderHierarchy
+      .getByRole("button", { name: /^Repository root, \d+ items?$/ })
+      .first();
+    await expect(rootDirectory).toHaveAttribute("aria-expanded", "true");
+    const rootGroupId = await rootDirectory.getAttribute("aria-controls");
+    expect(rootGroupId).toBeTruthy();
+    await expect(page.locator(`[id="${rootGroupId}"]`)).toBeVisible();
+
+    const nestedDirectory = folderHierarchy.getByRole("button").nth(1);
+    await nestedDirectory.focus();
+    await expect(nestedDirectory).toBeFocused();
+    const nestedGroupId = await nestedDirectory.getAttribute("aria-controls");
+    expect(nestedGroupId).toBeTruthy();
+    const wasExpanded = await nestedDirectory.getAttribute("aria-expanded");
+    await nestedDirectory.click();
+    await expect(nestedDirectory).toBeFocused();
+    await expect(nestedDirectory).toHaveAttribute(
+      "aria-expanded",
+      wasExpanded === "true" ? "false" : "true"
+    );
+    if (wasExpanded === "true") {
+      await expect(page.locator(`[id="${nestedGroupId}"]`)).toBeHidden();
+    } else {
+      await expect(page.locator(`[id="${nestedGroupId}"]`)).toBeVisible();
+    }
 
     await page.getByRole("tab", { name: "Start Here", exact: true }).last().click();
     await expect(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { FolderMapNode } from "@/types/report";
 
 interface FolderMapTreeProps {
@@ -18,22 +18,37 @@ function TreeNode({
   defaultExpandDepth?: number;
 }) {
   const [expanded, setExpanded] = useState(depth < defaultExpandDepth);
+  const controlId = useId();
+  const childGroupId = `${controlId}-children`;
   const isDirectory = node.type === "dir";
   const isExpandable = isDirectory && Boolean(node.children?.length);
   const name = node.path.split("/").pop() || node.path;
+  const accessibleName = node.path === "." ? "Repository root" : name;
   const rowContent = (
     <>
-      <span className="absolute -left-[7px] h-2.5 w-2.5 rounded-full bg-slate-200 group-hover:bg-emerald-400" />
+      <span
+        aria-hidden="true"
+        className="absolute -left-[7px] h-2.5 w-2.5 rounded-full bg-slate-200 group-hover:bg-emerald-400"
+      />
       {isExpandable ? (
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-600">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-600"
+        >
           {expanded ? "-" : "+"}
         </span>
       ) : isDirectory ? (
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-600">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white text-[10px] text-slate-600"
+        >
           {node.truncated ? "…" : "/"}
         </span>
       ) : (
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-slate-50 text-[10px] text-slate-500">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-slate-50 text-[10px] text-slate-500"
+        >
           •
         </span>
       )}
@@ -60,13 +75,18 @@ function TreeNode({
   );
 
   return (
-    <div className="relative ml-4 border-l border-slate-200 pl-3">
+    <li className="relative ml-4 list-none border-l border-slate-200 pl-3">
       {isExpandable ? (
         <button
+          id={controlId}
           type="button"
           className="group flex w-full items-center gap-2 rounded-md py-1 pr-2 text-left hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
           style={{ paddingLeft: depth * 12 }}
+          aria-label={`${accessibleName}, ${node.children!.length} ${
+            node.children!.length === 1 ? "item" : "items"
+          }`}
           aria-expanded={expanded}
+          aria-controls={childGroupId}
           onClick={() => setExpanded(!expanded)}
         >
           {rowContent}
@@ -79,8 +99,13 @@ function TreeNode({
           {rowContent}
         </div>
       )}
-      {isExpandable && expanded && node.children && (
-        <div className="space-y-0.5">
+      {isExpandable && node.children && (
+        <ul
+          id={childGroupId}
+          aria-labelledby={controlId}
+          className="m-0 list-none space-y-0.5 p-0"
+          hidden={!expanded}
+        >
           {node.children.map((child) => (
             <TreeNode
               key={child.path}
@@ -89,16 +114,19 @@ function TreeNode({
               defaultExpandDepth={defaultExpandDepth}
             />
           ))}
-        </div>
+        </ul>
       )}
-    </div>
+    </li>
   );
 }
 
 export function FolderMapTree({ node, defaultExpandDepth = 2 }: FolderMapTreeProps) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm">
+    <ul
+      aria-label="Repository folder hierarchy"
+      className="m-0 list-none rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm"
+    >
       <TreeNode node={node} defaultExpandDepth={defaultExpandDepth} />
-    </div>
+    </ul>
   );
 }
