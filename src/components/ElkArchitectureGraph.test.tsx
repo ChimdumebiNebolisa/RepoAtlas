@@ -1,5 +1,5 @@
 import React from "react";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LayoutResult } from "@/lib/elkLayout";
@@ -158,6 +158,7 @@ describe("ElkArchitectureGraph states", () => {
     expect(emptyState).toHaveTextContent(
       "Check Candidate Brief confidence notes for analysis limits."
     );
+    expect(screen.queryByText("Read architecture as text")).not.toBeInTheDocument();
     expect(layoutGraph).not.toHaveBeenCalled();
   });
 
@@ -172,10 +173,13 @@ describe("ElkArchitectureGraph states", () => {
       "data-architecture-state",
       "loading"
     );
+    expect(screen.queryByText("Read architecture as text")).not.toBeInTheDocument();
 
     await act(async () => pendingLayout.resolve(baseLayout));
 
-    expect(await screen.findByText("Entry")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("img", { name: "Architecture dependency map" })
+    ).toBeInTheDocument();
     expect(container.querySelector('[data-architecture-state="ready"]')).toBeInTheDocument();
   });
 
@@ -193,7 +197,7 @@ describe("ElkArchitectureGraph states", () => {
     layoutGraph.mockResolvedValueOnce({ ...baseLayout, edges: [] });
 
     render(<ElkArchitectureGraph architecture={architecture} />);
-    await screen.findByText("Entry");
+    await screen.findByRole("img", { name: "Architecture dependency map" });
 
     expect(layoutGraph).toHaveBeenCalledWith({
       nodes: architecture.nodes.slice(0, 50),
@@ -213,6 +217,7 @@ describe("ElkArchitectureGraph states", () => {
       "data-architecture-state",
       "error"
     );
+    expect(screen.queryByText("Read architecture as text")).not.toBeInTheDocument();
 
     const replacement = {
       nodes: [{ id: "replacement", label: "Replacement" }],
@@ -221,7 +226,9 @@ describe("ElkArchitectureGraph states", () => {
     rerender(<ElkArchitectureGraph architecture={replacement} />);
 
     expect(screen.getByText("Computing layout...")).toBeInTheDocument();
-    expect(await screen.findByText("Entry")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("img", { name: "Architecture dependency map" })
+    ).toBeInTheDocument();
     expect(screen.queryByText(/Layout error:/)).not.toBeInTheDocument();
   });
 
@@ -259,7 +266,9 @@ describe("ElkArchitectureGraph states", () => {
     };
     await act(async () => secondLayout.resolve(replacementLayout));
 
-    expect(await screen.findByText("Replacement")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Displayed nodes (1)" })
+    ).toBeInTheDocument();
     expect(screen.queryByText("Entry")).not.toBeInTheDocument();
   });
 
@@ -336,13 +345,154 @@ describe("ElkArchitectureGraph evidence and drawing", () => {
     const { container } = render(
       <ElkArchitectureGraph architecture={baseArchitecture} />
     );
-    await screen.findByText("Entry");
+    await screen.findByRole("img", { name: "Architecture dependency map" });
 
     const paths = container.querySelectorAll("g.edges path");
     expect(paths).toHaveLength(2);
     expect(paths[0]).toHaveAttribute("d", "M 70,60 L 70,140");
     expect(paths[1]).toHaveAttribute("d", "M 70,180 L 70,20");
     expect(paths[0].getAttribute("marker-end")).toMatch(/^url\(#arrowhead-/);
+  });
+
+  it("gives the visual map a dependable accessible name and explanation", async () => {
+    layoutGraph.mockResolvedValueOnce(baseLayout);
+    render(<ElkArchitectureGraph architecture={baseArchitecture} />);
+
+    const graph = await screen.findByRole("img", {
+      name: "Architecture dependency map",
+    });
+    expect(graph).toHaveAccessibleDescription(
+      "The map shows 2 repository nodes and 1 supported relationship. Use the controls to pan and zoom, or read the same evidence as text below. External and unresolved imports are counted separately."
+    );
+  });
+
+  it("lists exactly the nodes and supported relationships drawn in the map", async () => {
+    layoutGraph.mockResolvedValueOnce({
+      ...baseLayout,
+      edges: [
+        baseLayout.edges[0],
+        { from: "service", to: "entry", path: [] },
+        { from: "entry", to: "missing", path: [] },
+      ],
+    });
+    const { container } = render(
+      <ElkArchitectureGraph architecture={baseArchitecture} />
+    );
+
+    await screen.findByRole("img", { name: "Architecture dependency map" });
+    await userEvent.click(screen.getByText("Read architecture as text"));
+
+    const textNodes = container.querySelectorAll("[data-architecture-text-node]");
+    const textRelationships = container.querySelectorAll(
+      "[data-architecture-text-relationship]"
+    );
+    expect(textNodes).toHaveLength(
+      container.querySelectorAll("g.nodes > g").length
+    );
+    expect(textRelationships).toHaveLength(
+      container.querySelectorAll("[data-architecture-edge]").length
+    );
+    expect(screen.getByRole("heading", { name: "Displayed nodes (2)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Displayed relationships (2)" })
+    ).toBeInTheDocument();
+    expect(textRelationships[0]).toHaveTextContent(/Entry.*Service/);
+    expect(textRelationships[1]).toHaveTextContent(/Service.*Entry/);
+    expect(screen.queryByText(/missing/)).not.toBeInTheDocument();
+  });
+
+  it("preserves duplicate displayed relationships in both views", async () => {
+    layoutGraph.mockResolvedValueOnce({
+      ...baseLayout,
+      edges: [baseLayout.edges[0], { ...baseLayout.edges[0], path: [] }],
+    });
+    const { container } = render(
+      <ElkArchitectureGraph architecture={baseArchitecture} />
+    );
+
+    await screen.findByRole("img", { name: "Architecture dependency map" });
+    fireEvent.click(screen.getByText("Read architecture as text"));
+
+    expect(container.querySelectorAll("[data-architecture-edge]")).toHaveLength(2);
+    expect(
+      container.querySelectorAll("[data-architecture-text-relationship]")
+    ).toHaveLength(2);
+  });
+
+  it("explains the reduced node cap and a graph with no displayed relationships", async () => {
+    const architecture: Architecture = {
+      nodes: Array.from({ length: 52 }, (_, index) => ({
+        id: `node-${index}`,
+        label: `Node ${index}`,
+      })),
+      edges: [],
+    };
+    const cappedLayout: LayoutResult = {
+      ...baseLayout,
+      nodes: Array.from({ length: 50 }, (_, index) => ({
+        id: `node-${index}`,
+        label: `Node ${index}`,
+        x: 0,
+        y: index * 60,
+        width: 100,
+        height: 40,
+      })),
+      edges: [],
+    };
+    layoutGraph.mockResolvedValueOnce(cappedLayout);
+    const { container } = render(
+      <ElkArchitectureGraph architecture={architecture} />
+    );
+
+    await screen.findByRole("img", { name: "Architecture dependency map" });
+    fireEvent.click(screen.getByText("Read architecture as text"));
+
+    expect(screen.getByText("The displayed map contains 50 of 52 repository nodes."))
+      .toBeInTheDocument();
+    expect(screen.getByText("No relationships are displayed between these nodes."))
+      .toBeInTheDocument();
+    expect(container.querySelectorAll("[data-architecture-text-node]")).toHaveLength(50);
+  });
+
+  it("replaces the text alternative when the graph changes", async () => {
+    layoutGraph
+      .mockResolvedValueOnce(baseLayout)
+      .mockResolvedValueOnce({
+        ...baseLayout,
+        nodes: [
+          {
+            id: "replacement",
+            label: "Replacement",
+            x: 0,
+            y: 0,
+            width: 120,
+            height: 40,
+          },
+        ],
+        edges: [],
+      });
+    const { rerender } = render(
+      <ElkArchitectureGraph architecture={baseArchitecture} />
+    );
+
+    await screen.findByRole("img", { name: "Architecture dependency map" });
+    fireEvent.click(screen.getByText("Read architecture as text"));
+    const nodesHeading = screen.getByRole("heading", { name: "Displayed nodes (2)" });
+    expect(within(nodesHeading.closest("section")!).getByText("Entry")).toBeInTheDocument();
+
+    rerender(
+      <ElkArchitectureGraph
+        architecture={{ nodes: [{ id: "replacement", label: "Replacement" }], edges: [] }}
+      />
+    );
+
+    const replacementNodesHeading = await screen.findByRole("heading", {
+      name: "Displayed nodes (1)",
+    });
+    expect(
+      within(replacementNodesHeading.closest("section")!).getByText("Replacement")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Entry")).not.toBeInTheDocument();
   });
 });
 
@@ -351,7 +501,7 @@ describe("ElkArchitectureGraph interactions", () => {
     layoutGraph.mockResolvedValueOnce(baseLayout);
     const user = userEvent.setup();
     render(<ElkArchitectureGraph architecture={baseArchitecture} />);
-    await screen.findByText("Entry");
+    await screen.findByRole("img", { name: "Architecture dependency map" });
     const transform = screen.getByTestId("transform-wrapper");
 
     await user.tab();
@@ -383,7 +533,7 @@ describe("ElkArchitectureGraph interactions", () => {
     const { container } = render(
       <ElkArchitectureGraph architecture={baseArchitecture} />
     );
-    await screen.findByText("Entry");
+    await screen.findByRole("img", { name: "Architecture dependency map" });
     const graphViewport = screen.getByTestId("transform-component").parentElement;
     const svg = container.querySelector("svg");
 

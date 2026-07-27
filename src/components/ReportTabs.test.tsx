@@ -1,6 +1,13 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { buildSampleReport } from "@/lib/buildSampleReport";
 import { ReportTabs } from "./ReportTabs";
@@ -322,7 +329,11 @@ describe("ReportTabs architecture integration", () => {
 
     expect(await screen.findByRole("button", { name: "Zoom in" })).toBeEnabled();
     expect(layoutGraph).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("InputForm")).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("img", { name: "Architecture dependency map" })
+      ).getByText("InputForm")
+    ).toBeInTheDocument();
   });
 
   it("keeps empty architecture guidance available after keyboard navigation", async () => {
