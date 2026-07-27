@@ -192,6 +192,10 @@ export default defineConfig({
           branches: 100,
           lines: 100,
         },
+        "src/app/not-found.tsx": {
+          branches: 100,
+          lines: 100,
+        },
         "src/analyzer/packs/python{,/**}.ts": {
           branches: 80,
           lines: 85,
