@@ -16,6 +16,8 @@ export function ElkArchitectureGraph({
 }: ElkArchitectureGraphProps) {
   const rawMarkerId = useId();
   const arrowMarkerId = `arrowhead-${rawMarkerId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const graphTitleId = useId();
+  const graphDescriptionId = useId();
   const [layoutState, setLayoutState] = useState<{
     architecture: Architecture;
     layout: LayoutResult | null;
@@ -95,6 +97,18 @@ export function ElkArchitectureGraph({
 
   const padding = 20;
   const viewBox = `0 0 ${layout.width + padding * 2} ${layout.height + padding * 2}`;
+  const nodeById = new Map(layout.nodes.map((node) => [node.id, node]));
+  const displayedRelationships = layout.edges.flatMap((edge) => {
+    const fromNode = nodeById.get(edge.from);
+    const toNode = nodeById.get(edge.to);
+    return fromNode && toNode ? [{ edge, fromNode, toNode }] : [];
+  });
+  const relationshipCount = displayedRelationships.length;
+  const graphDescription = `The map shows ${layout.nodes.length} repository node${
+    layout.nodes.length === 1 ? "" : "s"
+  } and ${relationshipCount} supported relationship${
+    relationshipCount === 1 ? "" : "s"
+  }. Use the controls to pan and zoom, or read the same evidence as text below. External and unresolved imports are counted separately.`;
 
   const unresolvedCount = semanticGraph?.stats.unresolved ?? 0;
   const externalCount = semanticGraph?.stats.resolved_external ?? 0;
@@ -178,7 +192,12 @@ export function ElkArchitectureGraph({
                   viewBox={viewBox}
                   className="mx-auto block"
                   style={{ minHeight: "400px" }}
+                  role="img"
+                  aria-labelledby={graphTitleId}
+                  aria-describedby={graphDescriptionId}
                 >
+                  <title id={graphTitleId}>Architecture dependency map</title>
+                  <desc id={graphDescriptionId}>{graphDescription}</desc>
                   <defs>
                     <marker
                       id={arrowMarkerId}
@@ -194,11 +213,7 @@ export function ElkArchitectureGraph({
                   </defs>
 
                   <g className="edges">
-                    {layout.edges.map((edge, i) => {
-                      const fromNode = layout.nodes.find((n) => n.id === edge.from);
-                      const toNode = layout.nodes.find((n) => n.id === edge.to);
-                      if (!fromNode || !toNode) return null;
-
+                    {displayedRelationships.map(({ edge, fromNode, toNode }, i) => {
                       const startX = fromNode.x + fromNode.width / 2 + padding;
                       const startY = fromNode.y + fromNode.height + padding;
                       const endX = toNode.x + toNode.width / 2 + padding;
@@ -221,6 +236,7 @@ export function ElkArchitectureGraph({
                           strokeWidth="1.5"
                           className="text-slate-400"
                           markerEnd={`url(#${arrowMarkerId})`}
+                          data-architecture-edge
                         />
                       );
                     })}
@@ -253,6 +269,72 @@ export function ElkArchitectureGraph({
                 </svg>
               </TransformComponent>
             </div>
+
+            <details className="rounded border border-slate-200 bg-white px-3 py-2">
+              <summary className="cursor-pointer font-medium text-slate-900">
+                Read architecture as text
+              </summary>
+              <div className="mt-3 space-y-4 text-sm text-slate-700">
+                <p className="leading-6">
+                  This text view matches the nodes and relationships displayed in the map.
+                  External and unresolved imports are not drawn as relationships.
+                </p>
+                {architecture.nodes.length > layout.nodes.length && (
+                  <p className="rounded bg-slate-100 px-3 py-2 text-xs leading-5 text-slate-600">
+                    The displayed map contains {layout.nodes.length} of{" "}
+                    {architecture.nodes.length} repository nodes.
+                  </p>
+                )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <section aria-labelledby={`${graphTitleId}-nodes`}>
+                    <h3 id={`${graphTitleId}-nodes`} className="font-medium text-slate-900">
+                      Displayed nodes ({layout.nodes.length})
+                    </h3>
+                    <ul className="mt-2 space-y-1">
+                      {layout.nodes.map((node, index) => (
+                        <li
+                          key={`${node.id}-${index}`}
+                          className="break-all rounded bg-slate-50 px-2 py-1.5"
+                          data-architecture-text-node
+                        >
+                          <code>{node.label}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section aria-labelledby={`${graphTitleId}-relationships`}>
+                    <h3
+                      id={`${graphTitleId}-relationships`}
+                      className="font-medium text-slate-900"
+                    >
+                      Displayed relationships ({relationshipCount})
+                    </h3>
+                    {relationshipCount > 0 ? (
+                      <ul className="mt-2 space-y-1">
+                        {displayedRelationships.map(
+                          ({ edge, fromNode, toNode }, index) => (
+                            <li
+                              key={`${edge.from}-${edge.to}-${index}`}
+                              className="break-all rounded bg-slate-50 px-2 py-1.5"
+                              data-architecture-text-relationship
+                            >
+                              <code>{fromNode.label}</code>{" "}
+                              <span aria-hidden="true">→</span>
+                              <span className="sr-only"> to </span>{" "}
+                              <code>{toNode.label}</code>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 leading-6">
+                        No relationships are displayed between these nodes.
+                      </p>
+                    )}
+                  </section>
+                </div>
+              </div>
+            </details>
           </div>
         )}
       </TransformWrapper>
