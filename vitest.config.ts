@@ -188,6 +188,10 @@ export default defineConfig({
           branches: 80,
           lines: 85,
         },
+        "src/app/robots.ts": {
+          branches: 100,
+          lines: 100,
+        },
         "src/analyzer/packs/python{,/**}.ts": {
           branches: 80,
           lines: 85,
