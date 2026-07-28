@@ -41,7 +41,10 @@ describe("codebase interview preparation page", () => {
       link.classList.contains("btn-primary"),
     );
     expect(primaryActions).toHaveLength(1);
-    expect(primaryActions[0]).toHaveAttribute("href", "/?source=interview_preparation#analyze");
+    expect(primaryActions[0]).toHaveAttribute(
+      "href",
+      "/?source=comparison_structured_preparation#analyze",
+    );
 
     expect(screen.getAllByRole("link", { name: /repository walkthrough interview guide/i })[0]).toHaveAttribute(
       "href",

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
+import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
 
 const canonicalUrl = "https://repo-atlas-phi.vercel.app/ai-codebase-summary";
 
@@ -87,12 +88,12 @@ export default function AiCodebaseSummaryPage() {
               a quick overview, or a repeatable walkthrough whose repository claims lead back to
               files you can inspect.
             </p>
-            <Link
-              className="btn btn-primary comparison-primary-action"
-              href="/?source=interview_preparation#analyze"
+            <TrackedAnalysisLink
+              className="comparison-primary-action"
+              entrySource="comparison_ai_summary"
             >
               Run the bundled sample
-            </Link>
+            </TrackedAnalysisLink>
             <p className="comparison-action-note">
               No upload is needed. The sample shows the complete evidence-linked Candidate Brief.
             </p>

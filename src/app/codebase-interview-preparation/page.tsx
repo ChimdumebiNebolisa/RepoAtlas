@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
+import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
 
 const canonicalUrl = "https://repo-atlas-phi.vercel.app/codebase-interview-preparation";
 
@@ -69,9 +70,12 @@ export default function CodebaseInterviewPreparationPage() {
               to explain an unfamiliar repository, show where each claim came from, and control the
               depth of the conversation.
             </p>
-            <Link className="btn btn-primary comparison-primary-action" href="/?source=interview_preparation#analyze">
+            <TrackedAnalysisLink
+              className="comparison-primary-action"
+              entrySource="comparison_structured_preparation"
+            >
               Run the bundled sample
-            </Link>
+            </TrackedAnalysisLink>
             <p className="comparison-action-note">No upload is needed. The sample uses the same file-backed workflow.</p>
           </div>
 

@@ -95,7 +95,7 @@ describe("stableRouteName", () => {
 });
 
 describe("analysisEntrySource", () => {
-  it("keeps only the bounded interview-preparation and Cycle 3 sources", async () => {
+  it("keeps only the bounded interview-preparation, comparison, and Cycle 3 sources", async () => {
     const { analysisEntrySource } = await loadAnalytics(false);
 
     expect(analysisEntrySource("?source=interview_preparation")).toBe(
@@ -104,9 +104,18 @@ describe("analysisEntrySource", () => {
     expect(analysisEntrySource("?source=c3p1")).toBe("c3p1");
     expect(analysisEntrySource("?source=c3p2")).toBe("c3p2");
     expect(
+      analysisEntrySource("?source=comparison_structured_preparation")
+    ).toBe("comparison_structured_preparation");
+    expect(analysisEntrySource("?source=comparison_ai_summary")).toBe(
+      "comparison_ai_summary"
+    );
+    expect(
       analysisEntrySource("?source=private-repository-name")
     ).toBeUndefined();
     expect(analysisEntrySource("?source=c3p3")).toBeUndefined();
+    expect(
+      analysisEntrySource("?source=comparison_private_page")
+    ).toBeUndefined();
     expect(analysisEntrySource("")).toBeUndefined();
   });
 });
@@ -143,6 +152,8 @@ describe("event-specific property allowlists", () => {
       "interview_preparation",
       "c3p1",
       "c3p2",
+      "comparison_structured_preparation",
+      "comparison_ai_summary",
     ] as const) {
       analytics.captureProductEvent("analysis_cta_clicked", {
         source: "interview_preparation",
@@ -160,9 +171,9 @@ describe("event-specific property allowlists", () => {
       destination: "analysis_start",
     } as never);
 
-    expect(posthog.capture).toHaveBeenCalledTimes(4);
+    expect(posthog.capture).toHaveBeenCalledTimes(6);
     expect(posthog.capture).toHaveBeenNthCalledWith(
-      4,
+      6,
       "analysis_cta_clicked",
       {
         source: "interview_preparation",

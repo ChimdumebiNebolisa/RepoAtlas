@@ -66,6 +66,60 @@ describe("TrackedAnalysisLink", () => {
   );
 
   it.each([
+    "comparison_structured_preparation",
+    "comparison_ai_summary",
+  ] as const)(
+    "uses fixed bounded comparison source %s instead of an incoming source",
+    (entrySource) => {
+      useSearchParams.mockReturnValue(new URLSearchParams("source=c3p1"));
+      render(
+        <TrackedAnalysisLink
+          className="comparison-primary-action"
+          entrySource={entrySource}
+        >
+          Prepare
+        </TrackedAnalysisLink>
+      );
+
+      const link = screen.getByRole("link", { name: /prepare/i });
+      expect(link).toHaveClass("comparison-primary-action");
+      expect(link).toHaveAttribute(
+        "href",
+        `/?source=${entrySource}#analyze`
+      );
+      clickWithoutNavigation(link);
+
+      expect(captureProductEvent).toHaveBeenCalledOnce();
+      expect(captureProductEvent).toHaveBeenCalledWith("analysis_cta_clicked", {
+        source: "interview_preparation",
+        destination: "analysis_start",
+        entry_source: entrySource,
+      });
+    }
+  );
+
+  it("drops an invalid fixed source without blocking the interview destination", () => {
+    render(
+      <TrackedAnalysisLink entrySource={"private-repository-name" as never}>
+        Prepare
+      </TrackedAnalysisLink>
+    );
+
+    const link = screen.getByRole("link", { name: /prepare/i });
+    expect(link).toHaveAttribute(
+      "href",
+      "/?source=interview_preparation#analyze"
+    );
+    clickWithoutNavigation(link);
+
+    expect(captureProductEvent).toHaveBeenCalledOnce();
+    expect(captureProductEvent).toHaveBeenCalledWith("analysis_cta_clicked", {
+      source: "interview_preparation",
+      destination: "analysis_start",
+    });
+  });
+
+  it.each([
     "private-repository-name",
     "c3p3",
     "C3P1",
