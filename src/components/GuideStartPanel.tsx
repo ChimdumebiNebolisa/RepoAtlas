@@ -3,12 +3,22 @@ import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
 
 const analysisHref = "/?source=interview_preparation#analyze";
 
-export function GuideStartPanel() {
+type GuideStartPanelProps = {
+  ariaLabel?: string;
+  description?: string;
+  heading?: string;
+};
+
+export function GuideStartPanel({
+  ariaLabel = "Start a repository walkthrough",
+  description = "Open a Candidate Brief now, then use the method below to explain it.",
+  heading = "Start with a repository.",
+}: GuideStartPanelProps = {}) {
   return (
-    <aside className="guide-start-panel" aria-label="Start a repository walkthrough">
+    <aside className="guide-start-panel" aria-label={ariaLabel}>
       <div className="guide-start-heading">
-        <strong>Start with a repository.</strong>
-        <span>Open a Candidate Brief now, then use the method below to explain it.</span>
+        <strong>{heading}</strong>
+        <span>{description}</span>
       </div>
       <div className="guide-start-actions">
         <TrackedAnalysisLink

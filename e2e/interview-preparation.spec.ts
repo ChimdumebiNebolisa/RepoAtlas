@@ -227,12 +227,36 @@ test("authored project guide separates candidate intent from repository evidence
   await expect(page.getByText(/does not execute code or call AI/)).toBeVisible();
   await expect(page.getByText(/TypeScript\/JavaScript, Python, and Java/)).toBeVisible();
 
-  const primaryAction = page.getByRole("link", { name: "Run the bundled sample" });
+  const startPanel = page.getByRole("complementary", {
+    name: "Start an authored-project brief",
+  });
+  await expect(startPanel).toContainText(
+    "RepoAtlas supplies entry points, architecture, tests, and evidence.",
+  );
+  await expect(startPanel).toContainText(
+    "You supply the rationale, constraints, and outcomes.",
+  );
+  const primaryAction = startPanel.getByRole("link", {
+    name: "Run the bundled sample",
+  });
+  const githubAction = startPanel.getByRole("link", {
+    name: "Use a public GitHub repository",
+  });
   await expect(primaryAction).toHaveCount(1);
   await expect(primaryAction).toHaveAttribute(
     "href",
     "/?source=interview_preparation#analyze"
   );
+  await expect(githubAction).toHaveAttribute(
+    "href",
+    "/?source=interview_preparation#analyze"
+  );
+  await expect(page.locator(".guide-page .btn-primary")).toHaveCount(1);
+  await expect(
+    page
+      .getByRole("region", { name: "See what repository evidence looks like." })
+      .getByRole("link", { name: "Run the bundled sample" }),
+  ).toHaveClass(/btn-secondary/);
   await primaryAction.click();
 
   await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
@@ -243,20 +267,45 @@ test("authored project guide separates candidate intent from repository evidence
   await expect(page.getByTestId("completed-report-heading")).toBeVisible({ timeout: 90_000 });
 });
 
-test("authored project guide fits a narrow mobile viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/how-to-walk-through-a-project-in-an-interview");
+for (const viewport of [
+  { label: "desktop", width: 1440, height: 900 },
+  { label: "390-pixel mobile", width: 390, height: 844 },
+] as const) {
+  test(`authored project guide keeps both starts in its ${viewport.label} first viewport`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/how-to-walk-through-a-project-in-an-interview");
 
-  await expect(
-    page.getByRole("heading", { name: "How to walk through a project in an interview" })
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Run the bundled sample" })).toBeVisible();
+    const startPanel = page.getByRole("complementary", {
+      name: "Start an authored-project brief",
+    });
+    const sampleAction = startPanel.getByRole("link", {
+      name: "Run the bundled sample",
+    });
+    const githubAction = startPanel.getByRole("link", {
+      name: "Use a public GitHub repository",
+    });
 
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
-  );
-  expect(overflow).toBeLessThanOrEqual(1);
-});
+    await expect(startPanel).toBeVisible();
+    await expect(sampleAction).toBeVisible();
+    await expect(githubAction).toBeVisible();
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    for (const element of [startPanel, sampleAction, githubAction]) {
+      const box = await element.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+    }
+  });
+}
 
 test("authored project guide is included in the sitemap", async ({ request }) => {
   const response = await request.get("/sitemap.xml");

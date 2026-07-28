@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GuideComparisonLinks } from "@/components/GuideComparisonLinks";
+import { GuideStartPanel } from "@/components/GuideStartPanel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { analyzeBundledSample } from "@/lib/bundledSample";
 import {
@@ -44,6 +45,11 @@ export default async function AuthoredProjectWalkthroughPage() {
               Build a clear story from your contribution, your decisions, and the repository
               evidence that supports the technical explanation.
             </p>
+            <GuideStartPanel
+              ariaLabel="Start an authored-project brief"
+              heading="Add the file-backed structure."
+              description="RepoAtlas supplies entry points, architecture, tests, and evidence. You supply the rationale, constraints, and outcomes."
+            />
           </div>
 
           <div className="authored-answer-map" aria-label="The two sources behind a defensible project answer">
@@ -250,7 +256,7 @@ export default async function AuthoredProjectWalkthroughPage() {
                 support. No upload is needed.
               </p>
             </div>
-            <Link className="btn btn-primary guide-primary-action" href="/?source=interview_preparation#analyze">
+            <Link className="btn btn-secondary guide-primary-action" href="/?source=interview_preparation#analyze">
               Run the bundled sample <span aria-hidden="true">→</span>
             </Link>
           </div>
