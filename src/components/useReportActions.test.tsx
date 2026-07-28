@@ -6,6 +6,10 @@ import {
   INLINE_MARKDOWN_UNAVAILABLE,
   useReportActions,
 } from "./useReportActions";
+import {
+  PDF_EXPORT_TIMEOUT_MESSAGE,
+  REPORT_EXPORT_DEADLINE_MS,
+} from "./reportExportRendering";
 
 const html2canvas = vi.hoisted(() => vi.fn());
 const createPortableShareLink = vi.hoisted(() => vi.fn());
@@ -332,6 +336,35 @@ describe("useReportActions", () => {
     );
   });
 
+  it("bounds a PDF snapshot that never settles and clears all export state", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T00:00:00Z"));
+    html2canvas.mockImplementationOnce(() => new Promise(() => {}));
+    const { result } = renderHook(() =>
+      useReportActions({ report, variant: "live" })
+    );
+    attachExportNode(result.current.setExportNode);
+
+    let exportPromise: Promise<void> | undefined;
+    act(() => {
+      exportPromise = result.current.handleExportPdf();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPORT_EXPORT_DEADLINE_MS + 1);
+      await exportPromise;
+    });
+
+    expect(result.current.exporting).toBeNull();
+    expect(result.current.exportMountActive).toBe(false);
+    expect(result.current.exportError).toBe(PDF_EXPORT_TIMEOUT_MESSAGE);
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(captureReportExportFailure).toHaveBeenCalledWith(
+      "pdf",
+      "live",
+      "render_failed"
+    );
+  });
+
   it("reports a missing PNG blob and leaves the next action available", async () => {
     html2canvas.mockResolvedValueOnce(makeCanvas({ blob: null }));
     const { result } = renderHook(() =>
@@ -389,6 +422,56 @@ describe("useReportActions", () => {
       "pdf",
       "live",
       "render_failed"
+    );
+  });
+
+  it("bounds a PDF page encoder that never calls back", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T00:00:00Z"));
+    html2canvas.mockResolvedValueOnce(makeCanvas());
+    const originalCreateElement = document.createElement.bind(document);
+    const pageEncodingStarted = vi.fn();
+    vi.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const element = originalCreateElement(tagName);
+      if (tagName === "canvas") {
+        vi.spyOn(element as HTMLCanvasElement, "getContext").mockReturnValue({
+          fillStyle: "",
+          fillRect: vi.fn(),
+          drawImage: vi.fn(),
+        } as unknown as CanvasRenderingContext2D);
+        vi.spyOn(element as HTMLCanvasElement, "toBlob").mockImplementation(() => {
+          pageEncodingStarted();
+        });
+      }
+      return element;
+    });
+    const { result } = renderHook(() =>
+      useReportActions({ report, variant: "live" })
+    );
+    attachExportNode(result.current.setExportNode);
+
+    let exportPromise: Promise<void> | undefined;
+    act(() => {
+      exportPromise = result.current.handleExportPdf();
+    });
+    await act(async () => {
+      await vi.waitFor(
+        () => expect(pageEncodingStarted).toHaveBeenCalledTimes(1),
+        { timeout: 1_000, interval: 1 }
+      );
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPORT_EXPORT_DEADLINE_MS + 1);
+      await exportPromise;
+    });
+
+    expect(result.current.exporting).toBeNull();
+    expect(result.current.exportMountActive).toBe(false);
+    expect(result.current.exportError).toBe(PDF_EXPORT_TIMEOUT_MESSAGE);
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(captureProductEvent).not.toHaveBeenCalledWith(
+      "report_exported",
+      expect.anything()
     );
   });
 

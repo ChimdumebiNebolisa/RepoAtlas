@@ -15,6 +15,14 @@ import {
   type MarkdownSupportState,
   type ReportFormatActionsState,
 } from "./reportActionState";
+import {
+  canvasToBlobBeforeDeadline,
+  createReportExportDeadline,
+  PDF_EXPORT_TIMEOUT_MESSAGE,
+  PNG_EXPORT_TIMEOUT_MESSAGE,
+  renderPdfBeforeDeadline,
+  settleBeforeReportExportDeadline,
+} from "./reportExportRendering";
 export const MAX_PNG_CANVAS_DIMENSION = 32_000;
 export function fitExportCanvasScale(
   width: number,
@@ -50,66 +58,6 @@ async function waitForExportContent(exportNode: HTMLDivElement) {
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
-}
-async function renderPdf(report: Report, canvas: HTMLCanvasElement) {
-  const { default: jsPDF } = await import("jspdf");
-  const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
-  pdf.setProperties({
-    title: `Repo Analysis: ${report.repo_metadata.name}`,
-    subject: "RepoAtlas Candidate Brief",
-    creator: "RepoAtlas",
-  });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 24;
-  const renderWidth = pageWidth - margin * 2;
-  const renderHeight = pageHeight - margin * 2;
-  const sourcePageHeight = Math.max(
-    1,
-    Math.floor((renderHeight * canvas.width) / renderWidth)
-  );
-  for (let sourceY = 0, pageIndex = 0; sourceY < canvas.height; pageIndex += 1) {
-    const sliceHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
-    const slice = document.createElement("canvas");
-    slice.width = canvas.width;
-    slice.height = sliceHeight;
-    const context = slice.getContext("2d");
-    if (!context) throw new Error("Could not prepare a PDF page.");
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, slice.width, slice.height);
-    context.drawImage(
-      canvas,
-      0,
-      sourceY,
-      canvas.width,
-      sliceHeight,
-      0,
-      0,
-      canvas.width,
-      sliceHeight
-    );
-    const blob = await new Promise<Blob | null>((resolve) =>
-      slice.toBlob(resolve, "image/png", 1)
-    );
-    if (!blob) throw new Error("Could not generate a PDF page image.");
-    const imageBytes = new Uint8Array(await blob.arrayBuffer());
-    const pageRenderHeight = (sliceHeight * renderWidth) / canvas.width;
-    if (pageIndex > 0) pdf.addPage();
-    pdf.addImage(
-      imageBytes,
-      "PNG",
-      margin,
-      margin,
-      renderWidth,
-      pageRenderHeight,
-      undefined,
-      "FAST"
-    );
-    slice.width = 1;
-    slice.height = 1;
-    sourceY += sliceHeight;
-  }
-  return pdf.output("blob");
 }
 export function useReportFormatExports({
   report,
@@ -168,7 +116,12 @@ export function useReportFormatExports({
       alive = false;
     };
   }, [reportId]);
-  const renderExportCanvas = async (scale = 1.5, constrainForPng = false) => {
+  const renderExportCanvas = async (
+    deadline: number,
+    timeoutMessage: string,
+    scale = 1.5,
+    constrainForPng = false
+  ) => {
     setExportMountActive(true);
     await waitForExportMount();
     const exportNode = exportRef.current;
@@ -178,16 +131,24 @@ export function useReportFormatExports({
     }
     try {
       await waitForExportContent(exportNode);
-      const { default: html2canvas } = await import("html2canvas");
+      const { default: html2canvas } = await settleBeforeReportExportDeadline(
+        import("html2canvas"),
+        deadline,
+        timeoutMessage
+      );
       const resolvedScale = constrainForPng
         ? fitExportCanvasScale(exportNode.scrollWidth, exportNode.scrollHeight, scale)
         : scale;
-      return await html2canvas(exportNode, {
-        backgroundColor: "#ffffff",
-        scale: resolvedScale,
-        useCORS: true,
-        windowWidth: 1200,
-      });
+      return await settleBeforeReportExportDeadline(
+        html2canvas(exportNode, {
+          backgroundColor: "#ffffff",
+          scale: resolvedScale,
+          useCORS: true,
+          windowWidth: 1200,
+        }),
+        deadline,
+        timeoutMessage
+      );
     } finally {
       setExportMountActive(false);
     }
@@ -201,9 +162,17 @@ export function useReportFormatExports({
     try {
       setExportError(null);
       setExporting("png");
-      const canvas = await renderExportCanvas(1.5, true);
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/png", 1)
+      const deadline = createReportExportDeadline();
+      const canvas = await renderExportCanvas(
+        deadline,
+        PNG_EXPORT_TIMEOUT_MESSAGE,
+        1.5,
+        true
+      );
+      const blob = await canvasToBlobBeforeDeadline(
+        canvas,
+        deadline,
+        PNG_EXPORT_TIMEOUT_MESSAGE
       );
       if (!blob) throw new Error("Could not generate PNG image.");
       downloadBlob(blob, `${exportBasename}.png`);
@@ -222,8 +191,16 @@ export function useReportFormatExports({
     try {
       setExportError(null);
       setExporting("pdf");
-      const canvas = await renderExportCanvas(1);
-      downloadBlob(await renderPdf(report, canvas), `${exportBasename}.pdf`);
+      const deadline = createReportExportDeadline();
+      const canvas = await renderExportCanvas(
+        deadline,
+        PDF_EXPORT_TIMEOUT_MESSAGE,
+        1
+      );
+      downloadBlob(
+        await renderPdfBeforeDeadline(report, canvas, deadline),
+        `${exportBasename}.pdf`
+      );
       captureProductEvent("report_exported", {
         format: "pdf",
         report_variant: variant,
