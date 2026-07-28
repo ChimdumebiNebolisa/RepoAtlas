@@ -16,6 +16,10 @@ export function GuideComparisonLinks({ lead }: GuideComparisonLinksProps) {
         <Link href="/ai-codebase-summary">
           compare an AI codebase summary with an evidence-linked brief
         </Link>
+        {", or "}
+        <Link href="/code-review-interview">
+          practice an evidence-first code review interview
+        </Link>
         .
       </p>
     </nav>

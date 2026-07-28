@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import AiCodebaseSummaryPage from "./ai-codebase-summary/page";
 import CodebaseInterviewPreparationPage from "./codebase-interview-preparation/page";
+import CodeReviewInterviewPage from "./code-review-interview/page";
 import AuthoredProjectWalkthroughPage from "./how-to-walk-through-a-project-in-an-interview/page";
 import RepositoryWalkthroughInterviewPage from "./repository-walkthrough-interview/page";
 
@@ -17,13 +18,21 @@ const clusterPages: ClusterPage[] = [
   {
     name: "repository walkthrough guide",
     renderPage: RepositoryWalkthroughInterviewPage,
-    requiredDestinations: ["/codebase-interview-preparation", "/ai-codebase-summary"],
+    requiredDestinations: [
+      "/codebase-interview-preparation",
+      "/ai-codebase-summary",
+      "/code-review-interview",
+    ],
     primaryActionHref: "/?source=interview_preparation#analyze",
   },
   {
     name: "authored project guide",
     renderPage: AuthoredProjectWalkthroughPage,
-    requiredDestinations: ["/codebase-interview-preparation", "/ai-codebase-summary"],
+    requiredDestinations: [
+      "/codebase-interview-preparation",
+      "/ai-codebase-summary",
+      "/code-review-interview",
+    ],
     primaryActionHref: "/?source=interview_preparation#analyze",
   },
   {
@@ -43,6 +52,15 @@ const clusterPages: ClusterPage[] = [
       "/how-to-walk-through-a-project-in-an-interview",
     ],
     primaryActionHref: "/?source=comparison_ai_summary#analyze",
+  },
+  {
+    name: "code review interview guide",
+    renderPage: CodeReviewInterviewPage,
+    requiredDestinations: [
+      "/repository-walkthrough-interview",
+      "/codebase-interview-preparation",
+    ],
+    primaryActionHref: "/?source=interview_preparation#analyze",
   },
 ];
 
