@@ -76,6 +76,14 @@ function makeCanvas({ blob = new Blob(["image"]) }: { blob?: Blob | null } = {})
   } as unknown as HTMLCanvasElement;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
 function attachExportNode(
   setExportNode: (node: HTMLDivElement | null) => void,
   architectureState?: "loading",
@@ -527,6 +535,69 @@ describe("useReportActions", () => {
     expect(pdfOutput).toHaveBeenCalledWith("blob");
     expect(captureProductEvent).toHaveBeenCalledWith("report_exported", {
       format: "pdf",
+      report_variant: "live",
+    });
+  });
+
+  it("prevents a replaced report export from downloading or reporting completion", async () => {
+    const staleCanvas = deferred<HTMLCanvasElement>();
+    html2canvas
+      .mockReturnValueOnce(staleCanvas.promise)
+      .mockResolvedValueOnce(makeCanvas());
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const element = originalCreateElement(tagName);
+      if (tagName === "canvas") {
+        vi.spyOn(element as HTMLCanvasElement, "getContext").mockReturnValue({
+          fillStyle: "",
+          fillRect: vi.fn(),
+          drawImage: vi.fn(),
+        } as unknown as CanvasRenderingContext2D);
+        vi.spyOn(element as HTMLCanvasElement, "toBlob").mockImplementation(
+          (callback) => callback(new Blob(["page"]))
+        );
+      }
+      return element;
+    });
+    const staleWorkspace = renderHook(() =>
+      useReportActions({ report, variant: "live" })
+    );
+    attachExportNode(staleWorkspace.result.current.setExportNode);
+
+    let staleExport: Promise<void> | undefined;
+    act(() => {
+      staleExport = staleWorkspace.result.current.handleExportPdf();
+    });
+    await waitFor(() => expect(html2canvas).toHaveBeenCalledTimes(1));
+    staleWorkspace.unmount();
+
+    const replacementReport = {
+      ...report,
+      repo_metadata: {
+        ...report.repo_metadata,
+        name: "replacement-repo",
+      },
+    };
+    const replacementWorkspace = renderHook(() =>
+      useReportActions({ report: replacementReport, variant: "live" })
+    );
+    attachExportNode(replacementWorkspace.result.current.setExportNode);
+    expect(replacementWorkspace.result.current.exportError).toBeNull();
+    expect(replacementWorkspace.result.current.exporting).toBeNull();
+
+    await act(async () => {
+      staleCanvas.resolve(makeCanvas());
+      await staleExport;
+    });
+
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(captureProductEvent).not.toHaveBeenCalled();
+    expect(captureReportExportFailure).not.toHaveBeenCalled();
+    await act(() => replacementWorkspace.result.current.handleExportPng());
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(captureProductEvent).toHaveBeenCalledTimes(1);
+    expect(captureProductEvent).toHaveBeenCalledWith("report_exported", {
+      format: "png",
       report_variant: "live",
     });
   });
