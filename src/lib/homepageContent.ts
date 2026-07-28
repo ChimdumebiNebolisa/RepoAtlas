@@ -3,6 +3,15 @@ import { REPORT_CAPABILITY_RULES } from "@/lib/reportCapabilities";
 
 const dependableExportFormats = REPORT_CAPABILITY_RULES.alwaysAvailableExports.join(" and ");
 
+export type HomepageFaqItem = {
+  question: string;
+  answer: string;
+  link?: {
+    label: string;
+    href: string;
+  };
+};
+
 export const homepageMetadata = {
   title: "Repository Walkthroughs for Code Interviews | RepoAtlas",
   description: `Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief with ${dependableExportFormats} exports, without running code.`,
@@ -15,7 +24,7 @@ export const siteIdentity = {
   url: "https://repo-atlas-phi.vercel.app/",
 } as const;
 
-export const homepageFaqItems = [
+export const homepageFaqItems: readonly HomepageFaqItem[] = [
   {
     question: "What happens to an uploaded repository?",
     answer:
@@ -40,7 +49,30 @@ export const homepageFaqItems = [
     answer:
       "The bundled sample includes a complete read-only Candidate Brief with a repo summary, reading path, architecture map, risk signals, run commands, interview talking points, and evidence references. You can also preview PDF and PNG exports without uploading a repository.",
   },
-] as const;
+  {
+    question: "When does a structured repository walkthrough help?",
+    answer:
+      "Use a structured walkthrough when the repository is unfamiliar, the interview can move across the system, or the same evidence must support both a short and detailed answer. Compare structured and ad hoc preparation.",
+    link: {
+      label: "Compare structured and ad hoc preparation.",
+      href: "/codebase-interview-preparation",
+    },
+  },
+  {
+    question: "How is a Candidate Brief different from an AI codebase summary?",
+    answer:
+      "An AI codebase summary can provide quick orientation. Its context, citations, and privacy boundary depend on the product. RepoAtlas uses deterministic static analysis to build a reading order, timed walkthroughs, and claims linked to files you can inspect. Compare AI summaries and evidence-linked briefs.",
+    link: {
+      label: "Compare AI summaries and evidence-linked briefs.",
+      href: "/ai-codebase-summary",
+    },
+  },
+  {
+    question: "What can RepoAtlas not infer from repository files?",
+    answer:
+      "RepoAtlas cannot prove your authorship, why a maintainer chose an approach, which alternatives they rejected, runtime behavior, or production outcomes. You supply those details from direct experience and verify them outside the repository structure.",
+  },
+];
 
 export const homepageTrustBoundaries = [
   "Reads files as text. It does not execute repository code or call AI.",

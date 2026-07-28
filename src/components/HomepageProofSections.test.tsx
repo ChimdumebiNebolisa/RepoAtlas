@@ -241,13 +241,19 @@ describe("HomepageTrustAndFaq", () => {
 
     const faqItems = screen.getAllByTestId("homepage-faq-item");
     expect(faqItems).toHaveLength(homepageFaqItems.length);
-    for (const [index, { question, answer }] of homepageFaqItems.entries()) {
+    for (const [index, { question, answer, link }] of homepageFaqItems.entries()) {
       const item = faqItems[index];
       expect(within(item).getByRole("heading", { name: question })).toBeInTheDocument();
       expect(item).not.toHaveAttribute("open");
       await user.click(within(item).getByText(question));
       expect(item).toHaveAttribute("open");
-      expect(within(item).getByText(answer)).toBeInTheDocument();
+      expect(item).toHaveTextContent(answer);
+      if (link) {
+        expect(within(item).getByRole("link", { name: link.label })).toHaveAttribute(
+          "href",
+          link.href,
+        );
+      }
     }
   });
 });

@@ -1036,6 +1036,17 @@ button, a { -webkit-tap-highlight-color: transparent; }
   line-height: 1.7;
   text-wrap: pretty;
 }
+.faq-list details > p a {
+  color: var(--accent-dark);
+  font-weight: 700;
+  text-underline-offset: 0.18em;
+}
+.faq-list details > p a:hover { color: var(--accent); }
+.faq-list details > p a:focus-visible {
+  border-radius: 0.2rem;
+  outline: 3px solid rgba(8, 122, 85, 0.25);
+  outline-offset: 3px;
+}
 .homepage-guide-nav {
   display: grid;
   grid-template-columns: minmax(14rem, 0.72fr) repeat(2, minmax(0, 1fr));
