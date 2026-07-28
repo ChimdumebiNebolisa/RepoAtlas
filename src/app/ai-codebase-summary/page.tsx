@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ComparisonEntrance } from "@/components/ComparisonEntrance";
 import { SiteHeader } from "@/components/SiteHeader";
-import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
+import { analyzeBundledSample } from "@/lib/bundledSample";
+import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
 
 const canonicalUrl = "https://repo-atlas-phi.vercel.app/ai-codebase-summary";
 
@@ -72,7 +74,10 @@ const claimChecks = [
   },
 ] as const;
 
-export default function AiCodebaseSummaryPage() {
+export default async function AiCodebaseSummaryPage() {
+  const { report } = await analyzeBundledSample();
+  const sample = buildHomepageSamplePreview(report);
+
   return (
     <main className="site-shell guide-page comparison-page ai-summary-page">
       <div className="site-grid" aria-hidden="true" />
@@ -88,17 +93,12 @@ export default function AiCodebaseSummaryPage() {
               a quick overview, or a repeatable walkthrough whose repository claims lead back to
               files you can inspect.
             </p>
-            <TrackedAnalysisLink
-              className="comparison-primary-action"
-              entrySource="comparison_ai_summary"
-            >
-              Run the bundled sample
-            </TrackedAnalysisLink>
-            <p className="comparison-action-note">
-              No upload is needed. The sample shows the complete evidence-linked Candidate Brief.
-            </p>
           </div>
 
+          <ComparisonEntrance sample={sample} variant="ai-summary" />
+        </header>
+
+        <div className="comparison-route-section page-container">
           <div className="comparison-route-map ai-summary-route-map" aria-label="Two repository summary outputs">
             <p>Choose the output you need</p>
             <div className="comparison-route">
@@ -119,7 +119,7 @@ export default function AiCodebaseSummaryPage() {
               <p>Check what the tool proves, what it infers, and what only you can supply.</p>
             </div>
           </div>
-        </header>
+        </div>
 
         <section className="guide-intro page-container" aria-labelledby="definition-heading">
           <p className="guide-margin-note">Start with the job</p>

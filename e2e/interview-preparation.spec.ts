@@ -34,21 +34,33 @@ for (const comparison of [
   {
     path: "/codebase-interview-preparation",
     source: "comparison_structured_preparation",
+    action: "Try the sample interview route",
+    whatYouGet: "Get a reading route, timed walkthroughs, risk signals, and evidence you can inspect.",
   },
   {
     path: "/ai-codebase-summary",
     source: "comparison_ai_summary",
+    action: "Try the evidence-linked sample",
+    whatYouGet: "Get a reading route, timed walkthroughs, risk signals, and evidence you can inspect.",
   },
 ] as const) {
   test(`${comparison.path} preserves the bounded interview start`, async ({ page }) => {
     await page.goto(comparison.path);
 
-    const primaryAction = page.getByRole("link", { name: "Run the bundled sample" });
+    await expect(page.getByText(comparison.whatYouGet)).toBeVisible();
+    await expect(page.getByTestId("comparison-sample-proof")).toContainText(
+      "Real file-backed sample",
+    );
+
+    const primaryAction = page.getByRole("link", { name: comparison.action });
     await expect(primaryAction).toHaveCount(1);
     await expect(primaryAction).toHaveAttribute(
       "href",
       `/?source=${comparison.source}#analyze`,
     );
+    await expect(
+      page.getByRole("link", { name: "Use a public GitHub repository" }),
+    ).toHaveAttribute("href", `/?source=${comparison.source}#analyze`);
     await primaryAction.click();
 
     await expect(page).toHaveURL(
@@ -57,6 +69,34 @@ for (const comparison of [
     await expect(
       page.getByRole("radio", { name: /Interview walkthrough/i }),
     ).toBeChecked();
+  });
+
+  test(`${comparison.path} keeps its complete entrance inside 390 pixels`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(comparison.path);
+
+    const proof = page.getByTestId("comparison-sample-proof");
+    const sampleAction = page.getByRole("link", { name: comparison.action });
+    const githubAction = page.getByRole("link", {
+      name: "Use a public GitHub repository",
+    });
+
+    await expect(proof).toBeVisible();
+    await expect(sampleAction).toBeVisible();
+    await expect(githubAction).toBeVisible();
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    for (const element of [proof, sampleAction, githubAction]) {
+      const box = await element.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(844);
+    }
   });
 }
 

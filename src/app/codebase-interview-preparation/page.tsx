@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ComparisonEntrance } from "@/components/ComparisonEntrance";
 import { SiteHeader } from "@/components/SiteHeader";
-import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
+import { analyzeBundledSample } from "@/lib/bundledSample";
+import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
 
 const canonicalUrl = "https://repo-atlas-phi.vercel.app/codebase-interview-preparation";
 
@@ -54,7 +56,10 @@ const preparationSteps = [
   },
 ];
 
-export default function CodebaseInterviewPreparationPage() {
+export default async function CodebaseInterviewPreparationPage() {
+  const { report } = await analyzeBundledSample();
+  const sample = buildHomepageSamplePreview(report);
+
   return (
     <main className="site-shell guide-page comparison-page">
       <div className="site-grid" aria-hidden="true" />
@@ -70,15 +75,12 @@ export default function CodebaseInterviewPreparationPage() {
               to explain an unfamiliar repository, show where each claim came from, and control the
               depth of the conversation.
             </p>
-            <TrackedAnalysisLink
-              className="comparison-primary-action"
-              entrySource="comparison_structured_preparation"
-            >
-              Run the bundled sample
-            </TrackedAnalysisLink>
-            <p className="comparison-action-note">No upload is needed. The sample uses the same file-backed workflow.</p>
           </div>
 
+          <ComparisonEntrance sample={sample} variant="structured-preparation" />
+        </header>
+
+        <div className="comparison-route-section page-container">
           <div className="comparison-route-map" aria-label="Ad hoc and structured preparation paths">
             <p>Two useful preparation modes</p>
             <div className="comparison-route">
@@ -96,7 +98,7 @@ export default function CodebaseInterviewPreparationPage() {
               <p>Explore freely, then organize the evidence you need to defend.</p>
             </div>
           </div>
-        </header>
+        </div>
 
         <section className="guide-intro page-container" aria-labelledby="prepared-heading">
           <p className="guide-margin-note">What prepared means</p>
