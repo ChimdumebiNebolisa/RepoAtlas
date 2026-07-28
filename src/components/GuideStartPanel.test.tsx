@@ -33,4 +33,33 @@ describe("GuideStartPanel", () => {
     );
     expect(githubAction).not.toHaveClass("btn", "btn-primary");
   });
+
+  it("states the authored-project evidence boundary without changing the action hierarchy", () => {
+    render(
+      <GuideStartPanel
+        ariaLabel="Start an authored-project brief"
+        heading="Add the file-backed structure."
+        description="RepoAtlas supplies entry points, architecture, tests, and evidence. You supply the rationale, constraints, and outcomes."
+      />,
+    );
+
+    const panel = screen.getByRole("complementary", {
+      name: "Start an authored-project brief",
+    });
+
+    expect(panel).toHaveTextContent(
+      "RepoAtlas supplies entry points, architecture, tests, and evidence.",
+    );
+    expect(panel).toHaveTextContent(
+      "You supply the rationale, constraints, and outcomes.",
+    );
+    expect(
+      within(panel).getByRole("link", { name: "Run the bundled sample" }),
+    ).toHaveClass("btn-primary");
+    expect(
+      within(panel).getByRole("link", {
+        name: "Use a public GitHub repository",
+      }),
+    ).not.toHaveClass("btn-primary");
+  });
 });
