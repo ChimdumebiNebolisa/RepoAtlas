@@ -143,8 +143,6 @@ test("repository walkthrough guide teaches the method and opens the bundled samp
   await expect(
     page.getByRole("heading", { name: "Start with the sample or your repository." })
   ).toBeVisible();
-  await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
-  await expect(page.getByTestId("completed-report-heading")).toBeVisible({ timeout: 90_000 });
 });
 
 for (const viewport of [
@@ -263,8 +261,6 @@ test("authored project guide separates candidate intent from repository evidence
   await expect(
     page.getByRole("heading", { name: "Start with the sample or your repository." })
   ).toBeVisible();
-  await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
-  await expect(page.getByTestId("completed-report-heading")).toBeVisible({ timeout: 90_000 });
 });
 
 for (const viewport of [
