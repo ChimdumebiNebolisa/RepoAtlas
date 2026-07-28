@@ -4,6 +4,43 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [2026-07-28] - Candidate preparation entrances
+
+### Customer-visible behavior
+
+- The structured codebase-preparation comparison and AI codebase-summary comparison now form one reciprocal preparation cluster with both candidate guides.
+- The homepage FAQ now explains manual review, AI summaries, and evidence-linked walkthroughs while keeping the bundled sample as the primary action.
+- Both comparison pages now show one file-backed Candidate Brief result before the first scroll, with one bundled-sample action and a secondary public GitHub route.
+- Both candidate guides now offer the bundled sample and public GitHub start before the first scroll while preserving their existing teaching sequence and evidence boundaries.
+
+### Reliability
+
+- Comparison entrances accept only their allowlisted attribution values and discard unknown values before opening the interview-focused analysis form.
+- Direct browser coverage now completes both supported starts from all four candidate pages without retries and checks interview focus, readable evidence, and browser errors.
+
+## [2026-07-27] - Report integrity and accessible evidence
+
+### Candidate Brief
+
+- Complete reports with two or more material analyzer warnings no longer retain a high-confidence rating. Routine ZIP-history and architecture-reduction notices remain informational.
+- Runtime validation now rejects duplicate or dangling evidence, graph edges with missing nodes, contradictory semantic totals, reversed evidence ranges, and scores outside the displayed 0 to 100 range.
+
+### Accessibility
+
+- Public GitHub and ZIP inputs now use one keyboard tab stop with Left, Right, Home, and End navigation. Start Here and Danger Zones scores expose their values and meanings without adding row tab stops.
+- Architecture Map now names its graphic and lists the exact displayed nodes and supported relationships as structured text. Folder Map now exposes its complete parent-child structure as a native nested list.
+- PDF, PNG, and Markdown failures now use one dependable alert. Architecture layout failures retain the complete bounded repository evidence as structured text and recover when a valid graph replaces the failure.
+
+### Customer-visible behavior
+
+- Unknown routes now return a RepoAtlas recovery page with one route to the homepage, and `robots.txt` now permits public routes and names the production sitemap.
+- Long project signals, test targets, architecture paths, labels, recent-work areas, and churn files now remain inside report panels on narrow screens without truncating their evidence.
+- The structured codebase-preparation comparison now explains ad hoc and evidence-first preparation and links to both candidate guides and the bundled sample.
+
+### Reliability
+
+- Candidate Brief rendering, Architecture Map coordination, report delivery, report validation, repository scoring, and walkthrough generation now use focused production boundaries with enforced size limits while preserving established report output.
+
 ## [2026-07-26] - Language evidence and response validation
 
 ### Analysis
