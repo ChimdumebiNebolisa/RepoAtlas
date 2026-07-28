@@ -1437,13 +1437,63 @@ button, a { -webkit-tap-highlight-color: transparent; }
   line-height: 0.96;
   text-wrap: balance;
 }
-.guide-hero-copy > p:last-child {
+.guide-hero-copy > .guide-hero-intro {
   max-width: 43rem;
   margin: 1.65rem 0 0;
   color: #3f554c;
   font-size: clamp(1rem, 1.4vw, 1.16rem);
   line-height: 1.75;
   text-wrap: pretty;
+}
+.guide-start-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13.5rem, auto);
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(111, 143, 129, 0.34);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-card);
+  background: rgba(238, 248, 243, 0.76);
+}
+.guide-start-heading {
+  display: grid;
+  gap: 0.25rem;
+}
+.guide-start-heading strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+  letter-spacing: -0.025em;
+}
+.guide-start-heading span {
+  color: #52685e;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+.guide-start-actions {
+  display: grid;
+  justify-items: start;
+  gap: 0.55rem;
+}
+.guide-start-primary {
+  width: 100%;
+  margin-top: 0;
+  white-space: nowrap;
+}
+.guide-start-github {
+  color: var(--accent-dark);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-color: rgba(8, 122, 85, 0.32);
+  text-underline-offset: 0.2em;
+}
+.guide-start-github:hover { text-decoration-color: var(--accent); }
+.guide-start-github:focus-visible {
+  outline: 3px solid rgba(8, 122, 85, 0.25);
+  outline-offset: 4px;
 }
 .guide-evidence-map {
   position: relative;
@@ -2728,6 +2778,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .interview-proof-layout ul { display: grid; }
   .guide-hero { padding-block: 3.5rem 5rem; }
   .guide-hero-copy h1 { font-size: clamp(2.7rem, 15vw, 4.4rem); }
+  .guide-start-panel {
+    grid-template-columns: 1fr;
+    margin-top: 1.15rem;
+    padding: 0.85rem;
+  }
+  .guide-start-actions { gap: 0.45rem; }
+  .guide-start-primary { width: 100%; }
   .comparison-hero {
     gap: 1.5rem;
     padding-block: 1.5rem 2rem;

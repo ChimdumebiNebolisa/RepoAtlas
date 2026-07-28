@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GuideComparisonLinks } from "@/components/GuideComparisonLinks";
+import { GuideStartPanel } from "@/components/GuideStartPanel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { analyzeBundledSample } from "@/lib/bundledSample";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -39,11 +40,12 @@ export default async function RepositoryWalkthroughInterviewPage() {
           <div className="guide-hero-copy">
             <p className="eyebrow">Repository walkthrough interview guide</p>
             <h1>How to walk an interviewer through a repository.</h1>
-            <p>
+            <p className="guide-hero-intro">
               Start with a clear route through the code, not a list of folders. Show where control
               enters, how one important path crosses the system, which files support your claims,
               and where the evidence stops.
             </p>
+            <GuideStartPanel />
           </div>
 
           <div className="guide-evidence-map" aria-label="A defensible repository walkthrough">
@@ -196,7 +198,7 @@ export default async function RepositoryWalkthroughInterviewPage() {
                 talking points with the method above. No upload is needed.
               </p>
             </div>
-            <Link className="btn btn-primary guide-primary-action" href="/?source=interview_preparation#analyze">
+            <Link className="btn btn-secondary guide-primary-action" href="/?source=interview_preparation#analyze">
               Run the bundled sample <span aria-hidden="true">→</span>
             </Link>
           </div>
