@@ -21,8 +21,8 @@ describe("AI codebase summary comparison page", () => {
     });
   });
 
-  it("compares outputs without making universal claims about AI tools", () => {
-    render(<AiCodebaseSummaryPage />);
+  it("compares outputs without making universal claims about AI tools", async () => {
+    render(await AiCodebaseSummaryPage());
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "AI summary or evidence-linked interview brief?",
@@ -33,8 +33,8 @@ describe("AI codebase summary comparison page", () => {
     expect(screen.getByText(/They are not bug, vulnerability, or runtime findings/)).toBeInTheDocument();
   });
 
-  it("keeps one primary sample action and links both supporting guides", () => {
-    render(<AiCodebaseSummaryPage />);
+  it("keeps one specific sample action and links both supporting guides", async () => {
+    render(await AiCodebaseSummaryPage());
 
     const primaryActions = screen.getAllByRole("link").filter((link) =>
       link.classList.contains("btn-primary"),
@@ -44,6 +44,15 @@ describe("AI codebase summary comparison page", () => {
       "href",
       "/?source=comparison_ai_summary#analyze",
     );
+    expect(primaryActions[0]).toHaveAccessibleName("Try the evidence-linked sample");
+    expect(screen.getByRole("link", { name: /Use a public GitHub repository/i })).toHaveAttribute(
+      "href",
+      "/?source=comparison_ai_summary#analyze",
+    );
+    expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
+      "Real file-backed sample",
+    );
+    expect(screen.getByText(/Get a reading route, timed walkthroughs/)).toBeInTheDocument();
 
     expect(screen.getByRole("link", { name: /learn the complete evidence-first walkthrough/i })).toHaveAttribute(
       "href",
@@ -55,8 +64,8 @@ describe("AI codebase summary comparison page", () => {
     );
   });
 
-  it("covers the required verification and product-choice questions", () => {
-    render(<AiCodebaseSummaryPage />);
+  it("covers the required verification and product-choice questions", async () => {
+    render(await AiCodebaseSummaryPage());
 
     const matrix = screen.getByRole("table", {
       name: "AI summary and Candidate Brief comparison",

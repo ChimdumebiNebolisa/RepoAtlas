@@ -21,8 +21,8 @@ describe("codebase interview preparation page", () => {
     });
   });
 
-  it("compares both preparation modes before introducing the product boundary", () => {
-    render(<CodebaseInterviewPreparationPage />);
+  it("compares both preparation modes before introducing the product boundary", async () => {
+    render(await CodebaseInterviewPreparationPage());
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Prepare a route through the code, not a pile of notes.",
@@ -34,8 +34,8 @@ describe("codebase interview preparation page", () => {
     expect(screen.getByText(/not confirmed defects or vulnerabilities/)).toBeInTheDocument();
   });
 
-  it("keeps one primary sample action and links both supporting guides", () => {
-    render(<CodebaseInterviewPreparationPage />);
+  it("keeps one specific sample action and links both supporting guides", async () => {
+    render(await CodebaseInterviewPreparationPage());
 
     const primaryActions = screen.getAllByRole("link").filter((link) =>
       link.classList.contains("btn-primary"),
@@ -45,6 +45,15 @@ describe("codebase interview preparation page", () => {
       "href",
       "/?source=comparison_structured_preparation#analyze",
     );
+    expect(primaryActions[0]).toHaveAccessibleName("Try the sample interview route");
+    expect(screen.getByRole("link", { name: /Use a public GitHub repository/i })).toHaveAttribute(
+      "href",
+      "/?source=comparison_structured_preparation#analyze",
+    );
+    expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
+      "Real file-backed sample",
+    );
+    expect(screen.getByText(/Get a reading route, timed walkthroughs/)).toBeInTheDocument();
 
     expect(screen.getAllByRole("link", { name: /repository walkthrough interview guide/i })[0]).toHaveAttribute(
       "href",

@@ -1813,15 +1813,115 @@ button, a { -webkit-tap-highlight-color: transparent; }
   max-width: 13ch;
   font-size: clamp(3rem, 5.5vw, 5.75rem);
 }
+.comparison-entrance {
+  min-width: 0;
+  padding: clamp(1.35rem, 3vw, 2rem);
+  border: 1px solid rgba(111, 143, 129, 0.34);
+  border-radius: calc(var(--radius-card) + 0.35rem);
+  background:
+    linear-gradient(145deg, rgba(218, 242, 230, 0.76), transparent 46%),
+    rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-soft);
+}
+.comparison-entrance-heading {
+  display: grid;
+  gap: 0.5rem;
+}
+.comparison-entrance-heading > span,
+.comparison-entrance-proof > span {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.comparison-entrance-heading strong {
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+  letter-spacing: -0.035em;
+}
+.comparison-entrance-heading p {
+  max-width: 35rem;
+  margin: 0;
+  color: #40564d;
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+.comparison-entrance-proof {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid rgba(8, 122, 85, 0.28);
+  border-radius: 0.8rem;
+  background: rgba(250, 253, 251, 0.92);
+}
+.comparison-entrance-proof > div {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.comparison-entrance-proof small {
+  color: #667a70;
+  font-size: 0.66rem;
+  line-height: 1.55;
+}
+.comparison-entrance-proof code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #315d4b;
+  font-size: 0.72rem;
+}
+.comparison-entrance-proof p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+.comparison-entrance-unavailable {
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+.comparison-entrance-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem 1rem;
+  margin-top: 1.25rem;
+}
 .comparison-primary-action {
   width: fit-content;
-  margin-top: 2rem;
+  margin-top: 0;
 }
-.comparison-hero-copy .comparison-action-note {
+.comparison-github-action {
+  color: var(--accent-dark);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-color: rgba(8, 122, 85, 0.32);
+  text-underline-offset: 0.2em;
+}
+.comparison-github-action:hover { text-decoration-color: var(--accent); }
+.comparison-github-action:focus-visible {
+  outline: 3px solid rgba(8, 122, 85, 0.25);
+  outline-offset: 4px;
+}
+.comparison-entrance .comparison-action-note {
   margin-top: 0.8rem;
   color: #60736a;
   font-size: 0.7rem;
   line-height: 1.55;
+}
+.comparison-route-section {
+  padding-block: 0 clamp(4.5rem, 8vw, 7rem);
+}
+.comparison-route-section .comparison-route-map {
+  max-width: 52rem;
+  margin-inline: auto;
 }
 .comparison-route-map {
   position: relative;
@@ -2628,10 +2728,58 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .interview-proof-layout ul { display: grid; }
   .guide-hero { padding-block: 3.5rem 5rem; }
   .guide-hero-copy h1 { font-size: clamp(2.7rem, 15vw, 4.4rem); }
-  .comparison-hero-copy h1 { font-size: clamp(2.55rem, 13vw, 4rem); }
+  .comparison-hero {
+    gap: 1.5rem;
+    padding-block: 1.5rem 2rem;
+  }
+  .comparison-hero-copy h1 {
+    max-width: 16ch;
+    margin-top: 0.6rem;
+    font-size: clamp(2.15rem, 9.5vw, 2.45rem);
+    line-height: 0.98;
+  }
+  .comparison-hero-copy > p:last-child {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    line-height: 1.55;
+  }
   .authored-guide-hero-copy h1 { font-size: clamp(2.4rem, 11vw, 3.25rem); }
   .guide-evidence-map { padding: 1.1rem; }
   .comparison-route-map { padding: 1.1rem; }
+  .comparison-entrance { padding: 0.85rem; }
+  .comparison-entrance-heading { gap: 0.25rem; }
+  .comparison-entrance-heading strong { font-size: 1.05rem; }
+  .comparison-entrance-heading p {
+    font-size: 0.7rem;
+    line-height: 1.45;
+  }
+  .comparison-entrance-proof {
+    gap: 0.4rem;
+    margin-top: 0.7rem;
+    padding: 0.65rem;
+  }
+  .comparison-entrance-proof > div {
+    grid-template-columns: 3.8rem minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+  .comparison-entrance-proof p {
+    font-size: 0.68rem;
+    line-height: 1.45;
+  }
+  .comparison-entrance-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 0.7rem;
+  }
+  .comparison-entrance .comparison-primary-action { width: 100%; }
+  .comparison-github-action { width: fit-content; }
+  .comparison-entrance .comparison-action-note {
+    margin-top: 0.5rem;
+    font-size: 0.64rem;
+    line-height: 1.4;
+  }
+  .comparison-route-section { padding-bottom: 4.5rem; }
   .authored-answer-map { padding: 1.1rem; }
   .comparison-primary-action { width: 100%; }
   .guide-question blockquote { margin-top: 2.5rem; }
