@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GuideComparisonLinks } from "@/components/GuideComparisonLinks";
 import { SiteHeader } from "@/components/SiteHeader";
 import { analyzeBundledSample } from "@/lib/bundledSample";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -226,10 +227,10 @@ export default async function RepositoryWalkthroughInterviewPage() {
               <p><strong>30 seconds:</strong> purpose, entry point, one system path, one evidence limit.</p>
               <p><strong>2 minutes:</strong> add architecture boundaries, a risk signal, the test path, and one improvement question.</p>
             </div>
+            <GuideComparisonLinks lead="If you are still choosing how to prepare," />
           </div>
         </section>
       </article>
     </main>
   );
 }
-
