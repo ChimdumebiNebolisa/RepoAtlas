@@ -9,6 +9,7 @@ import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
 import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import type { Report } from "@/types/report";
 import { ReportTabs } from "@/components/ReportTabs";
+import type { HomepageFaqItem } from "@/lib/homepageContent";
 
 function Arrow() {
   return <span aria-hidden="true">→</span>;
@@ -20,6 +21,26 @@ function EvidenceTag({ id, path }: { id: string; path?: string }) {
       <span>{id}</span>
       {path && <code>{path}</code>}
     </span>
+  );
+}
+
+function HomepageFaqAnswer({ answer, link }: Pick<HomepageFaqItem, "answer" | "link">) {
+  if (!link) {
+    return <p>{answer}</p>;
+  }
+
+  const linkStart = answer.indexOf(link.label);
+
+  if (linkStart < 0) {
+    return <p>{answer}</p>;
+  }
+
+  return (
+    <p>
+      {answer.slice(0, linkStart)}
+      <a href={link.href}>{link.label}</a>
+      {answer.slice(linkStart + link.label.length)}
+    </p>
   );
 }
 
@@ -242,12 +263,12 @@ export function HomepageTrustAndFaq() {
           </a>
         </header>
         <div className="faq-list">
-          {homepageFaqItems.map(({ question, answer }) => (
+          {homepageFaqItems.map(({ question, answer, link }) => (
             <details key={question} data-testid="homepage-faq-item">
               <summary>
                 <h3>{question}</h3>
               </summary>
-              <p>{answer}</p>
+              <HomepageFaqAnswer answer={answer} link={link} />
             </details>
           ))}
         </div>

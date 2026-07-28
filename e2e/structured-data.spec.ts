@@ -31,7 +31,7 @@ test("homepage exposes synchronized Product and FAQPage JSON-LD in the head", as
     })),
   );
 
-  expect(faqPage.mainEntity).toHaveLength(5);
+  expect(faqPage.mainEntity).toHaveLength(8);
   expect(
     faqPage.mainEntity.map(({ name, acceptedAnswer }) => ({
       name,
