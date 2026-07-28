@@ -8,6 +8,7 @@ import type { Report } from "../src/types/report";
 import { buildSampleReport } from "../src/lib/buildSampleReport";
 import { buildExportFilename } from "../src/lib/exportNames";
 import { MAX_PNG_CANVAS_DIMENSION } from "../src/components/ReportTabs";
+import { REPORT_EXPORT_DEADLINE_MS } from "../src/components/reportExportRendering";
 import { expectCompletedReportInViewport } from "./helpers";
 
 const PDF_SIGNATURE = Buffer.from("%PDF-");
@@ -76,7 +77,7 @@ async function openControlledInlineReport(
   }
 
   await page.goto("/");
-  await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+  await page.getByRole("button", { name: /Try bundled sample/i }).first().click();
   await expectCompletedReportInViewport(page);
   await expect(
     page.getByText(
@@ -176,4 +177,84 @@ test("long Candidate Brief exports PNG below the browser canvas limit", async ({
   expect(png.width).toBeLessThanOrEqual(MAX_PNG_CANVAS_DIMENSION);
   expect(png.height).toBeLessThanOrEqual(MAX_PNG_CANVAS_DIMENSION);
   expect(nonWhitePixelRatio(png)).toBeGreaterThan(0.01);
+});
+
+test("a stalled long-report PDF reaches recovery and unlocks report actions", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openControlledInlineReport(page, buildSampleReport());
+
+  await page.evaluate(() => {
+    const runtime = window as Window & {
+      __longExportFixtureHeight?: number;
+      __pdfPageEncodingStalled?: boolean;
+    };
+    const originalToBlob = HTMLCanvasElement.prototype.toBlob;
+    const observer = new MutationObserver(() => {
+      const exportHeading = Array.from(document.querySelectorAll("h1")).find(
+        (heading) =>
+          heading.textContent?.startsWith("Repo Analysis:") &&
+          heading.closest(".fixed")
+      );
+      const exportNode = exportHeading?.parentElement;
+      if (!exportNode || exportNode.querySelector("[data-long-export-fixture]")) return;
+      const filler = document.createElement("div");
+      filler.dataset.longExportFixture = "true";
+      filler.style.height = "31000px";
+      exportNode.appendChild(filler);
+      runtime.__longExportFixtureHeight = exportNode.scrollHeight;
+      // Keep the long mount assertion without forcing two parallel browsers to
+      // allocate a second 31,000-pixel canvas; this contract stalls page encoding.
+      queueMicrotask(() => {
+        filler.style.height = "1px";
+      });
+      observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    HTMLCanvasElement.prototype.toBlob = function (
+      callback,
+      type,
+      quality
+    ) {
+      if (type === "image/png" && this.width >= 1_000 && this.height < 2_000) {
+        runtime.__pdfPageEncodingStalled = true;
+        return;
+      }
+      return originalToBlob.call(this, callback, type, quality);
+    };
+  });
+  await page.clock.install();
+
+  const pdfButton = page.getByRole("button", { name: "Export PDF", exact: true }).last();
+  const pngButton = page.getByRole("button", { name: "Export PNG", exact: true }).last();
+  const shareButton = page.getByRole("button", { name: "Share Candidate Brief" }).last();
+  await pdfButton.click();
+  await page.waitForFunction(
+    () =>
+      (window as Window & { __pdfPageEncodingStalled?: boolean })
+        .__pdfPageEncodingStalled === true
+  );
+  expect(
+    await page.evaluate(
+      () =>
+        (window as Window & { __longExportFixtureHeight?: number })
+          .__longExportFixtureHeight
+    )
+  ).toBeGreaterThan(30_000);
+  await expect(
+    page.getByRole("button", { name: /Exporting PDF/i }).last()
+  ).toBeDisabled();
+  await expect(pngButton).toBeDisabled();
+
+  await page.clock.fastForward(REPORT_EXPORT_DEADLINE_MS + 1);
+
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: "PDF export took too long. Try again or export PNG instead.",
+    })
+  ).toBeVisible({ timeout: 1_000 });
+  await expect(pdfButton).toBeEnabled();
+  await expect(pngButton).toBeEnabled();
+  await expect(shareButton).toBeEnabled();
 });

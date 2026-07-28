@@ -14,6 +14,7 @@ describe("useReportActions structure", () => {
       "useReportActions.ts",
       "reportActionState.ts",
       "useReportFormatExports.ts",
+      "reportExportRendering.ts",
       "usePrivateReportSharing.ts",
     ]) {
       expect(sourceLineCount(fileName), fileName).toBeLessThanOrEqual(300);
