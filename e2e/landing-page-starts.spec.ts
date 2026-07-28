@@ -1,10 +1,18 @@
-import { expect, test, type Page, type Request } from "@playwright/test";
-import { expectCompletedReportInViewport } from "./helpers";
+import {
+  expect,
+  test,
+  type Locator,
+  type Page,
+  type Request,
+} from "@playwright/test";
+import { expectCompletedReportInViewport, REPORT_TABS } from "./helpers";
 
 const PUBLIC_REPOSITORY_URL =
   "https://github.com/ChimdumebiNebolisa/CellScope";
 const PUBLIC_REPOSITORY_REF =
   "9276187bbb13c8dd98c81cadf0933cd0977b26bb";
+const useExactMobileViewport =
+  process.env.PLAYWRIGHT_EXACT_MOBILE_VIEWPORT === "1";
 
 const candidatePages = [
   {
@@ -35,17 +43,63 @@ const candidatePages = [
     entranceLabel: "Start an evidence-linked Candidate Brief",
     sampleAction: "Try the evidence-linked sample",
   },
+  {
+    label: "code review interview guide",
+    path: "/code-review-interview",
+    source: "interview_preparation",
+    entranceLabel: "Prepare a repository for a code review interview",
+    sampleAction: "Run the bundled sample",
+  },
 ] as const;
 
 type InputMode = "sample" | "github";
 
-function collectBrowserErrors(page: Page): string[] {
-  const errors: string[] = [];
+function collectBrowserDiagnostics(page: Page): string[] {
+  const diagnostics: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
+    if (["error", "warning"].includes(message.type())) {
+      diagnostics.push(`${message.type()}: ${message.text()}`);
+    }
   });
-  page.on("pageerror", (error) => errors.push(error.message));
-  return errors;
+  page.on("pageerror", (error) => diagnostics.push(`pageerror: ${error.message}`));
+  page.on("response", (response) => {
+    const resourceType = response.request().resourceType();
+    if (
+      response.status() >= 400 &&
+      ["document", "fetch", "xhr"].includes(resourceType)
+    ) {
+      diagnostics.push(
+        `HTTP ${response.status()}: ${response.request().method()} ${response.url()}`,
+      );
+    }
+  });
+  return diagnostics;
+}
+
+async function focusWithKeyboard(
+  page: Page,
+  target: Locator,
+  maximumTabs = 100,
+): Promise<void> {
+  await expect(target).toBeVisible();
+
+  for (let index = 0; index < maximumTabs; index += 1) {
+    if (
+      await target.evaluate(
+        (element) => element === element.ownerDocument.activeElement,
+      )
+    ) {
+      await expect(target).toBeFocused();
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+
+  throw new Error(
+    `Keyboard focus did not reach ${await target.evaluate(
+      (element) => element.getAttribute("aria-label") ?? element.textContent,
+    )}`,
+  );
 }
 
 async function expectAnalyzeRequest(
@@ -64,7 +118,29 @@ async function expectAnalyzeRequest(
   expect(payload.ref).toBe(PUBLIC_REPOSITORY_REF);
 }
 
-async function expectReadableEvidence(page: Page): Promise<void> {
+async function expectAllReportSectionsWithKeyboard(page: Page): Promise<void> {
+  const report = page.getByTestId("generated-report");
+  const candidateBriefTab = report.getByRole("tab", {
+    name: REPORT_TABS[0],
+  });
+  await focusWithKeyboard(page, candidateBriefTab);
+
+  for (const tabName of REPORT_TABS.slice(1)) {
+    await page.keyboard.press("ArrowRight");
+    const tab = report.getByRole("tab", { name: tabName });
+    await expect(tab).toBeFocused();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    await expect(
+      report.getByRole("tabpanel", { name: tabName }),
+    ).toBeVisible();
+  }
+
+  await page.keyboard.press("Home");
+  await expect(candidateBriefTab).toBeFocused();
+  await expect(candidateBriefTab).toHaveAttribute("aria-selected", "true");
+}
+
+async function expectReadableEvidenceWithKeyboard(page: Page): Promise<void> {
   const report = page.getByTestId("generated-report");
 
   const walkthrough = report.getByTestId("walkthrough-30-second");
@@ -81,7 +157,8 @@ async function expectReadableEvidence(page: Page): Promise<void> {
     .getByRole("button", { name: cardId!, exact: true })
     .first();
   await expect(evidenceLink).toBeVisible();
-  await evidenceLink.click();
+  await focusWithKeyboard(page, evidenceLink, 250);
+  await page.keyboard.press("Enter");
   await expect(evidenceCard).toBeInViewport();
   expect((await evidenceCard.innerText()).trim().length).toBeGreaterThan(20);
 }
@@ -91,10 +168,14 @@ test.describe("candidate landing-page starts", () => {
 
   for (const candidatePage of candidatePages) {
     for (const inputMode of ["sample", "github"] as const) {
-      test(`${candidatePage.label} completes the ${inputMode} start on its first attempt`, async ({
+      test(`${candidatePage.label} completes the ${inputMode} start by keyboard on its first attempt`, async ({
         page,
       }) => {
-        const browserErrors = collectBrowserErrors(page);
+        if (useExactMobileViewport) {
+          await page.setViewportSize({ width: 390, height: 844 });
+        }
+
+        const browserDiagnostics = collectBrowserDiagnostics(page);
         await page.goto(candidatePage.path);
 
         const entrance = page.getByRole("complementary", {
@@ -104,7 +185,9 @@ test.describe("candidate landing-page starts", () => {
           inputMode === "sample"
             ? candidatePage.sampleAction
             : "Use a public GitHub repository";
-        await entrance.getByRole("link", { name: actionName }).click();
+        const startAction = entrance.getByRole("link", { name: actionName });
+        await focusWithKeyboard(page, startAction);
+        await page.keyboard.press("Enter");
 
         await expect(page).toHaveURL(
           new RegExp(`\\?source=${candidatePage.source}#analyze$`),
@@ -114,12 +197,15 @@ test.describe("candidate landing-page starts", () => {
         ).toBeChecked();
 
         if (inputMode === "github") {
-          await page
-            .getByLabel("Public GitHub repository URL")
-            .fill(PUBLIC_REPOSITORY_URL);
-          await page
-            .getByLabel("Branch or tag (optional)")
-            .fill(PUBLIC_REPOSITORY_REF);
+          const repositoryInput = page.getByLabel(
+            "Public GitHub repository URL",
+          );
+          await focusWithKeyboard(page, repositoryInput);
+          await page.keyboard.type(PUBLIC_REPOSITORY_URL);
+
+          const refInput = page.getByLabel("Branch or tag (optional)");
+          await focusWithKeyboard(page, refInput);
+          await page.keyboard.type(PUBLIC_REPOSITORY_REF);
         }
 
         const analyzeRequest = page.waitForRequest(
@@ -127,25 +213,26 @@ test.describe("candidate landing-page starts", () => {
             request.method() === "POST" &&
             new URL(request.url()).pathname === "/api/analyze",
         );
-        await page
-          .getByRole("button", {
-            name:
-              inputMode === "sample"
-                ? /Generate sample Candidate Brief/i
-                : /Analyze public GitHub repository/i,
-          })
-          .click();
+        const analyzeAction = page.getByRole("button", {
+          name:
+            inputMode === "sample"
+              ? /Generate sample Candidate Brief/i
+              : /Analyze public GitHub repository/i,
+        });
+        await focusWithKeyboard(page, analyzeAction);
+        await page.keyboard.press("Enter");
 
         await expectAnalyzeRequest(await analyzeRequest, inputMode);
         await expectCompletedReportInViewport(page);
         await expect(
           page.getByRole("radio", { name: /Interview walkthrough/i }),
         ).toBeChecked();
-        await expectReadableEvidence(page);
+        await expectAllReportSectionsWithKeyboard(page);
+        await expectReadableEvidenceWithKeyboard(page);
         await expect(page).toHaveURL(
           new RegExp(`\\?source=${candidatePage.source}#analyze$`),
         );
-        expect(browserErrors).toEqual([]);
+        expect(browserDiagnostics).toEqual([]);
       });
     }
   }
