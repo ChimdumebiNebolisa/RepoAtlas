@@ -10,20 +10,21 @@ type ClusterPage = {
   name: string;
   renderPage: () => ReactElement | Promise<ReactElement>;
   requiredDestinations: string[];
+  primaryActionHref: string;
 };
-
-const primaryActionHref = "/?source=interview_preparation#analyze";
 
 const clusterPages: ClusterPage[] = [
   {
     name: "repository walkthrough guide",
     renderPage: RepositoryWalkthroughInterviewPage,
     requiredDestinations: ["/codebase-interview-preparation", "/ai-codebase-summary"],
+    primaryActionHref: "/?source=interview_preparation#analyze",
   },
   {
     name: "authored project guide",
     renderPage: AuthoredProjectWalkthroughPage,
     requiredDestinations: ["/codebase-interview-preparation", "/ai-codebase-summary"],
+    primaryActionHref: "/?source=interview_preparation#analyze",
   },
   {
     name: "structured preparation comparison",
@@ -32,6 +33,7 @@ const clusterPages: ClusterPage[] = [
       "/repository-walkthrough-interview",
       "/how-to-walk-through-a-project-in-an-interview",
     ],
+    primaryActionHref: "/?source=comparison_structured_preparation#analyze",
   },
   {
     name: "AI summary comparison",
@@ -40,12 +42,13 @@ const clusterPages: ClusterPage[] = [
       "/repository-walkthrough-interview",
       "/how-to-walk-through-a-project-in-an-interview",
     ],
+    primaryActionHref: "/?source=comparison_ai_summary#analyze",
   },
 ];
 
 afterEach(cleanup);
 
-describe.each(clusterPages)("$name", ({ renderPage, requiredDestinations }) => {
+describe.each(clusterPages)("$name", ({ renderPage, requiredDestinations, primaryActionHref }) => {
   it("keeps both reciprocal cluster destinations and one primary sample action", async () => {
     render(await renderPage());
 

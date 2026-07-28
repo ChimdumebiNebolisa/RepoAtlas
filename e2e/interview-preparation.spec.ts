@@ -30,6 +30,36 @@ test("interview-preparation page leads to the measurable analysis start", async 
   ).toBeVisible();
 });
 
+for (const comparison of [
+  {
+    path: "/codebase-interview-preparation",
+    source: "comparison_structured_preparation",
+  },
+  {
+    path: "/ai-codebase-summary",
+    source: "comparison_ai_summary",
+  },
+] as const) {
+  test(`${comparison.path} preserves the bounded interview start`, async ({ page }) => {
+    await page.goto(comparison.path);
+
+    const primaryAction = page.getByRole("link", { name: "Run the bundled sample" });
+    await expect(primaryAction).toHaveCount(1);
+    await expect(primaryAction).toHaveAttribute(
+      "href",
+      `/?source=${comparison.source}#analyze`,
+    );
+    await primaryAction.click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`\\?source=${comparison.source}#analyze$`),
+    );
+    await expect(
+      page.getByRole("radio", { name: /Interview walkthrough/i }),
+    ).toBeChecked();
+  });
+}
+
 test("repository walkthrough guide teaches the method and opens the bundled sample path", async ({ page }) => {
   await page.goto("/repository-walkthrough-interview");
 
