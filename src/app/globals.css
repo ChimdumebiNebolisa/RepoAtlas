@@ -1769,6 +1769,31 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-size: 0.82rem;
   line-height: 1.7;
 }
+.guide-comparison-links {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #bfcfc7;
+}
+.guide-comparison-links p {
+  max-width: 64ch;
+  margin: 0;
+  color: #52685e;
+  font-size: 0.8rem;
+  line-height: 1.75;
+}
+.guide-comparison-links a {
+  color: var(--accent-dark);
+  font-weight: 700;
+  text-decoration-line: underline;
+  text-decoration-color: rgba(8, 122, 85, 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.guide-comparison-links a:hover { text-decoration-color: var(--accent); }
+.guide-comparison-links a:focus-visible {
+  outline: 3px solid rgba(8, 122, 85, 0.25);
+  outline-offset: 4px;
+}
 
 .comparison-hero {
   grid-template-columns: minmax(0, 1.06fr) minmax(24rem, 0.94fr);

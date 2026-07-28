@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GuideComparisonLinks } from "@/components/GuideComparisonLinks";
 import { SiteHeader } from "@/components/SiteHeader";
 import { analyzeBundledSample } from "@/lib/bundledSample";
 import {
@@ -275,6 +276,7 @@ export default async function AuthoredProjectWalkthroughPage() {
               describe your own intent. RepoAtlas can support the structural half of the answer, but
               it cannot recover your reasoning from code alone.
             </p>
+            <GuideComparisonLinks lead="Before adding your own rationale, choose the preparation method that fits." />
           </div>
         </section>
       </article>

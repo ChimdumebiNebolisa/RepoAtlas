@@ -1,0 +1,23 @@
+import Link from "next/link";
+
+type GuideComparisonLinksProps = {
+  lead: string;
+};
+
+export function GuideComparisonLinks({ lead }: GuideComparisonLinksProps) {
+  return (
+    <nav className="guide-comparison-links" aria-label="Compare repository preparation methods">
+      <p>
+        {lead}{" "}
+        <Link href="/codebase-interview-preparation">
+          Compare structured preparation with ad hoc browsing
+        </Link>
+        {" or "}
+        <Link href="/ai-codebase-summary">
+          compare an AI codebase summary with an evidence-linked brief
+        </Link>
+        .
+      </p>
+    </nav>
+  );
+}
