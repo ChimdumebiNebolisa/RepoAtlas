@@ -120,7 +120,7 @@ export function useReportFormatExports({
     deadline: number,
     timeoutMessage: string,
     scale = 1.5,
-    constrainForPng = false
+    constrainToBrowserLimit = false
   ) => {
     setExportMountActive(true);
     await waitForExportMount();
@@ -136,7 +136,7 @@ export function useReportFormatExports({
         deadline,
         timeoutMessage
       );
-      const resolvedScale = constrainForPng
+      const resolvedScale = constrainToBrowserLimit
         ? fitExportCanvasScale(exportNode.scrollWidth, exportNode.scrollHeight, scale)
         : scale;
       return await settleBeforeReportExportDeadline(
@@ -195,7 +195,8 @@ export function useReportFormatExports({
       const canvas = await renderExportCanvas(
         deadline,
         PDF_EXPORT_TIMEOUT_MESSAGE,
-        1
+        1,
+        true
       );
       downloadBlob(
         await renderPdfBeforeDeadline(report, canvas, deadline),

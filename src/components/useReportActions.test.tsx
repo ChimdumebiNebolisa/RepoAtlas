@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildSampleReport } from "@/lib/buildSampleReport";
 import {
   INLINE_MARKDOWN_UNAVAILABLE,
+  MAX_PNG_CANVAS_DIMENSION,
   useReportActions,
 } from "./useReportActions";
 import {
@@ -77,12 +78,13 @@ function makeCanvas({ blob = new Blob(["image"]) }: { blob?: Blob | null } = {})
 
 function attachExportNode(
   setExportNode: (node: HTMLDivElement | null) => void,
-  architectureState?: "loading"
+  architectureState?: "loading",
+  dimensions = { width: 1200, height: 1800 }
 ) {
   const node = document.createElement("div");
   Object.defineProperties(node, {
-    scrollWidth: { configurable: true, value: 1200 },
-    scrollHeight: { configurable: true, value: 1800 },
+    scrollWidth: { configurable: true, value: dimensions.width },
+    scrollHeight: { configurable: true, value: dimensions.height },
   });
   if (architectureState) {
     const architecture = document.createElement("div");
@@ -475,7 +477,7 @@ describe("useReportActions", () => {
     );
   });
 
-  it("downloads every PDF page and records one successful export", async () => {
+  it("bounds a long PDF canvas, downloads every page, and records one successful export", async () => {
     html2canvas.mockResolvedValueOnce(makeCanvas());
     const originalCreateElement = document.createElement.bind(document);
     const fillRect = vi.fn();
@@ -497,12 +499,22 @@ describe("useReportActions", () => {
     const { result } = renderHook(() =>
       useReportActions({ report, variant: "live" })
     );
-    attachExportNode(result.current.setExportNode);
+    const exportNode = attachExportNode(
+      result.current.setExportNode,
+      undefined,
+      { width: 1_036, height: 45_220 }
+    );
 
     await act(() => result.current.handleExportPdf());
 
     expect(result.current.exportError).toBeNull();
     expect(result.current.exporting).toBeNull();
+    expect(html2canvas).toHaveBeenCalledWith(
+      exportNode,
+      expect.objectContaining({
+        scale: MAX_PNG_CANVAS_DIMENSION / 45_220,
+      })
+    );
     expect(pdfSetProperties).toHaveBeenCalledWith({
       title: `Repo Analysis: ${report.repo_metadata.name}`,
       subject: "RepoAtlas Candidate Brief",

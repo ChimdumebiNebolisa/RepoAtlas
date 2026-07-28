@@ -189,8 +189,10 @@ test("a stalled long-report PDF reaches recovery and unlocks report actions", as
     const runtime = window as Window & {
       __longExportFixtureHeight?: number;
       __pdfPageEncodingStalled?: boolean;
+      __originalCanvasToBlob?: typeof HTMLCanvasElement.prototype.toBlob;
     };
     const originalToBlob = HTMLCanvasElement.prototype.toBlob;
+    runtime.__originalCanvasToBlob = originalToBlob;
     const observer = new MutationObserver(() => {
       const exportHeading = Array.from(document.querySelectorAll("h1")).find(
         (heading) =>
@@ -257,4 +259,59 @@ test("a stalled long-report PDF reaches recovery and unlocks report actions", as
   await expect(pdfButton).toBeEnabled();
   await expect(pngButton).toBeEnabled();
   await expect(shareButton).toBeEnabled();
+
+  await page.evaluate(() => {
+    const originalToBlob = (
+      window as Window & {
+        __originalCanvasToBlob?: typeof HTMLCanvasElement.prototype.toBlob;
+      }
+    ).__originalCanvasToBlob;
+    if (!originalToBlob) throw new Error("Missing original canvas encoder.");
+    HTMLCanvasElement.prototype.toBlob = originalToBlob;
+  });
+  await page.clock.resume();
+
+  const pdfDownload = await downloadFromButton(page, "Export PDF");
+  const pdfBuffer = await readDownload(pdfDownload);
+  expect(pdfBuffer.subarray(0, PDF_SIGNATURE.length)).toEqual(PDF_SIGNATURE);
+  expect(pdfBuffer.byteLength).toBeGreaterThan(10_000);
+  const pdf = await getDocument({ data: new Uint8Array(pdfBuffer) }).promise;
+  expect(pdf.numPages).toBeGreaterThan(0);
+  const firstPage = await pdf.getPage(1);
+  const operators = await firstPage.getOperatorList();
+  expect(
+    operators.fnArray.some(
+      (operator) =>
+        operator === OPS.paintImageXObject ||
+        operator === OPS.paintInlineImageXObject ||
+        operator === OPS.paintImageMaskXObject
+    )
+  ).toBeTruthy();
+  await pdf.destroy();
+
+  const pngDownload = await downloadFromButton(page, "Export PNG");
+  const pngBuffer = await readDownload(pngDownload);
+  expect(pngBuffer.subarray(0, PNG_SIGNATURE.length)).toEqual(PNG_SIGNATURE);
+  const png = PNG.sync.read(pngBuffer);
+  expect(nonWhitePixelRatio(png)).toBeGreaterThan(0.01);
+
+  await page.getByRole("button", { name: /Try bundled sample/i }).first().click();
+  await expectCompletedReportInViewport(page);
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: "PDF export took too long. Try again or export PNG instead.",
+    })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Export PDF", exact: true }).last()
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Export PNG", exact: true }).last()
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Share Candidate Brief" }).last()
+  ).toBeEnabled();
+  await expect(
+    page.locator(".fixed").filter({ has: page.getByRole("heading", { name: /Repo Analysis:/ }) })
+  ).toHaveCount(0);
 });
