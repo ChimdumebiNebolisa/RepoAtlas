@@ -23,6 +23,7 @@ import {
   renderPdfBeforeDeadline,
   settleBeforeReportExportDeadline,
 } from "./reportExportRendering";
+
 export const MAX_PNG_CANVAS_DIMENSION = 32_000;
 export function fitExportCanvasScale(
   width: number,
@@ -78,8 +79,23 @@ export function useReportFormatExports({
     reportId ? "Checking Markdown export availability..." : INLINE_MARKDOWN_UNAVAILABLE
   );
   const exportRef = useRef<HTMLDivElement>(null);
+  const exportOperationRef = useRef<object | null>(null);
   const setExportNode = useCallback((node: HTMLDivElement | null) => {
     exportRef.current = node;
+  }, []);
+  const beginExportOperation = () => {
+    const operation = {};
+    exportOperationRef.current = operation;
+    return operation;
+  };
+  const ownsExportOperation = (operation: object) => exportOperationRef.current === operation;
+  const finishExportOperation = (operation: object) => {
+    if (!ownsExportOperation(operation)) return;
+    exportOperationRef.current = null;
+    setExporting(null);
+  };
+  useEffect(() => () => {
+    exportOperationRef.current = null;
   }, []);
   useEffect(() => {
     let alive = true;
@@ -159,6 +175,7 @@ export function useReportFormatExports({
     ext: "md",
   }).replace(/\.md$/, "");
   const handleExportPng = async () => {
+    const operation = beginExportOperation();
     try {
       setExportError(null);
       setExporting("png");
@@ -169,11 +186,13 @@ export function useReportFormatExports({
         1.5,
         true
       );
+      if (!ownsExportOperation(operation)) return;
       const blob = await canvasToBlobBeforeDeadline(
         canvas,
         deadline,
         PNG_EXPORT_TIMEOUT_MESSAGE
       );
+      if (!ownsExportOperation(operation)) return;
       if (!blob) throw new Error("Could not generate PNG image.");
       downloadBlob(blob, `${exportBasename}.png`);
       captureProductEvent("report_exported", {
@@ -181,13 +200,15 @@ export function useReportFormatExports({
         report_variant: variant,
       });
     } catch (error) {
+      if (!ownsExportOperation(operation)) return;
       captureReportExportFailure("png", variant, "render_failed");
       setExportError(error instanceof Error ? error.message : "PNG export failed.");
     } finally {
-      setExporting(null);
+      finishExportOperation(operation);
     }
   };
   const handleExportPdf = async () => {
+    const operation = beginExportOperation();
     try {
       setExportError(null);
       setExporting("pdf");
@@ -198,19 +219,20 @@ export function useReportFormatExports({
         1,
         true
       );
-      downloadBlob(
-        await renderPdfBeforeDeadline(report, canvas, deadline),
-        `${exportBasename}.pdf`
-      );
+      if (!ownsExportOperation(operation)) return;
+      const pdf = await renderPdfBeforeDeadline(report, canvas, deadline);
+      if (!ownsExportOperation(operation)) return;
+      downloadBlob(pdf, `${exportBasename}.pdf`);
       captureProductEvent("report_exported", {
         format: "pdf",
         report_variant: variant,
       });
     } catch (error) {
+      if (!ownsExportOperation(operation)) return;
       captureReportExportFailure("pdf", variant, "render_failed");
       setExportError(error instanceof Error ? error.message : "PDF export failed.");
     } finally {
-      setExporting(null);
+      finishExportOperation(operation);
     }
   };
   const handleExportMarkdown = async () => {
@@ -222,12 +244,15 @@ export function useReportFormatExports({
       setExportError(markdownNote ?? "Markdown export is currently unavailable.");
       return;
     }
+    const operation = beginExportOperation();
     try {
       setExportError(null);
       setExporting("md");
       const res = await fetch(getMarkdownRoute(reportId));
+      if (!ownsExportOperation(operation)) return;
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
+        if (!ownsExportOperation(operation)) return;
         const message = describeMarkdownExportFailure(payload, res.status);
         captureReportExportFailure("markdown", variant, "http_error", res.status);
         console.error("Markdown export request failed", { status: res.status });
@@ -235,6 +260,7 @@ export function useReportFormatExports({
         return;
       }
       const markdown = await res.text();
+      if (!ownsExportOperation(operation)) return;
       const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
       const disposition = res.headers.get("Content-Disposition");
       const filename =
@@ -252,10 +278,11 @@ export function useReportFormatExports({
       setMarkdownSupport("available");
       setMarkdownNote(null);
     } catch (error) {
+      if (!ownsExportOperation(operation)) return;
       captureReportExportFailure("markdown", variant, "request_failed");
       setExportError(error instanceof Error ? error.message : "Markdown export failed.");
     } finally {
-      setExporting(null);
+      finishExportOperation(operation);
     }
   };
   return {
