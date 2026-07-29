@@ -11,6 +11,7 @@ import {
   PDF_EXPORT_TIMEOUT_MESSAGE,
   REPORT_EXPORT_DEADLINE_MS,
 } from "./reportExportRendering";
+import { REPORT_EXPORT_SNAPSHOT_SLICE_HEIGHT } from "./reportExportSnapshot";
 
 const html2canvas = vi.hoisted(() => vi.fn());
 const createPortableShareLink = vi.hoisted(() => vi.fn());
@@ -375,6 +376,48 @@ describe("useReportActions", () => {
     );
   });
 
+  it("observes the PDF deadline between long snapshot slices", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T00:00:00Z"));
+    html2canvas
+      .mockResolvedValueOnce(makeCanvas())
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const element = originalCreateElement(tagName);
+      if (tagName === "canvas") {
+        vi.spyOn(element as HTMLCanvasElement, "getContext").mockReturnValue({
+          fillStyle: "",
+          fillRect: vi.fn(),
+          drawImage: vi.fn(),
+        } as unknown as CanvasRenderingContext2D);
+      }
+      return element;
+    });
+    const { result } = renderHook(() =>
+      useReportActions({ report, variant: "live" })
+    );
+    attachExportNode(result.current.setExportNode, undefined, {
+      width: 1_036,
+      height: REPORT_EXPORT_SNAPSHOT_SLICE_HEIGHT * 3,
+    });
+
+    let exportPromise: Promise<void> | undefined;
+    act(() => {
+      exportPromise = result.current.handleExportPdf();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPORT_EXPORT_DEADLINE_MS + 1);
+      await exportPromise;
+    });
+
+    expect(html2canvas).toHaveBeenCalledTimes(2);
+    expect(result.current.exporting).toBeNull();
+    expect(result.current.exportMountActive).toBe(false);
+    expect(result.current.exportError).toBe(PDF_EXPORT_TIMEOUT_MESSAGE);
+    expect(clickSpy).not.toHaveBeenCalled();
+  });
+
   it("reports a missing PNG blob and leaves the next action available", async () => {
     html2canvas.mockResolvedValueOnce(makeCanvas({ blob: null }));
     const { result } = renderHook(() =>
@@ -486,7 +529,7 @@ describe("useReportActions", () => {
   });
 
   it("bounds a long PDF canvas, downloads every page, and records one successful export", async () => {
-    html2canvas.mockResolvedValueOnce(makeCanvas());
+    html2canvas.mockResolvedValue(makeCanvas());
     const originalCreateElement = document.createElement.bind(document);
     const fillRect = vi.fn();
     const drawImage = vi.fn();
@@ -517,9 +560,11 @@ describe("useReportActions", () => {
 
     expect(result.current.exportError).toBeNull();
     expect(result.current.exporting).toBeNull();
+    expect(html2canvas).toHaveBeenCalledTimes(23);
     expect(html2canvas).toHaveBeenCalledWith(
       exportNode,
       expect.objectContaining({
+        height: REPORT_EXPORT_SNAPSHOT_SLICE_HEIGHT,
         scale: MAX_PNG_CANVAS_DIMENSION / 45_220,
       })
     );
@@ -528,10 +573,10 @@ describe("useReportActions", () => {
       subject: "RepoAtlas Candidate Brief",
       creator: "RepoAtlas",
     });
-    expect(pdfAddImage).toHaveBeenCalledTimes(2);
-    expect(pdfAddPage).toHaveBeenCalledTimes(1);
-    expect(fillRect).toHaveBeenCalledTimes(2);
-    expect(drawImage).toHaveBeenCalledTimes(2);
+    expect(pdfAddImage).toHaveBeenCalledTimes(31);
+    expect(pdfAddPage).toHaveBeenCalledTimes(30);
+    expect(fillRect).toHaveBeenCalledTimes(32);
+    expect(drawImage).toHaveBeenCalledTimes(54);
     expect(pdfOutput).toHaveBeenCalledWith("blob");
     expect(captureProductEvent).toHaveBeenCalledWith("report_exported", {
       format: "pdf",
