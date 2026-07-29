@@ -1929,6 +1929,22 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-size: 0.74rem;
   line-height: 1.6;
 }
+.comparison-entrance-proof ol {
+  display: grid;
+  gap: 0.14rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+.comparison-entrance-proof li {
+  padding-left: 0.12rem;
+  color: #667a70;
+  font-size: 0.67rem;
+  line-height: 1.35;
+}
+.comparison-proof-risk > div {
+  display: grid;
+  gap: 0.12rem;
+}
 .comparison-entrance-unavailable {
   margin: 1.25rem 0 0;
   color: var(--muted);
@@ -3103,6 +3119,14 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .comparison-entrance-proof p {
     font-size: 0.68rem;
     line-height: 1.45;
+  }
+  .comparison-entrance-proof ol {
+    gap: 0.06rem;
+    padding-left: 1rem;
+  }
+  .comparison-entrance-proof li {
+    font-size: 0.62rem;
+    line-height: 1.25;
   }
   .comparison-entrance-actions {
     align-items: stretch;

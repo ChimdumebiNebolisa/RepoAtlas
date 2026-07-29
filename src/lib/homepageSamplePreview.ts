@@ -10,6 +10,15 @@ export type HomepageSamplePreview = {
     why: string;
     evidence: EvidenceRef | null;
   };
+  comparisonProof: {
+    readingSequence: string[];
+    dangerZone: {
+      path: string;
+      score: number;
+      complexity: number;
+      fanOut: number;
+    };
+  } | null;
   architecture: {
     explanation: string;
     evidence: EvidenceRef | null;
@@ -37,6 +46,10 @@ function hasText(value: string | undefined): value is string {
   return Boolean(value?.trim());
 }
 
+function hasFiniteNumber(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
 export function buildHomepageSamplePreview(report: Report): HomepageSamplePreview | null {
   const brief = report.candidate_brief;
   const walkthrough = brief?.walkthrough_script;
@@ -62,6 +75,40 @@ export function buildHomepageSamplePreview(report: Report): HomepageSamplePrevie
   );
 
   if (!readingStep) return null;
+
+  const readingSequence = (brief.reading_path ?? [])
+    .filter(
+      (step) =>
+        hasText(step.path) &&
+        hasText(step.why) &&
+        resolveEvidence(evidenceById, step.evidence_refs) !== null
+    )
+    .slice(0, 3)
+    .map((step) => step.path);
+  const dangerZone = report.danger_zones.find(
+    (item) =>
+      hasText(item.path) &&
+      Number.isFinite(item.score) &&
+      hasFiniteNumber(item.metrics.complexity) &&
+      hasFiniteNumber(item.metrics.fan_out) &&
+      (brief.evidence_refs ?? []).some(
+        (evidence) =>
+          evidence.kind === "danger_zone" &&
+          evidence.path === item.path
+      )
+  );
+  const comparisonProof =
+    readingSequence.length === 3 && dangerZone
+      ? {
+          readingSequence,
+          dangerZone: {
+            path: dangerZone.path,
+            score: dangerZone.score,
+            complexity: dangerZone.metrics.complexity!,
+            fanOut: dangerZone.metrics.fan_out!,
+          },
+        }
+      : null;
 
   const architectureEvidence =
     (walkthrough.evidence_refs ?? [])
@@ -97,6 +144,7 @@ export function buildHomepageSamplePreview(report: Report): HomepageSamplePrevie
       why: readingStep.why,
       evidence: resolveEvidence(evidenceById, readingStep.evidence_refs),
     },
+    comparisonProof,
     architecture: {
       explanation:
         architectureEvidence?.detail ??
