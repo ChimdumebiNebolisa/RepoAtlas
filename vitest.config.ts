@@ -236,7 +236,7 @@ export default defineConfig({
           branches: 80,
           lines: 90,
         },
-        "src/analyzer/{testInventory,dependencyEvidence}.ts": {
+        "src/analyzer/dependencyEvidence{,/**}.ts": {
           branches: 80,
           lines: 85,
         },
