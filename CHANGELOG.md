@@ -4,6 +4,20 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [2026-07-29] - Export recovery and focused boundaries
+
+### Customer-visible behavior
+
+- Long Candidate Brief exports now apply the existing 90-second deadline throughout snapshotting, PNG encoding, PDF page generation, and file reads. A stalled export returns to a recoverable report state with PDF, PNG, and private sharing re-enabled.
+
+### Reliability
+
+- ZIP extraction now separates entry validation, archive planning and budgets, write cleanup, and coordination behind the existing safety limits.
+- Candidate Brief evidence, summaries, contribution guidance, and dependency declarations now use focused modules while preserving established claims, ordering, evidence references, and fallbacks.
+- Product analytics now separates event contracts, property sanitization, initialization, capture, and helpers while preserving all ten privacy allowlists.
+- Stored sharing now separates record validation, filesystem and private Blob persistence, backend selection, and lifecycle coordination while preserving token validation, seven-day expiry, active-link reuse, and cleanup.
+- The code-review and AI-summary guides now use focused presentation modules while preserving copy, metadata, links, and action hierarchy.
+
 ## [2026-07-28] - Candidate preparation entrances
 
 ### Customer-visible behavior
