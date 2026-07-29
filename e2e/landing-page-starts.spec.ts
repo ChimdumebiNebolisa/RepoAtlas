@@ -21,6 +21,7 @@ const candidatePages = [
     source: "interview_preparation",
     entranceLabel: "Start a repository walkthrough",
     sampleAction: "Run the bundled sample",
+    directSample: true,
   },
   {
     label: "authored project guide",
@@ -28,6 +29,7 @@ const candidatePages = [
     source: "interview_preparation",
     entranceLabel: "Start an authored-project brief",
     sampleAction: "Run the bundled sample",
+    directSample: true,
   },
   {
     label: "structured preparation comparison",
@@ -35,6 +37,7 @@ const candidatePages = [
     source: "comparison_structured_preparation",
     entranceLabel: "Start an evidence-linked Candidate Brief",
     sampleAction: "Try the sample interview route",
+    directSample: true,
   },
   {
     label: "AI summary comparison",
@@ -42,6 +45,7 @@ const candidatePages = [
     source: "comparison_ai_summary",
     entranceLabel: "Start an evidence-linked Candidate Brief",
     sampleAction: "Try the evidence-linked sample",
+    directSample: true,
   },
   {
     label: "code review interview guide",
@@ -49,6 +53,7 @@ const candidatePages = [
     source: "interview_preparation",
     entranceLabel: "Prepare a repository for a code review interview",
     sampleAction: "Run the bundled sample",
+    directSample: false,
   },
 ] as const;
 
@@ -186,6 +191,14 @@ test.describe("candidate landing-page starts", () => {
             ? candidatePage.sampleAction
             : "Use a public GitHub repository";
         const startAction = entrance.getByRole("link", { name: actionName });
+        const directSampleRequest =
+          inputMode === "sample" && candidatePage.directSample
+            ? page.waitForRequest(
+                (request) =>
+                  request.method() === "POST" &&
+                  new URL(request.url()).pathname === "/api/analyze",
+              )
+            : null;
         await focusWithKeyboard(page, startAction);
         await page.keyboard.press("Enter");
 
@@ -208,19 +221,23 @@ test.describe("candidate landing-page starts", () => {
           await page.keyboard.type(PUBLIC_REPOSITORY_REF);
         }
 
-        const analyzeRequest = page.waitForRequest(
-          (request) =>
-            request.method() === "POST" &&
-            new URL(request.url()).pathname === "/api/analyze",
-        );
-        const analyzeAction = page.getByRole("button", {
-          name:
-            inputMode === "sample"
-              ? /Generate sample Candidate Brief/i
-              : /Analyze public GitHub repository/i,
-        });
-        await focusWithKeyboard(page, analyzeAction);
-        await page.keyboard.press("Enter");
+        const analyzeRequest =
+          directSampleRequest ??
+          page.waitForRequest(
+            (request) =>
+              request.method() === "POST" &&
+              new URL(request.url()).pathname === "/api/analyze",
+          );
+        if (!directSampleRequest) {
+          const analyzeAction = page.getByRole("button", {
+            name:
+              inputMode === "sample"
+                ? /Generate sample Candidate Brief/i
+                : /Analyze public GitHub repository/i,
+          });
+          await focusWithKeyboard(page, analyzeAction);
+          await page.keyboard.press("Enter");
+        }
 
         await expectAnalyzeRequest(await analyzeRequest, inputMode);
         await expectCompletedReportInViewport(page);

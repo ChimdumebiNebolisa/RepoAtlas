@@ -7,12 +7,14 @@ type GuideStartPanelProps = {
   ariaLabel?: string;
   description?: string;
   heading?: string;
+  startSample?: boolean;
 };
 
 export function GuideStartPanel({
   ariaLabel = "Start a repository walkthrough",
   description = "Open a Candidate Brief now, then use the method below to explain it.",
   heading = "Start with a repository.",
+  startSample = true,
 }: GuideStartPanelProps = {}) {
   return (
     <aside className="guide-start-panel" aria-label={ariaLabel}>
@@ -24,6 +26,7 @@ export function GuideStartPanel({
         <TrackedAnalysisLink
           className="guide-start-primary"
           entrySource="interview_preparation"
+          startSample={startSample}
         >
           Run the bundled sample
         </TrackedAnalysisLink>

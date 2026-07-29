@@ -56,19 +56,28 @@ for (const comparison of [
     await expect(primaryAction).toHaveCount(1);
     await expect(primaryAction).toHaveAttribute(
       "href",
-      `/?source=${comparison.source}#analyze`,
+      `/?source=${comparison.source}&sample=1#analyze`,
     );
     await expect(
       page.getByRole("link", { name: "Use a public GitHub repository" }),
     ).toHaveAttribute("href", `/?source=${comparison.source}#analyze`);
+    const analyzeRequest = page.waitForRequest(
+      (request) =>
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/analyze",
+    );
     await primaryAction.click();
 
     await expect(page).toHaveURL(
       new RegExp(`\\?source=${comparison.source}#analyze$`),
     );
+    expect((await analyzeRequest).postDataJSON()).toMatchObject({
+      sample: true,
+      analysisIntent: "interview",
+    });
     await expect(
-      page.getByRole("radio", { name: /Interview walkthrough/i }),
-    ).toBeChecked();
+      page.getByRole("heading", { name: "Your Candidate Brief is ready" }),
+    ).toBeVisible();
   });
 
   test(`${comparison.path} keeps its complete entrance inside 390 pixels`, async ({ page }) => {
@@ -130,18 +139,27 @@ test("repository walkthrough guide teaches the method and opens the bundled samp
   await expect(primaryAction).toHaveCount(1);
   await expect(primaryAction).toHaveAttribute(
     "href",
-    "/?source=interview_preparation#analyze"
+    "/?source=interview_preparation&sample=1#analyze"
   );
   await expect(githubAction).toHaveAttribute(
     "href",
     "/?source=interview_preparation#analyze"
   );
   await expect(page.locator(".guide-page .btn-primary")).toHaveCount(1);
+  const analyzeRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/analyze",
+  );
   await primaryAction.click();
 
   await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
+  expect((await analyzeRequest).postDataJSON()).toMatchObject({
+    sample: true,
+    analysisIntent: "interview",
+  });
   await expect(
-    page.getByRole("heading", { name: "Start with the sample or your repository." })
+    page.getByRole("heading", { name: "Your Candidate Brief is ready" })
   ).toBeVisible();
 });
 
@@ -243,7 +261,7 @@ test("authored project guide separates candidate intent from repository evidence
   await expect(primaryAction).toHaveCount(1);
   await expect(primaryAction).toHaveAttribute(
     "href",
-    "/?source=interview_preparation#analyze"
+    "/?source=interview_preparation&sample=1#analyze"
   );
   await expect(githubAction).toHaveAttribute(
     "href",
@@ -254,12 +272,24 @@ test("authored project guide separates candidate intent from repository evidence
     page
       .getByRole("region", { name: "See what repository evidence looks like." })
       .getByRole("link", { name: "Run the bundled sample" }),
-  ).toHaveClass(/btn-secondary/);
+  ).toHaveAttribute(
+    "href",
+    "/?source=interview_preparation&sample=1#analyze",
+  );
+  const analyzeRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/analyze",
+  );
   await primaryAction.click();
 
   await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
+  expect((await analyzeRequest).postDataJSON()).toMatchObject({
+    sample: true,
+    analysisIntent: "interview",
+  });
   await expect(
-    page.getByRole("heading", { name: "Start with the sample or your repository." })
+    page.getByRole("heading", { name: "Your Candidate Brief is ready" })
   ).toBeVisible();
 });
 

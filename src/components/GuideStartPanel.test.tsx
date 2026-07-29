@@ -24,7 +24,7 @@ describe("GuideStartPanel", () => {
 
     expect(sampleAction).toHaveAttribute(
       "href",
-      "/?source=interview_preparation#analyze",
+      "/?source=interview_preparation&sample=1#analyze",
     );
     expect(sampleAction).toHaveClass("btn", "btn-primary", "guide-start-primary");
     expect(githubAction).toHaveAttribute(

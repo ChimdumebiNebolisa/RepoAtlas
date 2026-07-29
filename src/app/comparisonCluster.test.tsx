@@ -23,7 +23,7 @@ const clusterPages: ClusterPage[] = [
       "/ai-codebase-summary",
       "/code-review-interview",
     ],
-    primaryActionHref: "/?source=interview_preparation#analyze",
+    primaryActionHref: "/?source=interview_preparation&sample=1#analyze",
   },
   {
     name: "authored project guide",
@@ -33,7 +33,7 @@ const clusterPages: ClusterPage[] = [
       "/ai-codebase-summary",
       "/code-review-interview",
     ],
-    primaryActionHref: "/?source=interview_preparation#analyze",
+    primaryActionHref: "/?source=interview_preparation&sample=1#analyze",
   },
   {
     name: "structured preparation comparison",
@@ -42,7 +42,7 @@ const clusterPages: ClusterPage[] = [
       "/repository-walkthrough-interview",
       "/how-to-walk-through-a-project-in-an-interview",
     ],
-    primaryActionHref: "/?source=comparison_structured_preparation#analyze",
+    primaryActionHref: "/?source=comparison_structured_preparation&sample=1#analyze",
   },
   {
     name: "AI summary comparison",
@@ -51,7 +51,7 @@ const clusterPages: ClusterPage[] = [
       "/repository-walkthrough-interview",
       "/how-to-walk-through-a-project-in-an-interview",
     ],
-    primaryActionHref: "/?source=comparison_ai_summary#analyze",
+    primaryActionHref: "/?source=comparison_ai_summary&sample=1#analyze",
   },
   {
     name: "code review interview guide",

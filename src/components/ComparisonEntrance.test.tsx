@@ -40,7 +40,7 @@ describe("ComparisonEntrance", () => {
     );
     expect(screen.getByRole("link", { name: "Try the sample interview route" })).toHaveAttribute(
       "href",
-      "/?source=comparison_structured_preparation#analyze",
+      "/?source=comparison_structured_preparation&sample=1#analyze",
     );
     expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
       "Evidence start-1 in src/app/api/health/route.ts",
@@ -66,7 +66,7 @@ describe("ComparisonEntrance", () => {
 
     expect(screen.getByRole("link", { name: "Try the evidence-linked sample" })).toHaveAttribute(
       "href",
-      "/?source=comparison_ai_summary#analyze",
+      "/?source=comparison_ai_summary&sample=1#analyze",
     );
     expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent("Evidence start-1");
     expect(screen.getByTestId("comparison-sample-proof")).not.toHaveTextContent(

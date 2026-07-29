@@ -198,7 +198,7 @@ export default async function RepositoryWalkthroughInterviewPage() {
                 talking points with the method above. No upload is needed.
               </p>
             </div>
-            <Link className="btn btn-secondary guide-primary-action" href="/?source=interview_preparation#analyze">
+            <Link className="btn btn-secondary guide-primary-action" href="/?source=interview_preparation&sample=1#analyze">
               Run the bundled sample <span aria-hidden="true">→</span>
             </Link>
           </div>
