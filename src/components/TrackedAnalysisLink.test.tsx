@@ -98,6 +98,30 @@ describe("TrackedAnalysisLink", () => {
     }
   );
 
+  it("adds the bounded direct-sample flag without changing attribution", () => {
+    render(
+      <TrackedAnalysisLink
+        entrySource="comparison_structured_preparation"
+        startSample
+      >
+        Run sample
+      </TrackedAnalysisLink>,
+    );
+
+    const link = screen.getByRole("link", { name: /run sample/i });
+    expect(link).toHaveAttribute(
+      "href",
+      "/?source=comparison_structured_preparation&sample=1#analyze",
+    );
+    clickWithoutNavigation(link);
+
+    expect(captureProductEvent).toHaveBeenCalledWith("analysis_cta_clicked", {
+      source: "interview_preparation",
+      destination: "analysis_start",
+      entry_source: "comparison_structured_preparation",
+    });
+  });
+
   it("drops an invalid fixed source without blocking the interview destination", () => {
     render(
       <TrackedAnalysisLink entrySource={"private-repository-name" as never}>

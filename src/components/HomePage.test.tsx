@@ -149,6 +149,7 @@ describe("HomePage completion coordination", () => {
   });
 
   afterEach(() => {
+    window.history.replaceState({}, "", "/");
     document.documentElement.style.scrollBehavior = "";
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -168,6 +169,21 @@ describe("HomePage completion coordination", () => {
       behavior: "smooth",
       block: "center",
     });
+  });
+
+  it("consumes a direct sample request once and keeps its bounded attribution", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?source=comparison_ai_summary&sample=1#analyze",
+    );
+
+    render(<HomePage sampleReport={buildSampleReport()} />);
+
+    expect(generateSample).toHaveBeenCalledTimes(1);
+    expect(window.location.href.endsWith("/?source=comparison_ai_summary#analyze")).toBe(
+      true,
+    );
   });
 
   it("opens the complete sample proof and schedules it into view", async () => {

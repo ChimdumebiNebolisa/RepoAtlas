@@ -28,6 +28,28 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const inputFormRef = useRef<InputFormHandle | null>(null);
   const sampleButtonRef = useRef<HTMLButtonElement | null>(null);
   const sampleSectionRef = useRef<HTMLElement | null>(null);
+  const directSampleStartedRef = useRef(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (
+      directSampleStartedRef.current ||
+      searchParams.get("sample") !== "1"
+    ) {
+      return;
+    }
+
+    directSampleStartedRef.current = true;
+    inputFormRef.current?.generateSample();
+
+    searchParams.delete("sample");
+    const nextSearch = searchParams.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`,
+    );
+  }, []);
 
   useEffect(() => {
     if (!report) return;

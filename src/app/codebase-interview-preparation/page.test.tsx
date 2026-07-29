@@ -43,7 +43,7 @@ describe("codebase interview preparation page", () => {
     expect(primaryActions).toHaveLength(1);
     expect(primaryActions[0]).toHaveAttribute(
       "href",
-      "/?source=comparison_structured_preparation#analyze",
+      "/?source=comparison_structured_preparation&sample=1#analyze",
     );
     expect(primaryActions[0]).toHaveAccessibleName("Try the sample interview route");
     expect(screen.getByRole("link", { name: /Use a public GitHub repository/i })).toHaveAttribute(

@@ -75,6 +75,7 @@ export function ComparisonEntrance({
         <TrackedAnalysisLink
           className="comparison-primary-action"
           entrySource={copy.entrySource}
+          startSample
         >
           {copy.action}
         </TrackedAnalysisLink>

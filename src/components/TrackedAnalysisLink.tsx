@@ -13,6 +13,7 @@ type TrackedAnalysisLinkProps = {
   children: React.ReactNode;
   className?: string;
   entrySource?: AnalysisEntrySource;
+  startSample?: boolean;
 };
 
 type AnalysisLinkProps = TrackedAnalysisLinkProps & {
@@ -23,13 +24,15 @@ function AnalysisLink({
   children,
   className = "interview-primary-action",
   entrySource,
+  startSample = false,
 }: AnalysisLinkProps) {
   const source = entrySource ?? "interview_preparation";
+  const sampleQuery = startSample ? "&sample=1" : "";
 
   return (
     <Link
       className={`btn btn-primary ${className}`}
-      href={`/?source=${source}#analyze`}
+      href={`/?source=${source}${sampleQuery}#analyze`}
       onClick={() => {
         captureProductEvent("analysis_cta_clicked", {
           source: "interview_preparation",
