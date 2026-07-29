@@ -164,7 +164,7 @@ test("repository walkthrough guide teaches the method and opens the bundled samp
 });
 
 for (const viewport of [
-  { label: "desktop", width: 1440, height: 900 },
+  { label: "desktop", width: 1440, height: 757 },
   { label: "390-pixel mobile", width: 390, height: 844 },
 ] as const) {
   test(`repository walkthrough guide keeps both starts in its ${viewport.label} first viewport`, async ({

@@ -36,7 +36,7 @@ export default async function RepositoryWalkthroughInterviewPage() {
       <SiteHeader />
 
       <article>
-        <header className="guide-hero page-container">
+        <header className="guide-hero repository-walkthrough-hero page-container">
           <div className="guide-hero-copy">
             <p className="eyebrow">Repository walkthrough interview guide</p>
             <h1>How to walk an interviewer through a repository.</h1>
