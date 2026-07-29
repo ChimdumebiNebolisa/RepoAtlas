@@ -282,4 +282,24 @@ describe("safeExtractZip", () => {
       fs.unlinkSync(zipPath);
     }
   });
+
+  it("removes files created before a streaming write fails", async () => {
+    const buffer = makeZip([
+      { name: "README.md", data: "# written first" },
+      { name: "blocked.txt", data: "cannot replace a directory" },
+    ]);
+    const zipPath = path.join(os.tmpdir(), `repoatlas-stream-failure-${Date.now()}.zip`);
+    fs.writeFileSync(zipPath, buffer);
+    const extractRoot = fs.mkdtempSync(path.join(os.tmpdir(), "repoatlas-stream-failure-out-"));
+    const preexistingDirectory = path.join(extractRoot, "blocked.txt");
+    fs.mkdirSync(preexistingDirectory);
+    try {
+      await expect(safeExtractZipFromFile(zipPath, extractRoot)).rejects.toBeDefined();
+      expect(fs.existsSync(path.join(extractRoot, "README.md"))).toBe(false);
+      expect(fs.statSync(preexistingDirectory).isDirectory()).toBe(true);
+    } finally {
+      fs.rmSync(extractRoot, { recursive: true, force: true });
+      fs.unlinkSync(zipPath);
+    }
+  });
 });
