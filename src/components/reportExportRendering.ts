@@ -34,6 +34,19 @@ export async function settleBeforeReportExportDeadline<T>(
   }
 }
 
+export async function yieldBeforeReportExportDeadline(
+  deadline: number,
+  timeoutMessage: string
+) {
+  if (Date.now() >= deadline) throw new Error(timeoutMessage);
+  await settleBeforeReportExportDeadline(
+    new Promise<void>((resolve) => setTimeout(resolve, 0)),
+    deadline,
+    timeoutMessage
+  );
+  if (Date.now() >= deadline) throw new Error(timeoutMessage);
+}
+
 export function canvasToBlobBeforeDeadline(
   canvas: HTMLCanvasElement,
   deadline: number,
@@ -75,6 +88,10 @@ export async function renderPdfBeforeDeadline(
   );
 
   for (let sourceY = 0, pageIndex = 0; sourceY < canvas.height; pageIndex += 1) {
+    await yieldBeforeReportExportDeadline(
+      deadline,
+      PDF_EXPORT_TIMEOUT_MESSAGE
+    );
     const sliceHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
     const slice = document.createElement("canvas");
     slice.width = canvas.width;
@@ -123,5 +140,9 @@ export async function renderPdfBeforeDeadline(
     slice.height = 1;
     sourceY += sliceHeight;
   }
+  await yieldBeforeReportExportDeadline(
+    deadline,
+    PDF_EXPORT_TIMEOUT_MESSAGE
+  );
   return pdf.output("blob");
 }

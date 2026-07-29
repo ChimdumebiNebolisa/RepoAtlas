@@ -23,6 +23,7 @@ import {
   renderPdfBeforeDeadline,
   settleBeforeReportExportDeadline,
 } from "./reportExportRendering";
+import { renderReportCanvasBeforeDeadline } from "./reportExportSnapshot";
 
 export const MAX_PNG_CANVAS_DIMENSION = 32_000;
 export function fitExportCanvasScale(
@@ -38,9 +39,7 @@ function getMarkdownRoute(reportId: string) {
 }
 function waitForExportMount() {
   return new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => resolve());
-    });
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   });
 }
 function downloadBlob(blob: Blob, filename: string) {
@@ -133,6 +132,7 @@ export function useReportFormatExports({
     };
   }, [reportId]);
   const renderExportCanvas = async (
+    operation: object,
     deadline: number,
     timeoutMessage: string,
     scale = 1.5,
@@ -155,16 +155,14 @@ export function useReportFormatExports({
       const resolvedScale = constrainToBrowserLimit
         ? fitExportCanvasScale(exportNode.scrollWidth, exportNode.scrollHeight, scale)
         : scale;
-      return await settleBeforeReportExportDeadline(
-        html2canvas(exportNode, {
-          backgroundColor: "#ffffff",
-          scale: resolvedScale,
-          useCORS: true,
-          windowWidth: 1200,
-        }),
+      return await renderReportCanvasBeforeDeadline({
+        exportNode,
+        html2canvas,
+        scale: resolvedScale,
         deadline,
-        timeoutMessage
-      );
+        timeoutMessage,
+        shouldContinue: () => ownsExportOperation(operation),
+      });
     } finally {
       setExportMountActive(false);
     }
@@ -181,6 +179,7 @@ export function useReportFormatExports({
       setExporting("png");
       const deadline = createReportExportDeadline();
       const canvas = await renderExportCanvas(
+        operation,
         deadline,
         PNG_EXPORT_TIMEOUT_MESSAGE,
         1.5,
@@ -214,6 +213,7 @@ export function useReportFormatExports({
       setExporting("pdf");
       const deadline = createReportExportDeadline();
       const canvas = await renderExportCanvas(
+        operation,
         deadline,
         PDF_EXPORT_TIMEOUT_MESSAGE,
         1,
