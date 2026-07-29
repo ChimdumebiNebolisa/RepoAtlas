@@ -51,19 +51,36 @@ export function ComparisonEntrance({
       {sample ? (
         <div className="comparison-entrance-proof" data-testid="comparison-sample-proof">
           <span>Real file-backed sample</span>
-          <div>
-            <small>Read first</small>
-            <code>{sample.readingStep.path}</code>
-          </div>
-          <p>{sample.readingStep.why}</p>
-          {sample.readingStep.evidence ? (
-            <small>
-              Evidence {sample.readingStep.evidence.id}
-              {sample.readingStep.evidence.path
-                ? ` in ${sample.readingStep.evidence.path}`
-                : ""}
-            </small>
-          ) : null}
+          {sample.comparisonProof ? (
+            <>
+              <div className="comparison-proof-reading">
+                <small>Reading sequence</small>
+                <ol>
+                  {sample.comparisonProof.readingSequence.map((path) => (
+                    <li key={path}>
+                      <code>{path}</code>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div className="comparison-proof-risk">
+                <small>Danger Zone</small>
+                <div>
+                  <code>{sample.comparisonProof.dangerZone.path}</code>
+                  <p>
+                    Risk {sample.comparisonProof.dangerZone.score} out of 100, with
+                    complexity {sample.comparisonProof.dangerZone.complexity} and{" "}
+                    {sample.comparisonProof.dangerZone.fanOut} outgoing file links.
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div>
+              <small>Read first</small>
+              <code>{sample.readingStep.path}</code>
+            </div>
+          )}
         </div>
       ) : (
         <p className="comparison-entrance-unavailable">

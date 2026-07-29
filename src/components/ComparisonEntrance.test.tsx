@@ -18,6 +18,19 @@ const sample: HomepageSamplePreview = {
       path: "src/app/api/health/route.ts",
     },
   },
+  comparisonProof: {
+    readingSequence: [
+      "src/app/api/health/route.ts",
+      "src/app/page.tsx",
+      "src/app/layout.tsx",
+    ],
+    dangerZone: {
+      path: "src/bootstrap.ts",
+      score: 79,
+      complexity: 9,
+      fanOut: 2,
+    },
+  },
   architecture: {
     explanation: "The route connects to supported repository files.",
     evidence: null,
@@ -43,46 +56,34 @@ describe("ComparisonEntrance", () => {
       "/?source=comparison_structured_preparation&sample=1#analyze",
     );
     expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
-      "Evidence start-1 in src/app/api/health/route.ts",
+      "src/app/api/health/route.tssrc/app/page.tsxsrc/app/layout.tsx",
     );
+    expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
+      "src/bootstrap.tsRisk 79 out of 100, with complexity 9 and 2 outgoing file links.",
+    );
+    expect(screen.getByTestId("comparison-sample-proof")).not.toHaveTextContent("start-1");
   });
 
-  it("renders the AI-summary action and proof without an optional evidence path", () => {
+  it("renders the AI-summary action with the same exact bundled proof", () => {
     render(
-      <ComparisonEntrance
-        sample={{
-          ...sample,
-          readingStep: {
-            ...sample.readingStep,
-            evidence: {
-              ...sample.readingStep.evidence!,
-              path: undefined,
-            },
-          },
-        }}
-        variant="ai-summary"
-      />,
+      <ComparisonEntrance sample={sample} variant="ai-summary" />,
     );
 
     expect(screen.getByRole("link", { name: "Try the evidence-linked sample" })).toHaveAttribute(
       "href",
       "/?source=comparison_ai_summary&sample=1#analyze",
     );
-    expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent("Evidence start-1");
-    expect(screen.getByTestId("comparison-sample-proof")).not.toHaveTextContent(
-      "Evidence start-1 in",
+    expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
+      "src/bootstrap.tsRisk 79 out of 100",
     );
   });
 
-  it("keeps the file-backed preview readable when its evidence record is unavailable", () => {
+  it("keeps the first file-backed reading item when the comparison proof is unavailable", () => {
     render(
       <ComparisonEntrance
         sample={{
           ...sample,
-          readingStep: {
-            ...sample.readingStep,
-            evidence: null,
-          },
+          comparisonProof: null,
         }}
         variant="structured-preparation"
       />,
@@ -91,7 +92,7 @@ describe("ComparisonEntrance", () => {
     expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
       "src/app/api/health/route.ts",
     );
-    expect(screen.getByTestId("comparison-sample-proof")).not.toHaveTextContent("Evidence start-1");
+    expect(screen.getByTestId("comparison-sample-proof")).not.toHaveTextContent("Danger Zone");
   });
 
   it("keeps both bounded start paths when preview evidence is unavailable", () => {

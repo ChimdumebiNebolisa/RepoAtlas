@@ -38,6 +38,11 @@ describe("buildHomepageSamplePreview", () => {
         evidence_refs: [questionEvidence.id],
       },
     ];
+    const dangerZone = report.danger_zones[0]!;
+    dangerZone.path = questionEvidence.path!;
+    dangerZone.score = 79;
+    dangerZone.metrics.complexity = 9;
+    dangerZone.metrics.fan_out = 2;
 
     expect(buildHomepageSamplePreview(report)).toMatchObject({
       repositoryName: "fixture-derived-name",
@@ -47,6 +52,15 @@ describe("buildHomepageSamplePreview", () => {
         path: "src/fixture-entry.ts",
         why: "Fixture-derived reading reason.",
         evidence: { id: readingEvidence.id },
+      },
+      comparisonProof: {
+        readingSequence: ["src/fixture-entry.ts", expect.any(String), expect.any(String)],
+        dangerZone: {
+          path: questionEvidence.path,
+          score: 79,
+          complexity: 9,
+          fanOut: 2,
+        },
       },
       architecture: {
         explanation: "Fixture-derived architecture explanation.",
@@ -145,6 +159,26 @@ describe("buildHomepageSamplePreview", () => {
       why: fallbackStep.why,
       evidence: resolvedEvidence,
     });
+  });
+
+  it("withholds comparison proof when its reading sequence or Danger Zone is incomplete", () => {
+    const shortSequence = buildSampleReport();
+    shortSequence.candidate_brief!.reading_path =
+      shortSequence.candidate_brief!.reading_path.slice(0, 2);
+    expect(buildHomepageSamplePreview(shortSequence)?.comparisonProof).toBeNull();
+
+    const missingRiskEvidence = buildSampleReport();
+    missingRiskEvidence.candidate_brief!.evidence_refs =
+      missingRiskEvidence.candidate_brief!.evidence_refs.filter(
+        (evidence) => evidence.kind !== "danger_zone"
+      );
+    expect(buildHomepageSamplePreview(missingRiskEvidence)?.comparisonProof).toBeNull();
+
+    const missingRiskMetric = buildSampleReport();
+    missingRiskMetric.danger_zones.forEach((item) => {
+      item.metrics.complexity = undefined;
+    });
+    expect(buildHomepageSamplePreview(missingRiskMetric)?.comparisonProof).toBeNull();
   });
 
   it("prefers an evidence-backed question over generic and broken specific prompts", () => {
