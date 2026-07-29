@@ -41,6 +41,27 @@ describe("code review interview guide", () => {
     expect(screen.getByText(/does not execute the code or call AI/)).toBeInTheDocument();
   });
 
+  it("keeps the complete guide section hierarchy in its established order", () => {
+    render(<CodeReviewInterviewPage />);
+
+    expect(
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          "article [id^='code-review-'][id$='-heading']",
+        ),
+        (heading) => heading.id,
+      ),
+    ).toEqual([
+      "code-review-format-heading",
+      "code-review-method-heading",
+      "code-review-example-heading",
+      "code-review-findings-heading",
+      "code-review-priority-heading",
+      "code-review-questions-heading",
+      "code-review-close-heading",
+    ]);
+  });
+
   it("keeps one primary action and connects the surrounding preparation cluster", () => {
     render(<CodeReviewInterviewPage />);
 
