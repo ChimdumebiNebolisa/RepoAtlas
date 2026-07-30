@@ -51,7 +51,7 @@ describe("HomepageHero", () => {
       })
     ).toBeInTheDocument();
     expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
-      "key conclusions cite files"
+      "prioritized reading path"
     );
     expect(
       screen.getByRole("link", { name: /Paste a GitHub URL or upload a ZIP/ })

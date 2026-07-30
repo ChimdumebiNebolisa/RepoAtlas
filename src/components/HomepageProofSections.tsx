@@ -75,23 +75,23 @@ export function HomepageHero({
         </p>
       </div>
 
-      <div className="hero-visual" aria-label="Source-linked repository brief outline">
+      <div className="hero-visual" aria-label="Example source-linked repository brief">
         <div className="sample-hero-card" data-testid="hero-output-card">
           <div className="sample-hero-header">
-            <span>Repository brief</span>
-            <span className="brief-status">linked to source files</span>
+            <span>Example repository brief</span>
+            <span className="brief-status">source-linked</span>
           </div>
           <div className="sample-hero-repo">
-            <span>Static file analysis</span>
-            <code>key conclusions cite files</code>
+            <span>Start with</span>
+            <code>prioritized reading path</code>
           </div>
           <blockquote>
-            Purpose · important files · architecture and dependencies · inspection points and
-            questions
+            See what the repository appears to do, how supported parts and dependencies connect,
+            and what to inspect next.
           </blockquote>
           <div className="sample-hero-evidence">
-            <span>Repository handling</span>
-            <EvidenceTag id="files are read, not run" path="no AI service" />
+            <span>Evidence</span>
+            <EvidenceTag id="key claims cite files" path="confidence shown" />
           </div>
         </div>
       </div>
