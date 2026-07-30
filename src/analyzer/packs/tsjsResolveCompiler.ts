@@ -60,7 +60,20 @@ function loadCompilerOptions(workspacePath: string): CompilerResolution {
   const configName = findRootConfig(workspacePath);
   if (!configName) return { options: defaultCompilerOptions(workspacePath), warnings: [] };
 
-  const configFile = ts.readConfigFile(configName, ts.sys.readFile);
+  let configText: string | undefined;
+  try {
+    configText = ts.sys.readFile(configName);
+  } catch {
+    configText = undefined;
+  }
+  if (configText === undefined) {
+    return {
+      options: defaultCompilerOptions(workspacePath),
+      warnings: ["Could not parse tsconfig/jsconfig; using default module resolution."],
+    };
+  }
+  const configPath = normalizeRelPath(configName);
+  const configFile = ts.parseConfigFileTextToJson(configPath, configText);
   if (configFile.error) {
     return {
       options: {
@@ -76,7 +89,7 @@ function loadCompilerOptions(workspacePath: string): CompilerResolution {
   const parsed = ts.parseJsonConfigFileContent(
     configFile.config,
     ts.sys,
-    path.dirname(configName)
+    path.dirname(configPath)
   );
   return {
     options: {

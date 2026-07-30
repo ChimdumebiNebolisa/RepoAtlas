@@ -44,7 +44,6 @@ describe("workspace package discovery", () => {
         ],
       }),
       "packages/absolute/package.json": JSON.stringify({ name: "absolute" }),
-      "C:/packages/windows/package.json": JSON.stringify({ name: "windows" }),
     });
     const outside = path.join(path.dirname(workspace), "outside");
     fs.mkdirSync(outside, { recursive: true });

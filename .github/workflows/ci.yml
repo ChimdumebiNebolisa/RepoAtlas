@@ -36,6 +36,18 @@ jobs:
           if-no-files-found: ignore
       - run: npm run build
 
+  windows-unit:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
   e2e:
     runs-on: ubuntu-latest
     steps:

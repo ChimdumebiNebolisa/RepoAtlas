@@ -22,7 +22,7 @@ function writeWorkspace(files: Record<string, string>): string {
 }
 
 function fileIndex(...files: string[]): Set<string> {
-  return new Set(files.map((file) => path.normalize(file)));
+  return new Set(files.map((file) => file.replace(/\\/g, "/")));
 }
 
 describe("TypeScript resolution boundaries", () => {

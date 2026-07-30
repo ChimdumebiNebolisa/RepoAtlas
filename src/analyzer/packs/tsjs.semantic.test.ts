@@ -10,7 +10,7 @@ import { runTsJsPack } from "./tsjs";
 import type { IndexingPipelineResult } from "../pipeline";
 import { finalizeSemanticGraph } from "../semanticGraph";
 
-const relKey = (...segments: string[]) => path.join(...segments);
+const relKey = (...segments: string[]) => path.posix.join(...segments);
 const normalizeKey = (value: string) => value.replace(/\\/g, "/");
 
 function writeWorkspace(files: Record<string, string>): string {

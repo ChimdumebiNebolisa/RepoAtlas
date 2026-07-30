@@ -37,6 +37,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -119,7 +120,7 @@ describe("discoverDocuments", () => {
     write("docs/unreadable.md", "# Hidden");
     const readFileSync = fs.readFileSync.bind(fs);
     vi.spyOn(fs, "readFileSync").mockImplementation((file, ...args) => {
-      if (String(file).endsWith("docs/unreadable.md")) {
+      if (String(file).replace(/\\/g, "/").endsWith("docs/unreadable.md")) {
         throw new Error("simulated read failure");
       }
       return readFileSync(file, ...args);

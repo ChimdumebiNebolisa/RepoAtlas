@@ -75,35 +75,50 @@ describe("Candidate Brief byte stability", () => {
     [
       "bundled sample",
       "repo-ts",
-      "86ab059057ddc26c9a190f5757dcccce4d84074e244b0afec01d00aaa355a178",
+      [
+        "86ab059057ddc26c9a190f5757dcccce4d84074e244b0afec01d00aaa355a178",
+        "9e13435095dbb3c54e63a156cce7ee88153e0d6dc20139fa508a5220ffee835d",
+      ],
     ],
     [
       "TypeScript",
       "repo-node-api",
-      "d2577cfa2ffb6e47206331c6bc0942bc4038bdd8cc86ffbb819b2b59b6e191a5",
+      [
+        "d2577cfa2ffb6e47206331c6bc0942bc4038bdd8cc86ffbb819b2b59b6e191a5",
+        "9f9f35aa1963746fee744c6e3bc9b07e5a6e2139071deac4e3641d0248a3e31f",
+      ],
     ],
     [
       "Python",
       "repo-python",
-      "2ab9ef2a975c2c5a8896f442ae59e573f9e9bd07120313384ebf19f99a92fa40",
+      [
+        "2ab9ef2a975c2c5a8896f442ae59e573f9e9bd07120313384ebf19f99a92fa40",
+        "056846ba4dc67b9fec3901019466e7abdf70ad37b3a30b31c6ef7b4cb4af28a4",
+      ],
     ],
     [
       "Java",
       "repo-java-maven",
-      "fc374270ab8529bfdd17db4ef64796ab8358dc0df38eb613ab7642483f1327f6",
+      [
+        "fc374270ab8529bfdd17db4ef64796ab8358dc0df38eb613ab7642483f1327f6",
+        "e3c33c40fdf9bb708ff60691fc826224db5ea36fe60365f0a3ec72aaea90d584",
+      ],
     ],
     [
       "monorepo",
       "repo-monorepo",
-      "df98e00f7330fd10e043e64df1cfd11aa1b473145dfd4d86010421aabd88d324",
+      [
+        "df98e00f7330fd10e043e64df1cfd11aa1b473145dfd4d86010421aabd88d324",
+        "b2873d77a966d105fa69d47b568361f336cf90e75448177d973fe801824b30ca",
+      ],
     ],
-  ])("preserves the %s fixture byte-for-byte", async (_label, fixture, expected) => {
+  ])("preserves the %s fixture byte-for-byte", async (_label, fixture, expectedDigests) => {
     const fixturePath = path.resolve(__dirname, `../../fixtures/${fixture}`);
     const { report } = await analyzeRepository({ zipRef: fixturePath });
-    // Candidate Briefs contain no timestamps, so the entire object is hashed
-    // without normalization or excluded fields.
+    // Git can materialize text fixtures with LF or CRLF. Keep an exact golden
+    // for each checkout representation rather than weakening object coverage.
     const serialized = JSON.stringify(report.candidate_brief);
     const digest = createHash("sha256").update(serialized).digest("hex");
-    expect(digest).toBe(expected);
+    expect(expectedDigests).toContain(digest);
   }, 30000);
 });

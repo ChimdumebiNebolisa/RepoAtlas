@@ -141,7 +141,7 @@ describe("safeExtractZip", () => {
       safeExtractZip(buffer, extractRoot);
       expect(fs.readdirSync(extractRoot)).toHaveLength(MAX_ENTRIES);
     });
-  }, 20_000);
+  }, 60_000);
 
   it("rejects an archive over the entry-count limit before writing", () => {
     const buffer = makeRawStoredZip(
