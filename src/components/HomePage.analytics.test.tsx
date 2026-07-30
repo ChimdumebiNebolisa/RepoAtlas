@@ -87,7 +87,7 @@ describe("HomePage walkthrough analytics journeys", () => {
 
       if (source === "sample") {
         await user.click(
-          screen.getByRole("button", { name: /Generate sample Candidate Brief/i })
+          screen.getByRole("button", { name: /Generate the bundled sample brief/i })
         );
       } else if (source === "github") {
         await user.type(
@@ -106,7 +106,7 @@ describe("HomePage walkthrough analytics journeys", () => {
         await user.click(screen.getByRole("button", { name: /Analyze uploaded ZIP/i }));
       }
 
-      await screen.findByRole("heading", { name: "Your Candidate Brief is ready" });
+      await screen.findByRole("heading", { name: "Your repository brief is ready" });
       await user.click(screen.getByRole("button", { name: "Copy 30s" }));
 
       await waitFor(() => expect(captureReportViewed).toHaveBeenCalledTimes(1));

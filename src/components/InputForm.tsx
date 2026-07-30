@@ -195,7 +195,7 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
 
       <div className="quick-start">
         <div className="quick-start-copy">
-          <strong>See a complete brief first</strong>
+          <strong>See a complete repository brief first</strong>
           <span>Use the bundled repository. No upload or URL needed.</span>
         </div>
         <button
@@ -206,12 +206,12 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
           className="btn btn-primary"
         >
           <span aria-live="polite">
-            {loading ? "Generating…" : "Generate sample Candidate Brief"}
+            {loading ? "Generating…" : "Generate the bundled sample brief"}
           </span>
         </button>
       </div>
 
-      <div className="input-divider"><span>or analyze your repository</span></div>
+      <div className="input-divider"><span>or use your repository</span></div>
 
       <RepositoryInputControls
         mode={mode}

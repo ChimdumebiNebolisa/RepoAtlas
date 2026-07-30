@@ -140,11 +140,11 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         className={`action-section action-section-single page-container ${report ? "action-section-complete" : ""}`}
       >
         <article className="analyze-card">
-          <p className="section-kicker">Use your repository</p>
-          <h2>Analyze a repository when you’re ready.</h2>
+          <p className="section-kicker">Analyze your repository</p>
+          <h2>Paste a public GitHub URL or upload a ZIP.</h2>
           <p>
-            The bundled sample remains the easiest first action. When you are ready to analyze
-            your own codebase, paste a public GitHub URL or upload a permitted ZIP.
+            Choose the situation you are preparing for. RepoAtlas reads the files, builds the
+            source-linked brief, and shows which files support its key conclusions.
           </p>
           <InputForm
             ref={inputFormRef}
@@ -163,9 +163,9 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             sampleButtonRef={sampleButtonRef}
           />
           <div className="analyze-limits">
-            <span>ZIP upload or public GitHub URL</span>
-            <span>Reads repository files only</span>
-            <span>Public repositories only</span>
+            <span>Public GitHub URL or ZIP upload</span>
+            <span>Files are read, never run</span>
+            <span>Public GitHub repositories only</span>
             <span>{clientMaxZipMbLabel()}MB maximum zip</span>
             <span>Analysis up to 2 minutes</span>
           </div>
@@ -187,14 +187,14 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
               tabIndex={-1}
               data-testid="completed-report-heading"
             >
-              Your Candidate Brief is ready
+              Your repository brief is ready
             </h2>
             <p>
               {report.candidate_brief?.analysis_focus
-                ? `Your ${report.candidate_brief.analysis_focus.label.toLowerCase()} brief is complete and tied to repository evidence.`
+                ? `Your ${report.candidate_brief.analysis_focus.label.toLowerCase()} repository brief is ready. Review the linked files and confidence notes.`
                 : reportId
-                  ? "Start with the summary and walkthrough, then inspect, export, or share the evidence-linked report."
-                  : "Start with the summary and walkthrough, then inspect or export the evidence-linked report as PDF or PNG."}
+                  ? "Start with the purpose and reading path, then inspect, export, or share the source-linked report."
+                  : "Start with the purpose and reading path, then inspect or export the source-linked report as PDF or PNG."}
             </p>
           </div>
           <ReportTabs report={report} reportId={reportId} />

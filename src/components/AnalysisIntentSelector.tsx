@@ -25,8 +25,8 @@ export function AnalysisIntentSelector({
 
   return (
     <fieldset className="analysis-intent-fieldset" disabled={disabled}>
-      <legend>Focus this Candidate Brief</legend>
-      <p>Start with the whole-repository interview walkthrough.</p>
+      <legend>Choose what the repository brief should help with</legend>
+      <p>Start with whole-repository interview preparation.</p>
       <div className="analysis-intent-primary">
         <label
           className={`analysis-intent-option ${analysisIntent === PRIMARY_ANALYSIS_INTENT.value ? "is-selected" : ""}`}

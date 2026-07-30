@@ -14,8 +14,8 @@ export const PRIMARY_ANALYSIS_INTENT: {
   description: string;
 } = {
   value: "interview",
-  label: "Interview walkthrough",
-  description: "Explain the whole repository clearly.",
+  label: "Prepare for an interview",
+  description: "Explain the whole repository with source-linked talking points.",
 };
 
 export const SECONDARY_ANALYSIS_INTENTS: Array<{
@@ -26,17 +26,17 @@ export const SECONDARY_ANALYSIS_INTENTS: Array<{
   {
     value: "bug",
     label: "Investigate a bug",
-    description: "Trace likely entry points and risk signals.",
+    description: "Find likely entry points, dependencies, and files to inspect.",
   },
   {
     value: "planned_change",
     label: "Plan a change",
-    description: "Map boundaries, impact, and validation.",
+    description: "Map affected files, dependencies, and validation points.",
   },
   {
     value: "pull_request",
     label: "Discuss a pull request",
-    description: "Prepare a file-backed review path.",
+    description: "Build a source-linked review path.",
   },
 ];
 

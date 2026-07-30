@@ -225,20 +225,20 @@ describe("HomePage completion coordination", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
     expect(
-      screen.getByText(/inspect or export the evidence-linked report as PDF or PNG/)
+      screen.getByText(/inspect or export the source-linked report as PDF or PNG/)
     ).toBeInTheDocument();
     expect(screen.getByText("Inline report")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Complete saved" }));
     expect(
-      screen.getByText(/inspect, export, or share the evidence-linked report/)
+      screen.getByText(/inspect, export, or share the source-linked report/)
     ).toBeInTheDocument();
     expect(screen.getByText("Saved as saved-report-id")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Complete focused" }));
     expect(
       screen.getByText(
-        "Your bug investigation brief is complete and tied to repository evidence."
+        "Your bug investigation repository brief is ready. Review the linked files and confidence notes."
       )
     ).toBeInTheDocument();
   });

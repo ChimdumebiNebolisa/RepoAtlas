@@ -150,10 +150,10 @@ describe("InputForm", () => {
     expect(await within(form).findByRole("alert")).toHaveTextContent(/github/i);
   });
 
-  it("names the Candidate Brief created by the bundled sample", () => {
+  it("names the repository brief created by the bundled sample", () => {
     const { form } = renderForm();
     expect(
-      within(form).getByRole("button", { name: /generate sample candidate brief/i })
+      within(form).getByRole("button", { name: /generate the bundled sample brief/i })
     ).toBeInTheDocument();
   });
 
@@ -214,7 +214,7 @@ describe("InputForm", () => {
       .closest("summary");
     const details = disclosure?.closest("details");
 
-    expect(within(form).getByRole("radio", { name: /Interview walkthrough/i })).toBeChecked();
+    expect(within(form).getByRole("radio", { name: /Prepare for an interview/i })).toBeChecked();
     expect(details).not.toHaveAttribute("open");
     expect(
       within(form).getByRole("radio", { name: /Investigate a bug/i })
@@ -230,7 +230,7 @@ describe("InputForm", () => {
     await user.click(within(form).getByRole("radio", { name: /Investigate a bug/i }));
     expect(within(form).getByText(/Selected: Investigate a bug/i)).toBeVisible();
 
-    await user.click(within(form).getByRole("radio", { name: /Interview walkthrough/i }));
+    await user.click(within(form).getByRole("radio", { name: /Prepare for an interview/i }));
     expect(details).not.toHaveAttribute("open");
   });
 
@@ -251,7 +251,7 @@ describe("InputForm", () => {
     const { form } = renderForm();
     await user.click(within(form).getByText(/Use a different conversation focus/i));
     await user.click(screen.getByRole("radio", { name: /investigate a bug/i }));
-    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
     const request = fetchMock.mock.calls[0]?.[1];
     expect(JSON.parse(String(request?.body))).toEqual({
@@ -440,7 +440,7 @@ describe("InputForm", () => {
     );
 
     renderForm();
-    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -474,7 +474,7 @@ describe("InputForm", () => {
     );
 
     renderForm();
-    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -503,7 +503,7 @@ describe("InputForm", () => {
     );
 
     renderForm();
-    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -542,7 +542,7 @@ describe("InputForm", () => {
     );
 
     renderForm();
-    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -583,7 +583,7 @@ describe("InputForm", () => {
         loading={false}
       />
     );
-    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
     expect(onAnalyzeComplete).toHaveBeenCalledWith(inlineReport, null);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -622,7 +622,7 @@ describe("InputForm", () => {
         loading={false}
       />
     );
-    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(consoleError).toHaveBeenCalledOnce();
@@ -668,7 +668,7 @@ describe("InputForm", () => {
         loading={false}
       />
     );
-    await user.click(screen.getByRole("button", { name: /generate sample candidate brief/i }));
+    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
     expect(consoleError).toHaveBeenCalledOnce();
     expect(consoleError).toHaveBeenCalledWith(
