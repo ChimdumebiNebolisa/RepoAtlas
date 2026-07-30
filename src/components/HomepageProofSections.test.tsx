@@ -47,18 +47,22 @@ describe("HomepageHero", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Turn an unfamiliar repository into an evidence-backed walkthrough.",
+        name: "Understand an unfamiliar repository before you need to explain or change it.",
       })
     ).toBeInTheDocument();
     expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
-      "source files attached"
+      "key conclusions cite files"
     );
-    expect(screen.getByRole("link", { name: /Analyze a repository/ })).toHaveAttribute(
+    expect(
+      screen.getByRole("link", { name: /Paste a GitHub URL or upload a ZIP/ })
+    ).toHaveAttribute(
       "href",
       "#analyze"
     );
 
-    await user.click(screen.getByRole("button", { name: /Run bundled sample/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Generate a sample repository brief/ })
+    );
 
     expect(onGenerateSample).toHaveBeenCalledOnce();
   });
@@ -150,7 +154,7 @@ describe("HomepageSampleProof", () => {
 
     expect(
       screen.getByText(
-        "This sample does not contain enough supported dependency evidence for a system-flow claim."
+        "This sample does not contain enough supported dependency evidence to describe a system connection."
       )
     ).toBeInTheDocument();
     expect(container.querySelectorAll(".sample-evidence-tag")).toHaveLength(1);
@@ -173,7 +177,7 @@ describe("HomepageSampleProof", () => {
     expect(screen.queryByTestId("homepage-sample-preview")).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        /does not contain enough evidence for a walkthrough preview/
+        /does not contain enough evidence for this repository brief preview/
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Open sample report/ })).toBeEnabled();
@@ -194,7 +198,7 @@ describe("HomepageSampleProof", () => {
     expect(screen.queryByRole("button", { name: /Open sample report/ })).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "Explore the bundled read-only report. PDF and PNG preview exports work here; Markdown requires a saved analysis."
+        "Explore the bundled read-only repository brief. PDF and PNG preview exports work here; Markdown requires a saved analysis."
       )
     ).toBeInTheDocument();
     expect(screen.getByTestId("report-tabs")).toHaveTextContent(

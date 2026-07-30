@@ -1,19 +1,21 @@
 export const candidateBriefWalkthroughOutputs = [
   {
-    title: "Start in the right place",
-    description: "Prioritized files and detected run or test commands.",
+    title: "Repository purpose",
+    description:
+      "A plain-language account of what the repository appears to do, with confidence and source evidence.",
   },
   {
-    title: "Explain the system",
-    description: "Architecture and supported dependency relationships.",
+    title: "Important folders and files",
+    description: "A folder map and prioritized reading path showing where to start.",
   },
   {
-    title: "Prepare for follow-up questions",
-    description: "Structural hotspots to inspect, not assumed bugs.",
+    title: "Architecture and dependencies",
+    description: "Detected connections between supported files, modules, and dependencies.",
   },
   {
-    title: "Support what you say",
-    description: "Source-file evidence linked to each conclusion.",
+    title: "Evidence and next questions",
+    description:
+      "Key conclusions linked to files, plus suggested follow-up questions and inspection points.",
   },
 ] as const;
 

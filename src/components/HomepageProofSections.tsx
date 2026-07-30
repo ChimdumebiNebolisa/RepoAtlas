@@ -53,41 +53,45 @@ export function HomepageHero({
   return (
     <section id="top" className="hero page-container">
       <div className="hero-copy">
-        <p className="eyebrow">For codebases you need to explain, not just skim</p>
-        <h1>Turn an unfamiliar repository into an evidence-backed walkthrough.</h1>
+        <p className="eyebrow">For interviews, onboarding, debugging, and design discussions</p>
+        <h1>Understand an unfamiliar repository before you need to explain or change it.</h1>
         <p className="hero-description">
-          RepoAtlas analyzes a public TypeScript/JavaScript, Python, or Java repository and
-          shows where to begin, how the system fits together, which structural areas deserve
-          inspection, and the source files that support each conclusion.
+          Paste a public GitHub URL or upload a ZIP for a TypeScript/JavaScript, Python, or Java
+          repository. RepoAtlas reads the files without running the code and returns a source-linked
+          brief: what the repository appears to do, where the important code lives, how supported
+          parts and dependencies connect, and what to inspect next.
         </p>
         <div className="hero-actions">
           <button className="btn btn-primary" type="button" onClick={onGenerateSample}>
-            Run bundled sample <Arrow />
+            Generate a sample repository brief <Arrow />
           </button>
-          <a className="text-action" href="#analyze">Analyze a repository <Arrow /></a>
+          <a className="text-action" href="#analyze">
+            Paste a GitHub URL or upload a ZIP <Arrow />
+          </a>
         </div>
         <p className="hero-microcopy">
-          Static analysis only. No code execution. No AI calls.
+          Deterministic static analysis, not a generic AI summary. Repository code is read as text,
+          never run, and never sent to an AI service.
         </p>
       </div>
 
-      <div className="hero-visual" aria-label="Evidence-backed walkthrough outline">
+      <div className="hero-visual" aria-label="Source-linked repository brief outline">
         <div className="sample-hero-card" data-testid="hero-output-card">
           <div className="sample-hero-header">
-            <span>Repository walkthrough</span>
-            <span className="brief-status">evidence linked</span>
+            <span>Repository brief</span>
+            <span className="brief-status">linked to source files</span>
           </div>
           <div className="sample-hero-repo">
-            <span>Static repository analysis</span>
-            <code>source files attached</code>
+            <span>Static file analysis</span>
+            <code>key conclusions cite files</code>
           </div>
           <blockquote>
-            A prioritized explanation of where to start, how supported dependencies connect,
-            and which structural hotspots deserve a closer look.
+            Purpose · important files · architecture and dependencies · inspection points and
+            questions
           </blockquote>
           <div className="sample-hero-evidence">
-            <span>Analysis boundary</span>
-            <EvidenceTag id="no code execution" path="no AI calls" />
+            <span>Repository handling</span>
+            <EvidenceTag id="files are read, not run" path="no AI service" />
           </div>
         </div>
       </div>
@@ -104,9 +108,9 @@ export function HomepageWalkthroughOutcomes() {
     >
       <header className="walkthrough-outcomes-header">
         <div>
-          <p className="section-kicker">What the Candidate Brief gives you</p>
+          <p className="section-kicker">The deliverable</p>
           <h2 id="walkthrough-outcomes-heading">
-            Go from “I skimmed the repo” to “I can explain it.”
+            RepoAtlas calls it a Candidate Brief: a source-linked repository brief.
           </h2>
         </div>
       </header>
@@ -183,7 +187,7 @@ export function HomepageSampleProof({
             Bundled sample{sample ? ` · ${sample.repositoryName}` : ""}
           </p>
           <h2 id="sample-proof-heading">
-            See what an evidence-backed walkthrough looks like.
+            See the purpose, key files, connections, evidence, and next questions.
           </h2>
         </div>
         {!showSampleReport && (
@@ -217,7 +221,7 @@ export function HomepageSampleProof({
               </article>
 
               <article>
-                <span className="sample-proof-label">02 · Structural claim to inspect</span>
+                <span className="sample-proof-label">02 · Detected connection to inspect</span>
                 <p>{sample.architecture.explanation}</p>
                 {sample.architecture.evidence && (
                   <EvidenceTag
@@ -231,15 +235,15 @@ export function HomepageSampleProof({
           </div>
         ) : (
           <p className="sample-report-copy">
-            The bundled report does not contain enough evidence for a walkthrough preview. Open the
-            full report to inspect the available repository signals.
+            The bundled report does not contain enough evidence for this repository brief preview.
+            Open the full report to inspect the available signals and confidence gaps.
           </p>
         )
       ) : (
         <>
           <p className="sample-report-copy">
-            Explore the bundled read-only report. PDF and PNG preview exports work here; Markdown
-            requires a saved analysis.
+            Explore the bundled read-only repository brief. PDF and PNG preview exports work here;
+            Markdown requires a saved analysis.
           </p>
           <div className="sample-report-shell">
             <ReportTabs report={sampleReport} variant="preview" />

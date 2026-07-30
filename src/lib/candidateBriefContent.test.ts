@@ -7,10 +7,10 @@ import {
 describe("candidate brief content contract", () => {
   it("keeps the homepage and interview page aligned on the four walkthrough outputs", () => {
     expect(candidateBriefWalkthroughOutputs.map(({ title }) => title)).toEqual([
-      "Start in the right place",
-      "Explain the system",
-      "Prepare for follow-up questions",
-      "Support what you say",
+      "Repository purpose",
+      "Important folders and files",
+      "Architecture and dependencies",
+      "Evidence and next questions",
     ]);
     expect(new Set(candidateBriefWalkthroughOutputs.map(({ title }) => title)).size).toBe(4);
   });
