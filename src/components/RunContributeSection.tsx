@@ -26,7 +26,7 @@ export function RunContributeSection({
                 </code>
                 <span className="min-w-0 break-words text-sm text-gray-500">
                   (from {cmd.source})
-                  {cmd.description && ` — ${cmd.description}`}
+                  {cmd.description && `: ${cmd.description}`}
                 </span>
               </li>
             ))}

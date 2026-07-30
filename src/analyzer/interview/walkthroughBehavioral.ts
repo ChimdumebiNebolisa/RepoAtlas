@@ -25,7 +25,7 @@ export function buildBehavioralHooks(
     hooks.push({
       prompt: "Challenge (STAR template)",
       answer_starter:
-        "Not enough evidence — use a different example or skip this prompt.",
+        "Not enough evidence. Use a different example or skip this prompt.",
       evidence_refs: [],
       sufficient_evidence: false,
     });
@@ -47,7 +47,7 @@ export function buildBehavioralHooks(
     hooks.push({
       prompt: "Tradeoff (STAR template)",
       answer_starter:
-        "Not enough evidence — use a different example or skip this prompt.",
+        "Not enough evidence. Use a different example or skip this prompt.",
       evidence_refs: [],
       sufficient_evidence: false,
     });

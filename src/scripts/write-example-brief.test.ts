@@ -9,7 +9,7 @@ describe("write example brief", () => {
     const outDir = path.join(process.cwd(), "docs", "examples");
     fs.mkdirSync(outDir, { recursive: true });
     const report = buildSampleReport();
-    const header = `<!-- Generated from buildSampleReport() in src/lib/buildSampleReport.ts — bundled sample output, not from a live deployment. -->
+    const header = `<!-- Generated from buildSampleReport() in src/lib/buildSampleReport.ts. Bundled sample output, not from a live deployment. -->
 
 # Example Candidate Brief (sample output)
 

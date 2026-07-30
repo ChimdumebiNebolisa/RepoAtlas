@@ -14,7 +14,7 @@ function EvidenceBadge({
   const evidence = evidenceById.get(id);
   const tooltip = [evidence?.label, evidence?.path, evidence?.detail, evidence?.snippet]
     .filter(Boolean)
-    .join(" — ");
+    .join(" · ");
 
   return (
     <button

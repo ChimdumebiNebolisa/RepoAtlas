@@ -32,7 +32,7 @@ configureAbuseControls();
 //   - { githubUrl,ref } -> { kind: "github" }
 //
 // Caller-controlled filesystem paths (the old JSON `zipRef`) are intentionally
-// NOT accepted from the network — that path allowed reading arbitrary server
+// NOT accepted from the network because that path allowed reading arbitrary server
 // files (Phase 1 finding A). Internal code/tests call analyzeRepository()
 // directly for the zipRef path.
 

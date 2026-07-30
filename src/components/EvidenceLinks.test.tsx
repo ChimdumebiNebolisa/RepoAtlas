@@ -41,7 +41,7 @@ describe("EvidenceList", () => {
         ref.path,
         ref.detail,
         ref.snippet,
-      ].join(" — ")
+      ].join(" · ")
     );
 
     await userEvent.click(link);

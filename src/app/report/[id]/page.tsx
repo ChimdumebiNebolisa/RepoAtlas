@@ -81,7 +81,7 @@ export default function SharedReportPage() {
         <header className="mb-6 space-y-1">
           <p className="text-xl font-bold text-slate-900">RepoAtlas</p>
           <p className="text-sm text-slate-600">
-            Shared Candidate Brief — legacy direct link (use token sharing from Overview when
+            Shared Candidate Brief: legacy direct link (use token sharing from Overview when
             possible)
           </p>
         </header>

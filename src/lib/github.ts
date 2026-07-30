@@ -3,7 +3,7 @@
  *
  * For the first version we only accept canonical HTTPS github.com repository
  * URLs (optionally with a trailing `.git`). We deliberately do NOT try to
- * interpret arbitrary tree/blob URLs or generic git hosting URLs — a custom ref
+ * interpret arbitrary tree/blob URLs or generic git hosting URLs. A custom ref
  * must be supplied via a separate, validated `ref` field. This keeps the trust
  * boundary tiny and predictable (Phase 2 requirement 1).
  */
@@ -42,7 +42,7 @@ export function parseGithubRepoUrl(input: string): GithubRepoRef | null {
   }
 
   if (url.protocol !== "https:") return null;
-  // Only the canonical host — no www., no gist., no enterprise hosts.
+  // Only the canonical host: no www., no gist., no enterprise hosts.
   if (url.hostname.toLowerCase() !== "github.com") return null;
   if (url.username || url.password) return null;
   if (url.search || url.hash) return null;

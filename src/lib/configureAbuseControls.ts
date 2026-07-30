@@ -8,7 +8,7 @@ import {
 } from "@/lib/rateLimit";
 import { UpstashRedisRateLimiter, upstashConfigFromEnv } from "@/lib/upstashRateLimit";
 
-/** Idempotent startup hook — prefer Upstash Redis when credentials exist. */
+/** Idempotent startup hook. Prefer Upstash Redis when credentials exist. */
 export function configureAbuseControls(): void {
   configureRateLimiterOnce(() => {
     const upstash = upstashConfigFromEnv();

@@ -8,10 +8,10 @@
  *   We deliberately do not pretend otherwise.
  *
  * What we DO provide safely without extra infrastructure:
- *   1. A concurrency gate — caps concurrent analyses per process. This bounds
+ *   1. A concurrency gate caps concurrent analyses per process. This bounds
  *      memory/CPU/temp-disk pressure regardless of how requests are distributed
  *      and is a legitimate conservative control.
- *   2. A best-effort per-key sliding window — reduces trivial single-instance
+ *   2. A best-effort per-key sliding window reduces trivial single-instance
  *      bursts. Treat it as defense-in-depth, not a quota.
  *
  * To get durable, distributed rate limiting, implement {@link RateLimiter}

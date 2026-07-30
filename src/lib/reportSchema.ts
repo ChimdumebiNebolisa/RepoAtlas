@@ -1,5 +1,5 @@
 /**
- * Runtime validation for stored report JSON — versioned, deep shape checks.
+ * Runtime validation for stored report JSON with versioned, deep shape checks.
  */
 
 import type { Report } from "@/types/report";

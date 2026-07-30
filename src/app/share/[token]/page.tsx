@@ -136,8 +136,8 @@ export default function TokenSharePage() {
           </div>
           <p className="text-sm text-slate-600">
             {portable
-              ? "Shared Candidate Brief — read-only, private link decrypted in this browser"
-              : "Shared Candidate Brief — read-only, token-gated view (report JSON only)"}
+              ? "Shared Candidate Brief, read-only private link decrypted in this browser"
+              : "Shared Candidate Brief, read-only token-gated view (report JSON only)"}
           </p>
           {expiresAt && (
             <p className="text-xs text-slate-500">

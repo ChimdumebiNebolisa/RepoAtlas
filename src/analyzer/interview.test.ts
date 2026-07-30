@@ -168,7 +168,7 @@ describe("buildCandidateBrief", () => {
     const tradeoff = brief.behavioral_hooks?.find((hook) => hook.prompt.startsWith("Tradeoff"));
     expect(tradeoff).toEqual({
       prompt: "Tradeoff (STAR template)",
-      answer_starter: "Not enough evidence — use a different example or skip this prompt.",
+      answer_starter: "Not enough evidence. Use a different example or skip this prompt.",
       evidence_refs: [],
       sufficient_evidence: false,
     });

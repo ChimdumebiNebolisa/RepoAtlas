@@ -145,7 +145,7 @@ function comparePriority(a: DocumentInventoryItem, b: DocumentInventoryItem): nu
   const ra = CATEGORY_RANK[a.category] * 10 + SCOPE_RANK[a.scope];
   const rb = CATEGORY_RANK[b.category] * 10 + SCOPE_RANK[b.scope];
   if (ra !== rb) return ra - rb;
-  // Shallower paths first, then lexicographic — fully deterministic.
+  // Shallower paths first, then lexicographic for fully deterministic ordering.
   const da = a.path.split("/").length;
   const db = b.path.split("/").length;
   if (da !== db) return da - db;

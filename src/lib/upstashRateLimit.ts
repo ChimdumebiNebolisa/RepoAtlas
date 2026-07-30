@@ -1,6 +1,6 @@
 /**
  * Optional Upstash Redis REST rate limiter (distributed across serverless isolates).
- * Uses the REST API with fetch — no extra SDK dependency.
+ * Uses the REST API with fetch and no extra SDK dependency.
  */
 
 import type { RateLimiter, RateLimitResult } from "@/lib/rateLimit";

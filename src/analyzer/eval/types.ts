@@ -1,6 +1,6 @@
 /**
  * Analyzer evaluation gold labels and metrics.
- * Human-labeled expectations for fixture repositories — not analyzer output dumps.
+ * Human-labeled expectations for fixture repositories, not analyzer output dumps.
  */
 
 export interface EvalEdge {

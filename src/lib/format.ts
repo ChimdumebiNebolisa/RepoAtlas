@@ -1,5 +1,5 @@
 /**
- * Presentation helpers shared by report views. Pure functions only — safe to
+ * Presentation helpers shared by report views. Pure functions only, so they are safe to
  * import into both server and client components.
  */
 

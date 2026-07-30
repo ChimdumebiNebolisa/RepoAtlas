@@ -1,6 +1,6 @@
 /**
  * Import-statement scanner for Python sources.
- * Not a full AST — tracks strings/comments enough to avoid the worst false positives,
+ * Not a full AST. Tracks strings/comments enough to avoid the worst false positives,
  * and expands `from pkg import name` into both `pkg` and `pkg.name` for resolution.
  */
 
@@ -221,7 +221,7 @@ export function extractImportSpecifiers(content: string): string[] {
       }
       index = skipSpacesAndContinuations(content, index);
       let modulePath = "";
-      // Bare relative form: `from . import x` — do not consume the `import` keyword as a module.
+      // Bare relative form: `from . import x`; do not consume the `import` keyword as a module.
       if (!(content.startsWith("import", index) && !isIdentifierChar(content[index + 6] ?? ""))) {
         const moduleName = readDottedName(content, index);
         modulePath = moduleName?.value ?? "";
