@@ -15,12 +15,14 @@ export function escapeTableCell(value: string): string {
   return escapeMarkdownInline(value).replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
 
-function escapeInlineCodeContent(value: string): string {
-  return value.replace(/`/g, "\\`");
-}
-
 function wrapInlineCode(value: string): string {
-  return `\`${escapeInlineCodeContent(value)}\``;
+  const longestBacktickRun = Math.max(
+    0,
+    ...Array.from(value.matchAll(/`+/g), (match) => match[0].length)
+  );
+  const delimiter = "`".repeat(longestBacktickRun + 1);
+  const content = value.startsWith("`") || value.endsWith("`") ? ` ${value} ` : value;
+  return `${delimiter}${content}${delimiter}`;
 }
 
 function escapeMermaidLabel(label: string): string {

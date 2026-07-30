@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { marked } from "marked";
 import { exportReportToMarkdown } from "./export";
 import type { Report } from "@/types/report";
 
@@ -251,12 +252,24 @@ describe("exportReportToMarkdown", () => {
     expect(markdown).toContain('label\\"');
   });
 
-  it("escapes backticks in inline code paths", () => {
+  it("uses a longer code-span delimiter for paths containing backticks", () => {
     const report = sampleReport();
     report.start_here[0]!.path = "src/`inject`.ts";
 
     const markdown = exportReportToMarkdown(report);
 
-    expect(markdown).toContain("`src/\\`inject\\`.ts`");
+    expect(markdown).toContain("``src/`inject`.ts``");
+  });
+
+  it("keeps Markdown links inert inside hostile inline-code paths", () => {
+    const report = sampleReport();
+    report.start_here[0]!.path = "src/` [click](https://evil.example) `x.ts";
+
+    const markdown = exportReportToMarkdown(report);
+    const html = marked.parse(markdown, { async: false });
+
+    expect(markdown).toContain("``src/` [click](https://evil.example) `x.ts``");
+    expect(html).not.toContain('href="https://evil.example"');
+    expect(html).toContain("<code>src/` [click](https://evil.example) `x.ts</code>");
   });
 });
