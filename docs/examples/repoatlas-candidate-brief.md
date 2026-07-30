@@ -1,4 +1,4 @@
-<!-- Generated from buildSampleReport() in src/lib/buildSampleReport.ts — bundled sample output, not from a live deployment. -->
+<!-- Generated from buildSampleReport() in src/lib/buildSampleReport.ts. Bundled sample output, not from a live deployment. -->
 
 # Example Candidate Brief (sample output)
 
