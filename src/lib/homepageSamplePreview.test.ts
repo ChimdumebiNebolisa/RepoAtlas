@@ -46,6 +46,7 @@ describe("buildHomepageSamplePreview", () => {
 
     expect(buildHomepageSamplePreview(report)).toMatchObject({
       repositoryName: "fixture-derived-name",
+      purpose: brief.repo_summary.headline,
       summary: "Fixture-derived plain-English summary.",
       walkthrough: "Fixture-derived 30-second walkthrough.",
       readingStep: {
@@ -63,6 +64,7 @@ describe("buildHomepageSamplePreview", () => {
         },
       },
       architecture: {
+        connection: "InputForm connects to /api/analyze route.",
         explanation: "Fixture-derived architecture explanation.",
         evidence: { id: architectureEvidence.id },
       },
@@ -83,6 +85,8 @@ describe("buildHomepageSamplePreview", () => {
     );
 
     expect(buildHomepageSamplePreview(report)?.architecture).toEqual({
+      connection:
+        "This sample does not contain enough supported dependency evidence to describe a system connection.",
       explanation:
         "This sample does not contain enough supported dependency evidence to describe a system connection.",
       evidence: null,
@@ -109,6 +113,7 @@ describe("buildHomepageSamplePreview", () => {
     ];
 
     expect(buildHomepageSamplePreview(report)?.architecture).toEqual({
+      connection: "InputForm connects to /api/analyze route.",
       explanation: "Architecture evidence cited by the walkthrough.",
       evidence: walkthroughArchitecture,
     });
@@ -125,6 +130,7 @@ describe("buildHomepageSamplePreview", () => {
     brief.walkthrough_script!.evidence_refs = ["missing-architecture-reference"];
 
     expect(buildHomepageSamplePreview(report)?.architecture).toEqual({
+      connection: "InputForm connects to /api/analyze route.",
       explanation: "Report-level architecture fallback.",
       evidence: fallbackArchitecture,
     });

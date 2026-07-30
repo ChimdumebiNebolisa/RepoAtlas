@@ -6,6 +6,7 @@ import type { HomepageSamplePreview } from "@/lib/homepageSamplePreview";
 const sample: HomepageSamplePreview = {
   repositoryName: "repo-ts",
   confidence: "high",
+  purpose: "repo-ts appears to be a Next.js application",
   summary: "A file-backed repository sample.",
   walkthrough: "Start at the health route and follow its supported evidence.",
   readingStep: {
@@ -32,6 +33,7 @@ const sample: HomepageSamplePreview = {
     },
   },
   architecture: {
+    connection: "Health route connects to supported repository files.",
     explanation: "The route connects to supported repository files.",
     evidence: null,
   },

@@ -3,6 +3,7 @@ import type { EvidenceRef, Report } from "@/types/report";
 export type HomepageSamplePreview = {
   repositoryName: string;
   confidence: "high" | "medium" | "low";
+  purpose: string;
   summary: string;
   walkthrough: string;
   readingStep: {
@@ -20,6 +21,7 @@ export type HomepageSamplePreview = {
     };
   } | null;
   architecture: {
+    connection: string;
     explanation: string;
     evidence: EvidenceRef | null;
   };
@@ -48,6 +50,17 @@ function hasText(value: string | undefined): value is string {
 
 function hasFiniteNumber(value: number | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function describeFirstArchitectureConnection(report: Report): string | null {
+  const edge = report.architecture.edges[0];
+  if (!edge) return null;
+
+  const labelsById = new Map(report.architecture.nodes.map((node) => [node.id, node.label]));
+  const source = labelsById.get(edge.from) ?? edge.from;
+  const target = labelsById.get(edge.to) ?? edge.to;
+
+  return `${source} connects to ${target}.`;
 }
 
 export function buildHomepageSamplePreview(report: Report): HomepageSamplePreview | null {
@@ -137,6 +150,7 @@ export function buildHomepageSamplePreview(report: Report): HomepageSamplePrevie
   return {
     repositoryName: report.repo_metadata.name,
     confidence: brief.repo_summary.confidence,
+    purpose: brief.repo_summary.headline,
     summary: brief.repo_summary.plain_english,
     walkthrough: walkthrough.thirty_second,
     readingStep: {
@@ -146,6 +160,10 @@ export function buildHomepageSamplePreview(report: Report): HomepageSamplePrevie
     },
     comparisonProof,
     architecture: {
+      connection: architectureEvidence
+        ? describeFirstArchitectureConnection(report) ??
+          "No supported file connection was detected in this sample."
+        : "This sample does not contain enough supported dependency evidence to describe a system connection.",
       explanation:
         architectureEvidence?.detail ??
         "This sample does not contain enough supported dependency evidence to describe a system connection.",

@@ -60,13 +60,16 @@ describe("HomepageHero", () => {
       preview.repositoryName
     );
     expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
-      preview.summary
+      preview.purpose
     );
     expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
       preview.readingStep.path
     );
     expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
-      preview.architecture.explanation
+      preview.architecture.connection
+    );
+    expect(screen.getByTestId("hero-output-card")).not.toHaveTextContent(
+      preview.readingStep.evidence!.id
     );
     expect(
       screen.getByRole("link", { name: /Paste a GitHub URL or upload a ZIP/ })
@@ -132,19 +135,13 @@ describe("HomepageSampleProof", () => {
     );
 
     const proof = screen.getByTestId("homepage-sample-preview");
-    expect(proof).toHaveTextContent(preview.summary);
+    expect(proof).toHaveTextContent(preview.purpose);
     expect(proof).toHaveTextContent(preview.readingStep.path);
     expect(proof).toHaveTextContent(preview.readingStep.why);
-    expect(proof).toHaveTextContent(preview.architecture.explanation);
-    [
-      preview.readingStep.evidence,
-      preview.architecture.evidence,
-    ].forEach((evidence) => {
-      expect(proof).toHaveTextContent(evidence!.id);
-      if (evidence!.path) {
-        expect(proof).toHaveTextContent(evidence!.path);
-      }
-    });
+    expect(proof).toHaveTextContent(preview.architecture.connection);
+    expect(proof).toHaveTextContent("File citation");
+    expect(proof).not.toHaveTextContent(preview.readingStep.evidence!.id);
+    expect(proof).toHaveTextContent(preview.readingStep.evidence!.path!);
 
     await user.click(screen.getByRole("button", { name: /Open sample report/ }));
 
@@ -172,7 +169,7 @@ describe("HomepageSampleProof", () => {
         "This sample does not contain enough supported dependency evidence to describe a system connection."
       )
     ).toBeInTheDocument();
-    expect(container.querySelectorAll(".sample-evidence-tag")).toHaveLength(1);
+    expect(container.querySelectorAll(".sample-evidence-tag")).toHaveLength(0);
     expect(container.querySelectorAll(".sample-evidence-tag code")).toHaveLength(0);
   });
 

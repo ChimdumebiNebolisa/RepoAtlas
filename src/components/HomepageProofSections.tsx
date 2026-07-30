@@ -16,11 +16,11 @@ function Arrow() {
   return <span aria-hidden="true">→</span>;
 }
 
-function EvidenceTag({ id, path }: { id: string; path?: string }) {
+function EvidenceTag({ path }: { path: string }) {
   return (
     <span className="sample-evidence-tag">
-      <span>{id}</span>
-      {path && <code>{path}</code>}
+      <span>File citation</span>
+      <code>{path}</code>
     </span>
   );
 }
@@ -93,7 +93,7 @@ export function HomepageHero({
                   <span>Repository purpose</span>
                   <span className="brief-status">{sample.confidence} confidence</span>
                 </div>
-                <p>{sample.summary}</p>
+                <p>{sample.purpose}</p>
               </div>
               <div className="sample-hero-details">
                 <article>
@@ -103,17 +103,12 @@ export function HomepageHero({
                 </article>
                 <article>
                   <span>Detected connection</span>
-                  <p>{sample.architecture.explanation}</p>
+                  <p>{sample.architecture.connection}</p>
                 </article>
               </div>
               <div className="sample-hero-evidence">
-                <span>Evidence linked</span>
-                {sample.readingStep.evidence && (
-                  <EvidenceTag
-                    id={sample.readingStep.evidence.id}
-                    path={sample.readingStep.evidence.path}
-                  />
-                )}
+                <span>Evidence</span>
+                <p>Conclusions cite repository files.</p>
               </div>
             </>
           ) : (
@@ -226,7 +221,7 @@ export function HomepageSampleProof({
                 <span className="sample-proof-label">Repository purpose</span>
                 <span className="brief-status">{sample.confidence} confidence</span>
               </div>
-              <p>{sample.summary}</p>
+              <p>{sample.purpose}</p>
             </header>
 
             <div className="sample-proof-details">
@@ -234,22 +229,16 @@ export function HomepageSampleProof({
                 <span className="sample-proof-label">01 · Start here</span>
                 <code className="sample-proof-path">{sample.readingStep.path}</code>
                 <p>{sample.readingStep.why}</p>
-                {sample.readingStep.evidence && (
-                  <EvidenceTag
-                    id={sample.readingStep.evidence.id}
-                    path={sample.readingStep.evidence.path}
-                  />
+                {sample.readingStep.evidence?.path && (
+                  <EvidenceTag path={sample.readingStep.evidence.path} />
                 )}
               </article>
 
               <article>
                 <span className="sample-proof-label">02 · Connection to inspect</span>
-                <p>{sample.architecture.explanation}</p>
-                {sample.architecture.evidence && (
-                  <EvidenceTag
-                    id={sample.architecture.evidence.id}
-                    path={sample.architecture.evidence.path}
-                  />
+                <p>{sample.architecture.connection}</p>
+                {sample.architecture.evidence?.path && (
+                  <EvidenceTag path={sample.architecture.evidence.path} />
                 )}
               </article>
 
