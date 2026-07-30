@@ -1,18 +1,44 @@
 import { spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 
-const nextBin = process.platform === "win32" ? "next.cmd" : "next";
+const require = createRequire(import.meta.url);
+const nextCli = require.resolve("next/dist/bin/next");
 const broadTraceMarkers = [
   "Encountered unexpected file in NFT list",
   "whole project was traced unintentionally",
 ];
 let buildOutput = "";
 
+function isRuntimeReportPath(file) {
+  return file.replaceAll("\\", "/").includes("/reports/");
+}
+
+async function sanitizeRuntimeDataTraces(directory) {
+  let removed = 0;
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      removed += await sanitizeRuntimeDataTraces(entryPath);
+      continue;
+    }
+    if (!entry.name.endsWith(".nft.json")) continue;
+
+    const trace = JSON.parse(await readFile(entryPath, "utf8"));
+    const files = trace.files.filter((file) => !isRuntimeReportPath(file));
+    removed += trace.files.length - files.length;
+    if (files.length !== trace.files.length) {
+      await writeFile(entryPath, JSON.stringify({ ...trace, files }));
+    }
+  }
+  return removed;
+}
+
 // RepoAtlas deliberately walks repository files supplied at request time. The
 // current Turbopack tracer follows those dynamic paths back to the project root;
 // Webpack's supported production builder keeps that runtime boundary intact.
-const child = spawn(nextBin, ["build", "--webpack"], {
+const child = spawn(process.execPath, [nextCli, "build", "--webpack"], {
   env: process.env,
   shell: false,
   stdio: ["inherit", "pipe", "pipe"],
@@ -48,6 +74,14 @@ child.on("close", async (code, signal) => {
   }
 
   if (code === 0) {
+    const removedRuntimeFiles = await sanitizeRuntimeDataTraces(
+      path.join(process.cwd(), ".next")
+    );
+    if (removedRuntimeFiles > 0) {
+      console.log(
+        `Removed ${removedRuntimeFiles} runtime report files from deployment traces.`
+      );
+    }
     const analyzeTracePath = path.join(
       process.cwd(),
       ".next",
@@ -57,10 +91,18 @@ child.on("close", async (code, signal) => {
       "analyze",
       "route.js.nft.json"
     );
-    const analyzeTrace = await readFile(analyzeTracePath, "utf8");
-    if (!analyzeTrace.includes("fixtures/repo-ts/README.md")) {
+    const analyzeTrace = JSON.parse(await readFile(analyzeTracePath, "utf8"));
+    const tracedFiles = analyzeTrace.files.map((file) => file.replaceAll("\\", "/"));
+    if (!tracedFiles.some((file) => file.endsWith("/fixtures/repo-ts/README.md"))) {
       console.error(
         "Build failed because the deployed analysis route omitted the bundled sample README."
+      );
+      process.exitCode = 1;
+      return;
+    }
+    if (tracedFiles.some(isRuntimeReportPath)) {
+      console.error(
+        "Build failed because runtime report data was included in the deployed analysis route."
       );
       process.exitCode = 1;
       return;

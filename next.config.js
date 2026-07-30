@@ -14,6 +14,11 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/analyze': ['./fixtures/repo-ts/**/*'],
   },
+  // Existing local reports are runtime data, never deployment artifacts.
+  outputFileTracingExcludes: {
+    '/*': ['./reports/**/*'],
+    '/api/analyze': ['./reports/**/*'],
+  },
   async headers() {
     return [
       {
