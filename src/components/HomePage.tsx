@@ -143,8 +143,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <p className="section-kicker">Analyze your repository</p>
           <h2>Paste a public GitHub URL or upload a ZIP.</h2>
           <p>
-            Choose the situation you are preparing for. RepoAtlas reads the files, builds the
-            source-linked brief, and shows which files support its key conclusions.
+            Choose a goal. RepoAtlas builds the brief and cites the files behind each conclusion.
           </p>
           <InputForm
             ref={inputFormRef}

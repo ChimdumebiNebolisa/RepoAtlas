@@ -1,21 +1,19 @@
 export const candidateBriefWalkthroughOutputs = [
   {
     title: "Repository purpose",
-    description:
-      "A plain-language account of what the repository appears to do, with confidence and source evidence.",
+    description: "What the repository appears to do, with confidence.",
   },
   {
     title: "Important folders and files",
-    description: "A folder map and prioritized reading path showing where to start.",
+    description: "A folder map and suggested reading order.",
   },
   {
     title: "Architecture and dependencies",
-    description: "Detected connections between supported files, modules, and dependencies.",
+    description: "Supported connections between files, modules, and dependencies.",
   },
   {
     title: "Evidence and next questions",
-    description:
-      "Key conclusions linked to files, plus suggested follow-up questions and inspection points.",
+    description: "File citations, confidence gaps, and follow-up questions.",
   },
 ] as const;
 

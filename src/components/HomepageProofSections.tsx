@@ -102,9 +102,7 @@ export function HomepageWalkthroughOutcomes() {
       <header className="walkthrough-outcomes-header">
         <div>
           <p className="section-kicker">The deliverable</p>
-          <h2 id="walkthrough-outcomes-heading">
-            RepoAtlas calls it a Candidate Brief: a source-linked repository brief.
-          </h2>
+          <h2 id="walkthrough-outcomes-heading">Get a source-linked repository brief.</h2>
         </div>
       </header>
       <div className="walkthrough-outcome-list">
@@ -132,9 +130,7 @@ export function HomepageSupportedWorkflows() {
       <header className="walkthrough-outcomes-header">
         <div>
           <p className="section-kicker">Use RepoAtlas when…</p>
-          <h2 id="supported-workflows-heading">
-            Start with repository evidence before the conversation.
-          </h2>
+          <h2 id="supported-workflows-heading">Before you explain or change unfamiliar code.</h2>
         </div>
       </header>
       <div className="walkthrough-outcome-list">
@@ -179,9 +175,7 @@ export function HomepageSampleProof({
           <p className="section-kicker">
             Bundled sample{sample ? ` · ${sample.repositoryName}` : ""}
           </p>
-          <h2 id="sample-proof-heading">
-            See the purpose, key files, connections, evidence, and next questions.
-          </h2>
+          <h2 id="sample-proof-heading">Preview a real repository brief.</h2>
         </div>
         {!showSampleReport && (
           <button type="button" className="text-action" onClick={onOpenSample}>
@@ -194,7 +188,7 @@ export function HomepageSampleProof({
           <div className="sample-proof-preview" data-testid="homepage-sample-preview">
             <header className="sample-proof-summary">
               <div>
-                <span className="sample-proof-label">Plain-English summary</span>
+                <span className="sample-proof-label">Repository purpose</span>
                 <span className="brief-status">{sample.confidence} confidence</span>
               </div>
               <p>{sample.summary}</p>
@@ -214,7 +208,7 @@ export function HomepageSampleProof({
               </article>
 
               <article>
-                <span className="sample-proof-label">02 · Detected connection to inspect</span>
+                <span className="sample-proof-label">02 · Connection to inspect</span>
                 <p>{sample.architecture.explanation}</p>
                 {sample.architecture.evidence && (
                   <EvidenceTag
@@ -228,15 +222,15 @@ export function HomepageSampleProof({
           </div>
         ) : (
           <p className="sample-report-copy">
-            The bundled report does not contain enough evidence for this repository brief preview.
-            Open the full report to inspect the available signals and confidence gaps.
+            This sample lacks enough evidence for a preview. Open the report to see its confidence
+            gaps.
           </p>
         )
       ) : (
         <>
           <p className="sample-report-copy">
-            Explore the bundled read-only repository brief. PDF and PNG preview exports work here;
-            Markdown requires a saved analysis.
+            Explore the read-only sample. PDF and PNG previews work here; Markdown requires a saved
+            analysis.
           </p>
           <div className="sample-report-shell">
             <ReportTabs report={sampleReport} variant="preview" />
@@ -253,9 +247,7 @@ export function HomepageTrustAndFaq() {
       <div className="page-container faq-layout">
         <header className="faq-intro">
           <p className="section-kicker">Trust and privacy</p>
-          <h2 id="homepage-trust-heading">
-            Know what RepoAtlas reads, stores, and cannot conclude.
-          </h2>
+          <h2 id="homepage-trust-heading">What RepoAtlas reads—and what it cannot know.</h2>
           <p>{reportCapabilityCopy.homepageStorageNote}</p>
           <ul className="trust-boundary-list">
             {homepageTrustBoundaries.map((item) => <li key={item}>{item}</li>)}

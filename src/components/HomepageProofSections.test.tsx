@@ -177,7 +177,7 @@ describe("HomepageSampleProof", () => {
     expect(screen.queryByTestId("homepage-sample-preview")).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        /does not contain enough evidence for this repository brief preview/
+        /This sample lacks enough evidence for a preview/
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Open sample report/ })).toBeEnabled();
@@ -198,7 +198,7 @@ describe("HomepageSampleProof", () => {
     expect(screen.queryByRole("button", { name: /Open sample report/ })).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "Explore the bundled read-only repository brief. PDF and PNG preview exports work here; Markdown requires a saved analysis."
+        "Explore the read-only sample. PDF and PNG previews work here; Markdown requires a saved analysis."
       )
     ).toBeInTheDocument();
     expect(screen.getByTestId("report-tabs")).toHaveTextContent(
