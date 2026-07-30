@@ -54,7 +54,7 @@ export function HomepageHero({
     <section id="top" className="hero page-container">
       <div className="hero-copy">
         <p className="eyebrow">For interviews, onboarding, debugging, and design discussions</p>
-        <h1>Understand an unfamiliar repository—fast.</h1>
+        <h1>Understand unfamiliar repositories fast.</h1>
         <p className="hero-description">
           Paste a public GitHub URL or upload a ZIP. RepoAtlas reads TypeScript/JavaScript, Python,
           or Java files without running code. Get a source-linked brief of purpose, key files,
@@ -247,7 +247,7 @@ export function HomepageTrustAndFaq() {
       <div className="page-container faq-layout">
         <header className="faq-intro">
           <p className="section-kicker">Trust and privacy</p>
-          <h2 id="homepage-trust-heading">What RepoAtlas reads—and what it cannot know.</h2>
+          <h2 id="homepage-trust-heading">What RepoAtlas reads and what it cannot know.</h2>
           <p>{reportCapabilityCopy.homepageStorageNote}</p>
           <ul className="trust-boundary-list">
             {homepageTrustBoundaries.map((item) => <li key={item}>{item}</li>)}
