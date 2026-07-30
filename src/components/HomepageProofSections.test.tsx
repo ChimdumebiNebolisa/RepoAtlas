@@ -47,10 +47,10 @@ describe("HomepageHero", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Understand an unfamiliar repository before you need to explain or change it.",
+        name: "Understand an unfamiliar repository—fast.",
       })
     ).toBeInTheDocument();
-    expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
+    expect(screen.getByTestId("hero-output-card")).not.toHaveTextContent(
       "prioritized reading path"
     );
     expect(

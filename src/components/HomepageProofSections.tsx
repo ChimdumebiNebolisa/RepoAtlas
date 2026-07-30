@@ -54,12 +54,11 @@ export function HomepageHero({
     <section id="top" className="hero page-container">
       <div className="hero-copy">
         <p className="eyebrow">For interviews, onboarding, debugging, and design discussions</p>
-        <h1>Understand an unfamiliar repository before you need to explain or change it.</h1>
+        <h1>Understand an unfamiliar repository—fast.</h1>
         <p className="hero-description">
-          Paste a public GitHub URL or upload a ZIP for a TypeScript/JavaScript, Python, or Java
-          repository. RepoAtlas reads the files without running the code and returns a source-linked
-          brief: what the repository appears to do, where the important code lives, how supported
-          parts and dependencies connect, and what to inspect next.
+          Paste a public GitHub URL or upload a ZIP. RepoAtlas reads TypeScript/JavaScript, Python,
+          or Java files without running code. Get a source-linked brief of purpose, key files,
+          connections, and next steps.
         </p>
         <div className="hero-actions">
           <button className="btn btn-primary" type="button" onClick={onGenerateSample}>
@@ -70,28 +69,22 @@ export function HomepageHero({
           </a>
         </div>
         <p className="hero-microcopy">
-          Deterministic static analysis, not a generic AI summary. Repository code is read as text,
-          never run, and never sent to an AI service.
+          Static analysis only. No code execution. No AI calls.
         </p>
       </div>
 
       <div className="hero-visual" aria-label="Example source-linked repository brief">
         <div className="sample-hero-card" data-testid="hero-output-card">
           <div className="sample-hero-header">
-            <span>Example repository brief</span>
+            <span>Repository brief</span>
             <span className="brief-status">source-linked</span>
           </div>
-          <div className="sample-hero-repo">
-            <span>Start with</span>
-            <code>prioritized reading path</code>
-          </div>
           <blockquote>
-            See what the repository appears to do, how supported parts and dependencies connect,
-            and what to inspect next.
+            Purpose, key files, connections, and next steps.
           </blockquote>
           <div className="sample-hero-evidence">
             <span>Evidence</span>
-            <EvidenceTag id="key claims cite files" path="confidence shown" />
+            <EvidenceTag id="claims cite files" path="confidence shown" />
           </div>
         </div>
       </div>
