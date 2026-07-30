@@ -31,7 +31,7 @@ test("interview-preparation page leads to the measurable analysis start", async 
 
   await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
   await expect(
-    page.getByRole("heading", { name: "Analyze a repository when you’re ready." })
+    page.getByRole("heading", { name: "Analyze your repository." })
   ).toBeVisible();
 });
 
@@ -367,10 +367,10 @@ test("homepage connects both interview guides without replacing the sample actio
   await page.goto("/");
 
   await expect(
-    page.getByRole("button", { name: /Run bundled sample/ })
+    page.getByRole("button", { name: /Generate sample brief/ })
   ).toBeVisible();
   const guideNav = page.getByRole("navigation", {
-    name: "Prepare for the walkthrough question.",
+    name: "Prepare to explain a repository.",
   });
   await expect(
     guideNav.getByRole("link", { name: /Explain an unfamiliar repository/ })

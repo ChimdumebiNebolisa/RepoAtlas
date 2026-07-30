@@ -13,24 +13,23 @@ import {
 test.describe("Candidate Brief smoke", () => {
   test("homepage hero leads with a complete bundled sample", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Repository Walkthroughs")).toBeVisible();
     const hero = page.locator(".hero");
 
     await expect(
       hero.getByRole("heading", {
-        name: "Turn an unfamiliar repository into an evidence-backed walkthrough.",
+        name: "Understand unfamiliar repositories fast.",
       })
     ).toBeVisible();
     await expect(
-      hero.getByText(/public TypeScript\/JavaScript, Python, or Java repository/)
+      hero.getByText(/public GitHub repository or ZIP/)
     ).toBeVisible();
     await expect(hero.locator(".btn-primary")).toHaveCount(1);
-    await expect(hero.getByRole("link", { name: /Analyze a repository/i })).toHaveAttribute(
+    await expect(hero.getByRole("link", { name: /Analyze your repository/i })).toHaveAttribute(
       "href",
       "#analyze"
     );
 
-    await hero.getByRole("button", { name: /Run bundled sample/i }).click();
+    await hero.getByRole("button", { name: /Generate sample brief/i }).click();
     await expectCompletedReportInViewport(page);
   });
 
@@ -39,20 +38,18 @@ test.describe("Candidate Brief smoke", () => {
     await page.goto("/");
 
     const outcomes = page.getByTestId("walkthrough-outcomes");
-    await expect(outcomes.getByRole("heading", { name: "Start in the right place" })).toBeVisible();
-    await expect(outcomes.getByRole("heading", { name: "Explain the system" })).toBeVisible();
-    await expect(
-      outcomes.getByRole("heading", { name: "Prepare for follow-up questions" })
-    ).toBeVisible();
-    await expect(outcomes.getByRole("heading", { name: "Support what you say" })).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Repository purpose" })).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Important folders and files" })).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Architecture and dependencies" })).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Evidence and next questions" })).toBeVisible();
     await expect(outcomes).not.toContainText("PDF");
 
     const workflows = page.getByTestId("supported-workflows");
     for (const workflow of [
-      "Interview walkthrough",
-      "New-codebase orientation",
-      "Bug investigation",
-      "Planned change or PR discussion",
+      "Preparing for an interview",
+      "Joining an unfamiliar codebase",
+      "Investigating a bug",
+      "Preparing for a code or design discussion",
     ]) {
       await expect(workflows.getByRole("heading", { name: workflow })).toBeVisible();
     }
@@ -69,13 +66,13 @@ test.describe("Candidate Brief smoke", () => {
 
     await expect(page.locator("main > section")).toHaveCount(6);
     await expect(
-      page.getByRole("heading", { name: "See what an evidence-backed walkthrough looks like." })
+      page.getByRole("heading", { name: "See a complete sample brief." })
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Analyze a repository when you’re ready." })
+      page.getByRole("heading", { name: "Analyze your repository." })
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Explicit boundaries before you rely on the brief." })
+      page.getByRole("heading", { name: "What RepoAtlas reads and what it cannot know." })
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Works across project types." })
