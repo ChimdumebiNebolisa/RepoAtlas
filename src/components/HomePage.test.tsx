@@ -14,6 +14,7 @@ vi.mock("@/components/HomepageProofSections", () => ({
     onGenerateSample: () => void;
   }) => <button onClick={onGenerateSample}>Generate from hero</button>,
   HomepageWalkthroughOutcomes: () => <div>Walkthrough outcomes</div>,
+  HomepageSupportedWorkflows: () => <div>Supported workflows</div>,
   HomepageSampleProof: ({
     showSampleReport,
     onOpenSample,

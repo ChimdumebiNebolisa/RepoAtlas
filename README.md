@@ -34,6 +34,7 @@ When storage is available, the server saves the report and returns a report ID. 
 - [Fixtures and evaluation](#fixtures-and-evaluation)
 - [Limits and Behavior](#limits-and-behavior)
 - [Security Notes](#security-notes)
+- [Documentation Map](#documentation-map)
 - [Libraries and Licenses](#libraries-and-licenses)
 - [License](#license)
 
@@ -108,10 +109,6 @@ Open `http://localhost:3000`, upload a zip or paste a public GitHub URL, and cli
 ![RepoAtlas landing page](docs/images/landing.png)
 
 ![Candidate Brief with reading path and talking points](docs/images/candidate-brief.png)
-
-![Reading path section](docs/images/reading-path.png)
-
-![First PR plan section](docs/images/first-pr-plan.png)
 
 ### Demo (60s)
 
@@ -203,8 +200,9 @@ Downloadable Markdown for saved reports only.
 
 ### Cron cleanup
 
-- `GET /api/cron/cleanup` — health/instructions when configured
-- `POST /api/cron/cleanup` — TTL sweeps; production fails closed without `CRON_SECRET`
+- `GET /api/cron/cleanup` — scheduled TTL sweep (daily at 03:00 UTC on Vercel)
+- `POST /api/cron/cleanup` — manual/operator TTL sweep
+- Both methods require `Authorization: Bearer <CRON_SECRET>` in production and fail closed when the secret is missing
 
 ---
 
@@ -215,7 +213,7 @@ See [`.env.example`](.env.example) and [SECURITY.md](SECURITY.md). Highlights:
 - Vercel: private Blob store (OIDC) for saved reports; without Blob, analysis still completes inline
 - Local: `REPORTS_DIR` defaults to `<project-root>/reports`
 - Retention: `REPORT_TTL_DAYS`, `REPORT_MAX_COUNT`; cron auth via `CRON_SECRET`
-- Rate limiting: process-local `ANALYZE_RATE_LIMIT_PER_MIN`, `MAX_CONCURRENT_ANALYSES` (not distributed across serverless isolates)
+- Rate limiting: `ANALYZE_RATE_LIMIT_PER_MIN`, `MAX_CONCURRENT_ANALYSES`; optional Upstash REST credentials enable a shared cross-instance request limit
 
 RepoAtlas analyzes only public GitHub repositories and never attaches a server-owned GitHub token to user-supplied requests.
 
@@ -300,11 +298,30 @@ See [SECURITY.md](SECURITY.md). Summary:
 
 **What we will not claim.** No vulnerabilities, production readiness, business purpose, or code correctness. Danger Zones are structural signals (size, coupling, complexity, test proximity, optional churn) — not bug counts or calibrated absolute risk.
 
+RepoAtlas also does not reliably infer dynamic runtime behavior or support private
+repository access.
+
+---
+
+## Documentation Map
+
+| Document | Canonical responsibility |
+| --- | --- |
+| [README.md](README.md) | Product overview, supported capabilities, quick start, user-facing limits, architecture summary, and developer entry points |
+| [CHANGELOG.md](CHANGELOG.md) | Shipped release history and customer-visible changes |
+| [docs/roadmap.md](docs/roadmap.md) | Active future work, priorities, non-goals, and work-selection guidance |
+| [docs/spec.md](docs/spec.md) | Current product, API, schema, analyzer, storage, and behavioral contract |
+| [docs/adr/](docs/adr/) | Durable architecture and security decisions with rationale |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting, dependency-audit policy, and security guarantees |
+| [AGENTS.md](AGENTS.md) and [docs/guardrails.md](docs/guardrails.md) | Contributor workflow, verification caveats, and non-negotiable implementation rules |
+| [docs/semantic-graph.md](docs/semantic-graph.md) | TypeScript/JavaScript semantic graph guarantees and limitations |
+| [docs/examples/repoatlas-candidate-brief.md](docs/examples/repoatlas-candidate-brief.md) | Generated bundled sample export; not a manually maintained product contract |
+
 ---
 
 ## Libraries and Licenses
 
-Direct runtime dependencies: `next`, `react`, `react-dom`, `elkjs`, `react-zoom-pan-pinch`, `html2canvas`, `jspdf`, `mermaid`, `adm-zip`, `@vercel/blob`. Dev tooling: TypeScript, Vitest, Playwright, ESLint, Tailwind/PostCSS. See `package.json` for versions and each package’s license.
+Direct runtime dependencies: `next`, `react`, `react-dom`, `elkjs`, `react-zoom-pan-pinch`, `html2canvas`, `jspdf`, `adm-zip`, `@vercel/blob`. Dev tooling: TypeScript, Vitest, Playwright, ESLint, Tailwind/PostCSS, and `marked` for Markdown export safety tests. See `package.json` for versions and each package’s license.
 
 ---
 

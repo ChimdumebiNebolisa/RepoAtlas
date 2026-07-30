@@ -4,6 +4,19 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Changed
+
+- Reframed the homepage around an outcome-first repository walkthrough, four
+  supported workflows, one source-derived sample proof, and explicit analysis
+  boundaries.
+- Consolidated documentation ownership so the roadmap contains future work
+  only and major documents have one stated responsibility.
+
+### Removed
+
+- Removed the obsolete daily progress document after preserving shipped work
+  in this changelog and future work in the roadmap.
+
 ## [2026-07-29] - Export recovery and focused boundaries
 
 ### Customer-visible behavior

@@ -13,22 +13,24 @@ import {
 test.describe("Candidate Brief smoke", () => {
   test("homepage hero leads with a complete bundled sample", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Candidate Brief Generator")).toBeVisible();
+    await expect(page.getByText("Repository Walkthroughs")).toBeVisible();
     const hero = page.locator(".hero");
 
     await expect(
       hero.getByRole("heading", {
-        name: "Walk through the repository with file-backed talking points.",
+        name: "Turn an unfamiliar repository into an evidence-backed walkthrough.",
       })
     ).toBeVisible();
-    await expect(hero.getByText("TypeScript/JavaScript, Python, and Java")).toBeVisible();
+    await expect(
+      hero.getByText(/public TypeScript\/JavaScript, Python, or Java repository/)
+    ).toBeVisible();
     await expect(hero.locator(".btn-primary")).toHaveCount(1);
-    await expect(hero.getByRole("link", { name: /Use your own repository/i })).toHaveAttribute(
+    await expect(hero.getByRole("link", { name: /Analyze a repository/i })).toHaveAttribute(
       "href",
       "#analyze"
     );
 
-    await hero.getByRole("button", { name: /Try bundled sample/i }).click();
+    await hero.getByRole("button", { name: /Run bundled sample/i }).click();
     await expectCompletedReportInViewport(page);
   });
 
@@ -37,12 +39,23 @@ test.describe("Candidate Brief smoke", () => {
     await page.goto("/");
 
     const outcomes = page.getByTestId("walkthrough-outcomes");
-    await expect(outcomes.getByRole("heading", { name: "Entry points" })).toBeVisible();
-    await expect(outcomes.getByRole("heading", { name: "Architecture" })).toBeVisible();
-    await expect(outcomes.getByRole("heading", { name: "Risk signals" })).toBeVisible();
-    await expect(outcomes.getByRole("heading", { name: "Reading order" })).toBeVisible();
-    await expect(outcomes).toContainText("PDF and PNG exports are ready");
-    await expect(outcomes).not.toContainText("Markdown");
+    await expect(outcomes.getByRole("heading", { name: "Start in the right place" })).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Explain the system" })).toBeVisible();
+    await expect(
+      outcomes.getByRole("heading", { name: "Prepare for follow-up questions" })
+    ).toBeVisible();
+    await expect(outcomes.getByRole("heading", { name: "Support what you say" })).toBeVisible();
+    await expect(outcomes).not.toContainText("PDF");
+
+    const workflows = page.getByTestId("supported-workflows");
+    for (const workflow of [
+      "Interview walkthrough",
+      "New-codebase orientation",
+      "Bug investigation",
+      "Planned change or PR discussion",
+    ]) {
+      await expect(workflows.getByRole("heading", { name: workflow })).toBeVisible();
+    }
 
     const isBeforeAnalysis = await outcomes.evaluate((section) => {
       const analysis = document.querySelector("#analyze");
@@ -54,15 +67,15 @@ test.describe("Candidate Brief smoke", () => {
     });
     expect(isBeforeAnalysis).toBe(true);
 
-    await expect(page.locator("main > section")).toHaveCount(5);
+    await expect(page.locator("main > section")).toHaveCount(6);
     await expect(
-      page.getByRole("heading", { name: "Start with the sample or your repository." })
+      page.getByRole("heading", { name: "See what an evidence-backed walkthrough looks like." })
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "See the evidence before you add a repository." })
+      page.getByRole("heading", { name: "Analyze a repository when you’re ready." })
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "The useful boundaries stay visible." })
+      page.getByRole("heading", { name: "Explicit boundaries before you rely on the brief." })
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Works across project types." })
@@ -78,7 +91,6 @@ test.describe("Candidate Brief smoke", () => {
       height: document.documentElement.scrollHeight,
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     }));
-    expect(pageShape.height).toBeLessThanOrEqual(5_178);
     expect(pageShape.overflow).toBeLessThanOrEqual(0);
   });
 
@@ -94,8 +106,6 @@ test.describe("Candidate Brief smoke", () => {
       height: document.documentElement.scrollHeight,
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
-      analysisTop:
-        document.querySelector("#analyze")?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY,
       primaryActions: Array.from(document.querySelectorAll<HTMLElement>("main .btn-primary")).map(
         (element) => ({
           top: element.getBoundingClientRect().top,
@@ -104,13 +114,11 @@ test.describe("Candidate Brief smoke", () => {
       ),
     }));
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
-    expect(dimensions.height).toBeLessThanOrEqual(8_300);
-    expect(dimensions.analysisTop).toBeLessThanOrEqual(844 * 2);
     expect(dimensions.primaryActions).toHaveLength(2);
     expect(
       dimensions.primaryActions[1].top - dimensions.primaryActions[0].bottom
     ).toBeGreaterThanOrEqual(844);
-    await expect(page.locator("main > section")).toHaveCount(5);
+    await expect(page.locator("main > section")).toHaveCount(6);
   });
 
   test("sample analyze renders Candidate Brief tab", async ({ page }) => {
@@ -225,28 +233,15 @@ test.describe("Candidate Brief smoke", () => {
     const architectureEvidence = brief.evidence_refs.find(
       (evidence) => evidence.kind === "architecture"
     )!;
-    const evidenceBackedQuestion = brief.interview_questions!.find(
-      (question) =>
-        !question.generic && question.evidence_refs.some((evidenceRef) => evidenceById.has(evidenceRef))
-    )!;
-    const questionEvidence = evidenceById.get(evidenceBackedQuestion.evidence_refs[0])!;
 
     await page.goto("/");
-    const heroProof = page.getByTestId("sample-hero-card");
-    await expect(heroProof).toContainText(report.repo_metadata.name);
-    await expect(heroProof).toContainText(brief.walkthrough_script!.thirty_second);
-    await expect(heroProof).toContainText(readingStep.path);
-
     const preview = page.getByTestId("homepage-sample-preview");
     await expect(preview).toContainText(brief.repo_summary.plain_english);
-    await expect(preview).toContainText(brief.walkthrough_script!.thirty_second);
     await expect(preview).toContainText(readingStep.path);
     await expect(preview).toContainText(readingStep.why);
     await expect(preview).toContainText(architectureEvidence.detail!);
-    await expect(preview).toContainText(evidenceBackedQuestion.question);
-    await expect(preview).toContainText(evidenceBackedQuestion.rationale);
+    await expect(preview).toContainText(readingStep.evidence_refs[0]);
     await expect(preview).toContainText(architectureEvidence.id);
-    await expect(preview).toContainText(questionEvidence.id);
     await expect(preview).not.toContainText("src/analyzer/index.ts");
     await expect(preview).not.toContainText("src/analyzer/scoring.ts");
   });

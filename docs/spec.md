@@ -1,7 +1,7 @@
 # RepoAtlas Engineering Specification
 
-**Version:** 1.5
-**Status:** Living spec (validated against `main` at `5c91669` on 2026-07-24)
+**Version:** 1.6
+**Status:** Living spec (validated against `main` at `e9898b6` on 2026-07-29)
 **Target:** Local dev first; optional Vercel Blob storage  
 
 ---
@@ -16,7 +16,7 @@ Engineers preparing to discuss a repository need to find entrypoints, understand
 
 **Three supported starts** — the **bundled sample**, a **public GitHub repository URL**, or a **zip upload** — produce a **Candidate Brief** + **Repo Analysis** with:
 
-- **Candidate Brief** – Interview-facing output: 30-second and 2-minute walkthroughs, evidence-backed interview answers, reading path, first PR plan, resume bullets, and evidence index (deterministic, no AI).
+- **Candidate Brief** – Primary evidence-backed walkthrough output: repository summary, prioritized reading path, supported architecture claims, structural hotspots, detected commands, timed explanations, and evidence index (deterministic, no AI).
 - **Folder Map** – Directory tree of the repo.
 - **Architecture Map** – Interactive dependency graph in the runtime UI (ELK layout + pan/zoom).
 - **Start Here** – Prioritized reading list with explanations.
@@ -40,7 +40,7 @@ Engineers preparing to discuss a repository need to find entrypoints, understand
 
 ### What RepoAtlas Will Not Claim
 
-RepoAtlas does **not** assert vulnerabilities, production readiness, business purpose beyond extracted README/metadata, bug counts, or code correctness. Danger zones reflect structural risk signals (size, coupling, complexity, test proximity, optional churn) — not defect counts.
+RepoAtlas does **not** assert confirmed bugs or vulnerabilities, production readiness, business purpose beyond extracted README/metadata, code correctness, or reliable dynamic runtime behavior. Danger zones reflect structural risk signals (size, coupling, complexity, test proximity, optional churn) — not defect counts.
 
 ---
 
@@ -241,7 +241,7 @@ Rejected: non-HTTPS, non-`github.com` hosts, `tree`/`blob` subpaths, query strin
 - Delete temp dir on analysis completion (success **or** failure). `analyzeRepository()` wraps the whole run in `try/finally` and always invokes `workspace.cleanup()`, including when report persistence throws (regression test: `src/analyzer/cleanup.test.ts`).
 - Report files: filesystem and Vercel Blob storage support deletion and a TTL/max-count sweep. `sweepExpiredReports()` uses `analyzed_at` on the filesystem and blob upload timestamps for blob storage. Retention is `REPORT_TTL_DAYS` (default 7 with Blob storage credentials, otherwise 30) and `REPORT_MAX_COUNT` (default 100).
 - Share tokens: 7-day TTL; `sweepExpiredShareTokens()` lists and deletes expired records on **both** filesystem and Blob (`src/lib/sharing.ts`).
-- Cron: `POST /api/cron/cleanup` runs report + share sweeps. On Vercel (`VERCEL=1`), the route **fails closed** with `503 MISCONFIGURED` when `CRON_SECRET` is unset; when set, it requires `Authorization: Bearer <CRON_SECRET>`.
+- Cron: `GET` and `POST /api/cron/cleanup` run report + share sweeps. Vercel schedules `GET` daily at 03:00 UTC. In production (`NODE_ENV=production` or `VERCEL=1`), both methods **fail closed** with `503 MISCONFIGURED` when `CRON_SECRET` is unset; when set, they require `Authorization: Bearer <CRON_SECRET>`.
 - Production without usable Blob credentials returns reports inline. Saved report retention and stored-token cleanup cannot operate until both Blob storage and the protected cleanup schedule are connected.
 
 ### Centralized Limits (`src/lib/ingestLimits.ts`)
@@ -591,7 +591,7 @@ See `src/types/report.ts` for full `CandidateBrief`, `EvidenceRef`, and deep-ana
 | `src/app/api/reports/[id]/share/route.ts` | `POST` | `/api/reports/:id/share` | Creates 7-day read-only share token |
 | `src/app/api/share/[token]/route.ts` | `GET` | `/api/share/:token` | Resolves share token to report JSON |
 | `src/app/api/reports/[id]/export/md/route.ts` | `GET` | `/api/reports/:id/export/md` | Returns `text/markdown` with attachment headers |
-| `src/app/api/cron/cleanup/route.ts` | `GET`, `POST` | `/api/cron/cleanup` | `GET` health (auth when secret set); `POST` sweeps expired reports + share tokens. **Fails closed in production** without `CRON_SECRET`. |
+| `src/app/api/cron/cleanup/route.ts` | `GET`, `POST` | `/api/cron/cleanup` | Both methods sweep expired reports + share tokens; Vercel schedules `GET` daily. **Fails closed in production** without `CRON_SECRET`. |
 
 Maintenance rule: when route handlers are added/removed/renamed, update this table in the same PR by checking the route files directly.
 
@@ -663,24 +663,27 @@ There is **no public DELETE**. Report ids are read-only capabilities; retention 
 
 ### Retry Behavior
 
-- Client: Retry on 5xx with exponential backoff (e.g. 1s, 2s, 4s); max 3 retries.
+- Client: No automatic retry. A failed request returns to an actionable input state.
 - Server: No automatic retry for clone; single attempt.
 
 ---
 
-## 9. Frontend Implementation Plan
+## 9. Frontend Contract
 
 ### Pages and Components
 
 | Component | Responsibility |
 |-----------|----------------|
-| `Page` | Root layout; input form + report tabs container |
-| `InputForm` | Zip file input, submit; calls POST /api/analyze with multipart |
+| `HomePage` | Coordinates homepage sections, analysis state, sample actions, and completed report focus |
+| `HomepageProofSections` | Outcome-first hero, Candidate Brief outcomes, supported workflows, bundled proof, and trust/FAQ content |
+| `InputForm` | Bundled sample, public GitHub URL, and ZIP submission; calls `POST /api/analyze` |
+| `AnalysisIntentSelector` | Selects the supported analysis focus without creating separate products |
+| `RepositoryInputControls` | Accessible GitHub/ZIP input tabs and client validation |
 | `ReportTabs` | Tab bar + tab content; receives `Report` |
 | `CandidateBriefPanel` | Candidate Brief sections with evidence navigation |
 | `DeepAnalysisSection` | Overview panels for project profile, tests, boundaries, commits |
 | `FolderMapTree` | Recursive tree; expand/collapse |
-| `ArchitectureGraph` | Interactive ELK graph rendering; collapse to folder if nodes > 50 |
+| `ElkArchitectureGraph` | Interactive ELK graph rendering; collapse to folder if nodes > 50 |
 | `StartHereTable` | Sortable table; path, score, explanation |
 | `DangerZonesTable` | Sortable table; path, score, breakdown |
 | `RunContributeSection` | Lists run commands + contribute signals |
@@ -736,14 +739,14 @@ else {
 | Zip bombs / oversized archives | Deployment-aware compressed caps ([adr/002-zip-limits.md](./adr/002-zip-limits.md)), uncompressed caps, entry-count and per-file caps, streamed GitHub download with abort-on-cap. |
 | Fetch hangs | GitHub API and archive requests have `AbortController` timeouts. |
 | Rate limiting | Process-local concurrency gate (`MAX_CONCURRENT_ANALYSES`) plus a 30-per-minute sliding window by default. Configured Upstash REST credentials select the distributed limiter once per process; missing or invalid shared-store results use an explicit best-effort path. |
-| Cron misconfiguration | Production cleanup returns `503` when `CRON_SECRET` unset; mutation requires bearer secret when configured. |
+| Cron misconfiguration | Production cleanup returns `503` when `CRON_SECRET` is unset; both scheduled `GET` and manual `POST` require the bearer secret when configured. |
 | Share token cleanup on Blob | `listShareTokens()` and `deleteShareRecord()` use Vercel Blob list/del with `shares/` prefix. |
 
 **Security assumptions & remaining limitations:**
 
 - Only **public** GitHub repositories are supported. There is no user-scoped GitHub auth; private-repo support would require a deliberately designed OAuth flow.
 - Without valid Upstash REST configuration, the analysis rate limiter remains per-instance and best-effort. Durable cross-instance quotas require the configured shared-store path or an external WAF/API-gateway rule.
-- Blob-store retention relies on the cron sweep (`POST /api/cron/cleanup`); schedule it (e.g. Vercel Cron) in production and set `CRON_SECRET`.
+- Blob-store retention relies on the cron sweep (`GET /api/cron/cleanup` for Vercel Cron, or authenticated `POST` for an operator scheduler); set `CRON_SECRET` in production.
 
 **Acceptance criteria**: Zip with `../../etc/passwd` does not write outside extract dir; analyzer never executes repo code; a private repo cannot be read via server credentials; JSON `zipRef` cannot analyze an arbitrary server path; corrupt stored report JSON is not served (see `src/lib/reportSchema.test.ts`, `src/app/api/reports/reports-api.integration.test.ts`).
 
@@ -760,7 +763,7 @@ else {
 
 ---
 
-## 12. Testing Plan
+## 12. Verification Contract
 
 ### Unit Tests
 
@@ -804,19 +807,7 @@ Documentation-discovery edge cases (whitespace-only duplicates, similar-but-diff
 
 ---
 
-## 13. Milestones
-
-| Milestone | Outputs | Definition of Done |
-|-----------|---------|--------------------|
-| **M1** | Repo skeleton, ingest, basic indexing | Clone works; zip extract works; folder_map and file metadata in report |
-| **M2** | TS/JS pack, architecture graph, ELK UI renderer | Import graph built; interactive ELK graph renders in UI |
-| **M3** | Start Here, Danger Zones, UI tabs | All tabs render; scoring produces ranked lists |
-| **M4** | Markdown export (including Mermaid artifact), Python/Java packs | Export downloads .md; Python/Java produce basic graphs |
-| **M5** | Tests, fixtures, polish, demo | Unit + integration tests pass; demo script runs; acceptance criteria met |
-
----
-
-## 14. Examples
+## 13. Examples
 
 ### Example Markdown Mermaid Graph Artifact
 
@@ -901,22 +892,13 @@ flowchart LR
 }
 ```
 
-### Demo Script (2 Minutes)
-
-1. **0:00–0:15** – Open RepoAtlas; upload a zip of a repo (e.g. download from GitHub Code → Download ZIP, then select the file).
-2. **0:15–0:45** – Click "Analyze Repository"; show loading state; wait for completion.
-3. **0:45–1:30** – Walk through tabs: Overview (metadata), Folder Map (expand tree), Architecture (interactive ELK graph), Start Here (table), Danger Zones (table), Run & Contribute.
-4. **1:30–2:00** – Export PDF or PNG. If the report was saved, export Markdown; otherwise show the storage-dependent Markdown message and create an encrypted private link.
-
----
-
-## 15. Implementation Checklist
+## 14. Change Requirements
 
 MVP items are shipped. For current status see [CHANGELOG.md](../CHANGELOG.md); for planned work see [roadmap.md](./roadmap.md). When changing enforced behavior, update this spec and add an ADR under `docs/adr/` when the decision is security- or policy-sensitive.
 
 ---
 
-## 16. Non-Goals (Explicit)
+## 15. Non-Goals (Explicit)
 
 - Account-based or database-backed report ownership
 - Persistent report storage beyond local JSON files or optional private Vercel Blob JSON

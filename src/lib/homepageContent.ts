@@ -13,14 +13,14 @@ export type HomepageFaqItem = {
 };
 
 export const homepageMetadata = {
-  title: "Repository Walkthroughs for Code Interviews | RepoAtlas",
-  description: `Turn a TypeScript, JavaScript, Python, or Java repository into an evidence-linked Candidate Brief with ${dependableExportFormats} exports, without running code.`,
+  title: "Evidence-backed Repository Walkthroughs | RepoAtlas",
+  description: `Turn a public TypeScript, JavaScript, Python, or Java repository into an evidence-backed walkthrough with ${dependableExportFormats} exports, without running code.`,
 } as const;
 
 export const siteIdentity = {
   name: "RepoAtlas",
   description:
-    "Generate evidence-backed Candidate Briefs and repository analysis from ZIP uploads. No AI required.",
+    "Generate evidence-backed repository walkthroughs from public GitHub repositories or ZIP uploads.",
   url: "https://repo-atlas-phi.vercel.app/",
 } as const;
 
@@ -33,7 +33,7 @@ export const homepageFaqItems: readonly HomepageFaqItem[] = [
   {
     question: "Which repository types are supported?",
     answer:
-      "RepoAtlas performs deeper static analysis for TypeScript and JavaScript, Python, and Java repositories. It also maps mixed-language monorepos, docs-only repositories, and repositories without a README, with confidence gaps shown when evidence is limited.",
+      "RepoAtlas supports public TypeScript and JavaScript, Python, and Java repositories. TypeScript and JavaScript receive stronger AST-backed analysis; Python and Java use more limited structured analysis. Mixed-language, docs-only, and no-README repositories still expose confidence gaps when evidence is limited.",
   },
   {
     question: "How large can a ZIP upload be?",
@@ -70,15 +70,34 @@ export const homepageFaqItems: readonly HomepageFaqItem[] = [
   {
     question: "What can RepoAtlas not infer from repository files?",
     answer:
-      "RepoAtlas cannot prove your authorship, why a maintainer chose an approach, which alternatives they rejected, runtime behavior, or production outcomes. You supply those details from direct experience and verify them outside the repository structure.",
+      "RepoAtlas cannot confirm bugs or vulnerabilities, prove correctness, infer business purpose, assess production readiness, or reliably infer dynamic runtime behavior. It also cannot prove authorship or why a maintainer chose an approach. Verify those claims outside the repository structure.",
   },
 ];
 
 export const homepageTrustBoundaries = [
   "Reads files as text. It does not execute repository code or call AI.",
-  "Deeper analysis covers TypeScript/JavaScript, Python, and Java.",
+  "TypeScript/JavaScript receives stronger AST-backed analysis; Python and Java use more limited structured analysis.",
   "Risk signals identify structural hotspots, not confirmed bugs or vulnerabilities.",
   "PDF and PNG remain available when saved report storage is unavailable.",
+] as const;
+
+export const homepageSupportedWorkflows = [
+  {
+    title: "Interview walkthrough",
+    description: "Explain an unfamiliar project clearly with evidence ready for follow-up questions.",
+  },
+  {
+    title: "New-codebase orientation",
+    description: "Find the reading path before changing code.",
+  },
+  {
+    title: "Bug investigation",
+    description: "Identify relevant structural areas before deeper debugging.",
+  },
+  {
+    title: "Planned change or PR discussion",
+    description: "Understand affected boundaries before proposing work.",
+  },
 ] as const;
 
 export const homepageInterviewGuides = [

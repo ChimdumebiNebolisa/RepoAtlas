@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   HomepageHero,
   HomepageSampleProof,
+  HomepageSupportedWorkflows,
   HomepageTrustAndFaq,
   HomepageWalkthroughOutcomes,
 } from "@/components/HomepageProofSections";
@@ -111,30 +112,39 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <span className="brand-mark" aria-hidden="true">R</span>
           <span>
             <strong>RepoAtlas</strong>
-            <small>Candidate Brief Generator</small>
+            <small>Repository Walkthroughs</small>
           </span>
         </a>
         <div className="header-badges" aria-label="Product capabilities">
-          <Badge>No AI required</Badge>
+          <Badge>Deterministic static analysis</Badge>
           <Badge>TypeScript/JS + Python + Java</Badge>
           <Badge>{reportCapabilityCopy.headerBadge}</Badge>
         </div>
       </header>
 
-      <HomepageHero onGenerateSample={generateSampleBrief} sampleReport={sampleReport} />
+      <HomepageHero onGenerateSample={generateSampleBrief} />
 
       <HomepageWalkthroughOutcomes />
+
+      <HomepageSupportedWorkflows />
+
+      <HomepageSampleProof
+        sampleReport={sampleReport}
+        showSampleReport={showSampleReport}
+        onOpenSample={openSampleReport}
+        sectionRef={sampleSectionRef}
+      />
 
       <section
         id="analyze"
         className={`action-section action-section-single page-container ${report ? "action-section-complete" : ""}`}
       >
         <article className="analyze-card">
-          <p className="section-kicker">Your first Candidate Brief</p>
-          <h2>Start with the sample or your repository.</h2>
+          <p className="section-kicker">Use your repository</p>
+          <h2>Analyze a repository when you’re ready.</h2>
           <p>
-            Generate the bundled brief with one click. To analyze your own codebase, paste a
-            public GitHub URL or upload a permitted ZIP.
+            The bundled sample remains the easiest first action. When you are ready to analyze
+            your own codebase, paste a public GitHub URL or upload a permitted ZIP.
           </p>
           <InputForm
             ref={inputFormRef}
@@ -190,13 +200,6 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <ReportTabs report={report} reportId={reportId} />
         </section>
       )}
-
-      <HomepageSampleProof
-        sampleReport={sampleReport}
-        showSampleReport={showSampleReport}
-        onOpenSample={openSampleReport}
-        sectionRef={sampleSectionRef}
-      />
 
       <HomepageTrustAndFaq />
     </main>

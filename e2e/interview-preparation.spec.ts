@@ -8,7 +8,12 @@ test("interview-preparation page leads to the measurable analysis start", async 
     page.getByRole("heading", { name: "Prepare to explain your code, file by file." })
   ).toBeVisible();
   await expect(page.getByText("Walk me through this repository.")).toBeVisible();
-  for (const output of ["Entry points", "Architecture", "Risk signals", "Reading order"]) {
+  for (const output of [
+    "Start in the right place",
+    "Explain the system",
+    "Prepare for follow-up questions",
+    "Support what you say",
+  ]) {
     await expect(page.getByRole("heading", { name: output })).toBeVisible();
   }
   await expect(page.getByText(/PDF and PNG exports/)).toBeVisible();
@@ -26,7 +31,7 @@ test("interview-preparation page leads to the measurable analysis start", async 
 
   await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
   await expect(
-    page.getByRole("heading", { name: "Start with the sample or your repository." })
+    page.getByRole("heading", { name: "Analyze a repository when you’re ready." })
   ).toBeVisible();
 });
 
@@ -362,7 +367,7 @@ test("homepage connects both interview guides without replacing the sample actio
   await page.goto("/");
 
   await expect(
-    page.getByRole("button", { name: /Try bundled sample/ })
+    page.getByRole("button", { name: /Run bundled sample/ })
   ).toBeVisible();
   const guideNav = page.getByRole("navigation", {
     name: "Prepare for the walkthrough question.",

@@ -19,6 +19,7 @@ vi.mock("@/lib/productAnalytics", async (importOriginal) => {
 vi.mock("@/components/HomepageProofSections", () => ({
   HomepageHero: () => null,
   HomepageSampleProof: () => null,
+  HomepageSupportedWorkflows: () => null,
   HomepageTrustAndFaq: () => null,
   HomepageWalkthroughOutcomes: () => null,
 }));

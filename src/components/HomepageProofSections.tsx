@@ -3,6 +3,7 @@ import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
 import {
   homepageFaqItems,
   homepageInterviewGuides,
+  homepageSupportedWorkflows,
   homepageTrustBoundaries,
 } from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -46,63 +47,49 @@ function HomepageFaqAnswer({ answer, link }: Pick<HomepageFaqItem, "answer" | "l
 
 export function HomepageHero({
   onGenerateSample,
-  sampleReport,
 }: {
   onGenerateSample: () => void;
-  sampleReport: Report;
 }) {
-  const sample = buildHomepageSamplePreview(sampleReport);
-
   return (
     <section id="top" className="hero page-container">
       <div className="hero-copy">
-        <p className="eyebrow">For repository-centered interviews</p>
-        <h1>Walk through the repository with file-backed talking points.</h1>
+        <p className="eyebrow">For codebases you need to explain, not just skim</p>
+        <h1>Turn an unfamiliar repository into an evidence-backed walkthrough.</h1>
         <p className="hero-description">
-          RepoAtlas turns TypeScript/JavaScript, Python, and Java codebases into a Candidate
-          Brief that shows where to start, how the architecture fits together, what looks
-          risky, and which files support each talking point.
+          RepoAtlas analyzes a public TypeScript/JavaScript, Python, or Java repository and
+          shows where to begin, how the system fits together, which structural areas deserve
+          inspection, and the source files that support each conclusion.
         </p>
         <div className="hero-actions">
           <button className="btn btn-primary" type="button" onClick={onGenerateSample}>
-            Try bundled sample <Arrow />
+            Run bundled sample <Arrow />
           </button>
-          <a className="text-action" href="#analyze">Use your own repository <Arrow /></a>
+          <a className="text-action" href="#analyze">Analyze a repository <Arrow /></a>
         </div>
         <p className="hero-microcopy">
-          Bundled sample, no upload needed. Deterministic static analysis. No code execution or AI calls.
+          Static analysis only. No code execution. No AI calls.
         </p>
       </div>
 
-      <div className="hero-visual" aria-label="Real bundled Candidate Brief excerpt">
-        {sample ? (
-          <div className="sample-hero-card" data-testid="sample-hero-card">
-            <div className="sample-hero-header">
-              <span>Real bundled report</span>
-              <span className="brief-status">{sample.confidence} confidence</span>
-            </div>
-            <div className="sample-hero-repo">
-              <span>Candidate Brief</span>
-              <code>{sample.repositoryName}</code>
-            </div>
-            <blockquote>{sample.walkthrough}</blockquote>
-            <div className="sample-hero-evidence">
-              <span>Read first</span>
-              <EvidenceTag
-                id={sample.readingStep.evidence?.id ?? "observed path"}
-                path={sample.readingStep.path}
-              />
-            </div>
+      <div className="hero-visual" aria-label="Evidence-backed walkthrough outline">
+        <div className="sample-hero-card" data-testid="hero-output-card">
+          <div className="sample-hero-header">
+            <span>Repository walkthrough</span>
+            <span className="brief-status">evidence linked</span>
           </div>
-        ) : (
-          <div className="sample-hero-card">
-            <div className="sample-hero-header">
-              <span>Bundled Candidate Brief</span>
-              <span className="brief-status">evidence linked</span>
-            </div>
-            <p>The complete sample report is available from the primary action.</p>
+          <div className="sample-hero-repo">
+            <span>Static repository analysis</span>
+            <code>source files attached</code>
           </div>
-        )}
+          <blockquote>
+            A prioritized explanation of where to start, how supported dependencies connect,
+            and which structural hotspots deserve a closer look.
+          </blockquote>
+          <div className="sample-hero-evidence">
+            <span>Analysis boundary</span>
+            <EvidenceTag id="no code execution" path="no AI calls" />
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -117,16 +104,44 @@ export function HomepageWalkthroughOutcomes() {
     >
       <header className="walkthrough-outcomes-header">
         <div>
-          <p className="section-kicker">Inside the brief</p>
-          <h2 id="walkthrough-outcomes-heading">Four answers for the repository walkthrough.</h2>
+          <p className="section-kicker">What the Candidate Brief gives you</p>
+          <h2 id="walkthrough-outcomes-heading">
+            Go from “I skimmed the repo” to “I can explain it.”
+          </h2>
         </div>
-        <p className="walkthrough-export-note">
-          <span aria-hidden="true">&#10003;</span>
-          {reportCapabilityCopy.homepageBriefExports}
-        </p>
       </header>
       <div className="walkthrough-outcome-list">
         {candidateBriefWalkthroughOutputs.map(({ title, description }, index) => (
+          <article key={title}>
+            <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <h3>{title}</h3>
+              <p>{description}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function HomepageSupportedWorkflows() {
+  return (
+    <section
+      className="walkthrough-outcomes homepage-workflows page-container"
+      aria-labelledby="supported-workflows-heading"
+      data-testid="supported-workflows"
+    >
+      <header className="walkthrough-outcomes-header">
+        <div>
+          <p className="section-kicker">Four supported workflows</p>
+          <h2 id="supported-workflows-heading">
+            Use the walkthrough for the conversation in front of you.
+          </h2>
+        </div>
+      </header>
+      <div className="walkthrough-outcome-list">
+        {homepageSupportedWorkflows.map(({ title, description }, index) => (
           <article key={title}>
             <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <div>
@@ -164,8 +179,12 @@ export function HomepageSampleProof({
     >
       <div className="sample-report-heading">
         <div>
-          <p className="section-kicker">Real bundled output</p>
-          <h2 id="sample-proof-heading">See the evidence before you add a repository.</h2>
+          <p className="section-kicker">
+            Bundled sample{sample ? ` · ${sample.repositoryName}` : ""}
+          </p>
+          <h2 id="sample-proof-heading">
+            See what an evidence-backed walkthrough looks like.
+          </h2>
         </div>
         {!showSampleReport && (
           <button type="button" className="text-action" onClick={onOpenSample}>
@@ -184,11 +203,6 @@ export function HomepageSampleProof({
               <p>{sample.summary}</p>
             </header>
 
-            <article className="sample-proof-walkthrough">
-              <span className="sample-proof-label">What you can say in 30 seconds</span>
-              <blockquote>{sample.walkthrough}</blockquote>
-            </article>
-
             <div className="sample-proof-details">
               <article>
                 <span className="sample-proof-label">01 · Start here</span>
@@ -203,7 +217,7 @@ export function HomepageSampleProof({
               </article>
 
               <article>
-                <span className="sample-proof-label">02 · Explain the architecture</span>
+                <span className="sample-proof-label">02 · Structural claim to inspect</span>
                 <p>{sample.architecture.explanation}</p>
                 {sample.architecture.evidence && (
                   <EvidenceTag
@@ -213,17 +227,6 @@ export function HomepageSampleProof({
                 )}
               </article>
 
-              <article>
-                <span className="sample-proof-label">03 · Prepare for the follow-up</span>
-                <h3>{sample.interviewerQuestion.question}</h3>
-                <p>{sample.interviewerQuestion.rationale}</p>
-                {sample.interviewerQuestion.evidence && (
-                  <EvidenceTag
-                    id={sample.interviewerQuestion.evidence.id}
-                    path={sample.interviewerQuestion.evidence.path}
-                  />
-                )}
-              </article>
             </div>
           </div>
         ) : (
@@ -252,8 +255,8 @@ export function HomepageTrustAndFaq() {
     <section id="faq" className="faq-section homepage-trust" aria-labelledby="homepage-trust-heading">
       <div className="page-container faq-layout">
         <header className="faq-intro">
-          <p className="section-kicker">Before you upload</p>
-          <h2 id="homepage-trust-heading">The useful boundaries stay visible.</h2>
+          <p className="section-kicker">Trust and privacy</p>
+          <h2 id="homepage-trust-heading">Explicit boundaries before you rely on the brief.</h2>
           <p>{reportCapabilityCopy.homepageStorageNote}</p>
           <ul className="trust-boundary-list">
             {homepageTrustBoundaries.map((item) => <li key={item}>{item}</li>)}

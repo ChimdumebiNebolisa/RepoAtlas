@@ -1,19 +1,19 @@
 export const candidateBriefWalkthroughOutputs = [
   {
-    title: "Entry points",
-    description: "Likely files and commands that start the system.",
+    title: "Start in the right place",
+    description: "Prioritized files and detected run or test commands.",
   },
   {
-    title: "Architecture",
-    description: "Boundaries and dependency paths across the codebase.",
+    title: "Explain the system",
+    description: "Architecture and supported dependency relationships.",
   },
   {
-    title: "Risk signals",
+    title: "Prepare for follow-up questions",
     description: "Structural hotspots to inspect, not assumed bugs.",
   },
   {
-    title: "Reading order",
-    description: "A ranked path from orientation to deeper review.",
+    title: "Support what you say",
+    description: "Source-file evidence linked to each conclusion.",
   },
 ] as const;
 

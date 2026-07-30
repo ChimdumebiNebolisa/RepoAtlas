@@ -7,6 +7,7 @@ import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
 import {
   homepageFaqItems,
   homepageInterviewGuides,
+  homepageSupportedWorkflows,
   homepageTrustBoundaries,
 } from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -14,6 +15,7 @@ import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import {
   HomepageHero,
   HomepageSampleProof,
+  HomepageSupportedWorkflows,
   HomepageTrustAndFaq,
   HomepageWalkthroughOutcomes,
 } from "./HomepageProofSections";
@@ -37,55 +39,33 @@ afterEach(() => {
 });
 
 describe("HomepageHero", () => {
-  it("renders a report-derived excerpt and starts the bundled sample", async () => {
+  it("leads with the outcome and starts the bundled sample", async () => {
     const user = userEvent.setup();
-    const report = buildSampleReport();
-    const preview = buildHomepageSamplePreview(report)!;
     const onGenerateSample = vi.fn();
 
-    render(<HomepageHero sampleReport={report} onGenerateSample={onGenerateSample} />);
+    render(<HomepageHero onGenerateSample={onGenerateSample} />);
 
     expect(
       screen.getByRole("heading", {
-        name: "Walk through the repository with file-backed talking points.",
+        name: "Turn an unfamiliar repository into an evidence-backed walkthrough.",
       })
     ).toBeInTheDocument();
-    expect(screen.getByTestId("sample-hero-card")).toHaveTextContent(
-      preview.repositoryName
+    expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
+      "source files attached"
     );
-    expect(screen.getByTestId("sample-hero-card")).toHaveTextContent(preview.walkthrough);
-    expect(screen.getByTestId("sample-hero-card")).toHaveTextContent(
-      preview.readingStep.path
-    );
-    expect(screen.getByTestId("sample-hero-card")).toHaveTextContent(
-      preview.readingStep.evidence!.id
-    );
-    expect(screen.getByRole("link", { name: /Use your own repository/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Analyze a repository/ })).toHaveAttribute(
       "href",
       "#analyze"
     );
 
-    await user.click(screen.getByRole("button", { name: /Try bundled sample/ }));
+    await user.click(screen.getByRole("button", { name: /Run bundled sample/ }));
 
     expect(onGenerateSample).toHaveBeenCalledOnce();
-  });
-
-  it("keeps an honest bundled-report fallback when preview evidence is unavailable", () => {
-    const report = buildSampleReport();
-    report.candidate_brief = undefined;
-
-    render(<HomepageHero sampleReport={report} onGenerateSample={vi.fn()} />);
-
-    expect(screen.queryByTestId("sample-hero-card")).not.toBeInTheDocument();
-    expect(screen.getByText("Bundled Candidate Brief")).toBeInTheDocument();
-    expect(
-      screen.getByText("The complete sample report is available from the primary action.")
-    ).toBeInTheDocument();
   });
 });
 
 describe("HomepageWalkthroughOutcomes", () => {
-  it("renders the four established walkthrough outcomes and dependable export promise", () => {
+  it("renders the four established walkthrough outcomes", () => {
     render(<HomepageWalkthroughOutcomes />);
 
     const section = screen.getByTestId("walkthrough-outcomes");
@@ -97,7 +77,22 @@ describe("HomepageWalkthroughOutcomes", () => {
       expect(within(articles[index]).getByRole("heading", { name: title })).toBeInTheDocument();
       expect(articles[index]).toHaveTextContent(description);
     });
-    expect(section).toHaveTextContent(reportCapabilityCopy.homepageBriefExports);
+    expect(section).not.toHaveTextContent(reportCapabilityCopy.homepageBriefExports);
+  });
+});
+
+describe("HomepageSupportedWorkflows", () => {
+  it("renders the four supported workflows without presenting them as separate products", () => {
+    render(<HomepageSupportedWorkflows />);
+
+    const section = screen.getByTestId("supported-workflows");
+    const articles = within(section).getAllByRole("article");
+
+    expect(articles).toHaveLength(homepageSupportedWorkflows.length);
+    homepageSupportedWorkflows.forEach(({ title, description }, index) => {
+      expect(within(articles[index]).getByRole("heading", { name: title })).toBeInTheDocument();
+      expect(articles[index]).toHaveTextContent(description);
+    });
   });
 });
 
@@ -119,20 +114,12 @@ describe("HomepageSampleProof", () => {
 
     const proof = screen.getByTestId("homepage-sample-preview");
     expect(proof).toHaveTextContent(preview.summary);
-    expect(proof).toHaveTextContent(preview.walkthrough);
     expect(proof).toHaveTextContent(preview.readingStep.path);
     expect(proof).toHaveTextContent(preview.readingStep.why);
     expect(proof).toHaveTextContent(preview.architecture.explanation);
-    expect(
-      within(proof).getByRole("heading", {
-        name: preview.interviewerQuestion.question,
-      })
-    ).toBeInTheDocument();
-    expect(proof).toHaveTextContent(preview.interviewerQuestion.rationale);
     [
       preview.readingStep.evidence,
       preview.architecture.evidence,
-      preview.interviewerQuestion.evidence,
     ].forEach((evidence) => {
       expect(proof).toHaveTextContent(evidence!.id);
       if (evidence!.path) {
@@ -166,7 +153,7 @@ describe("HomepageSampleProof", () => {
         "This sample does not contain enough supported dependency evidence for a system-flow claim."
       )
     ).toBeInTheDocument();
-    expect(container.querySelectorAll(".sample-evidence-tag")).toHaveLength(2);
+    expect(container.querySelectorAll(".sample-evidence-tag")).toHaveLength(1);
     expect(container.querySelectorAll(".sample-evidence-tag code")).toHaveLength(0);
   });
 
