@@ -138,9 +138,9 @@ export function HomepageSupportedWorkflows() {
     >
       <header className="walkthrough-outcomes-header">
         <div>
-          <p className="section-kicker">Four supported workflows</p>
+          <p className="section-kicker">Use RepoAtlas when…</p>
           <h2 id="supported-workflows-heading">
-            Use the walkthrough for the conversation in front of you.
+            Start with repository evidence before the conversation.
           </h2>
         </div>
       </header>
@@ -260,7 +260,9 @@ export function HomepageTrustAndFaq() {
       <div className="page-container faq-layout">
         <header className="faq-intro">
           <p className="section-kicker">Trust and privacy</p>
-          <h2 id="homepage-trust-heading">Explicit boundaries before you rely on the brief.</h2>
+          <h2 id="homepage-trust-heading">
+            Know what RepoAtlas reads, stores, and cannot conclude.
+          </h2>
           <p>{reportCapabilityCopy.homepageStorageNote}</p>
           <ul className="trust-boundary-list">
             {homepageTrustBoundaries.map((item) => <li key={item}>{item}</li>)}
@@ -286,8 +288,8 @@ export function HomepageTrustAndFaq() {
       >
         <div className="homepage-guide-intro">
           <p className="section-kicker">Interview guides</p>
-          <h3 id="homepage-guide-nav-heading">Prepare for the walkthrough question.</h3>
-          <p>Choose the guide that matches the repository you need to explain.</p>
+          <h3 id="homepage-guide-nav-heading">Prepare to explain a repository.</h3>
+          <p>Choose the guide that matches the codebase and conversation.</p>
         </div>
         {homepageInterviewGuides.map(({ title, description, href }) => (
           <a key={href} href={href} className="homepage-guide-link" aria-label={title}>

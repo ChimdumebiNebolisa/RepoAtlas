@@ -222,7 +222,7 @@ describe("HomepageTrustAndFaq", () => {
       "/privacy"
     );
     const guideNav = screen.getByRole("navigation", {
-      name: "Prepare for the walkthrough question.",
+      name: "Prepare to explain a repository.",
     });
     homepageInterviewGuides.forEach(({ title, description, href }) => {
       const link = within(guideNav).getByRole("link", { name: title });

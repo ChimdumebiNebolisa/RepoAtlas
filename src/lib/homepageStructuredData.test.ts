@@ -14,11 +14,11 @@ import { REPORT_CAPABILITY_RULES } from "@/lib/reportCapabilities";
 describe("homepage structured data", () => {
   it("keeps candidate-focused search metadata within standard result lengths", () => {
     expect(homepageMetadata.title).toBe(
-      "Evidence-backed Repository Walkthroughs | RepoAtlas",
+      "Source-linked Repository Briefs | RepoAtlas",
     );
     expect(homepageMetadata.title.length).toBeLessThanOrEqual(60);
     expect(homepageMetadata.description).toBe(
-      "Turn a public TypeScript, JavaScript, Python, or Java repository into an evidence-backed walkthrough with PDF and PNG exports, without running code.",
+      "Analyze a public GitHub repository or ZIP without running code. Get a source-linked TypeScript/JavaScript, Python, or Java brief with PDF and PNG exports.",
     );
     expect(homepageMetadata.description.length).toBeGreaterThanOrEqual(120);
     expect(homepageMetadata.description.length).toBeLessThanOrEqual(160);

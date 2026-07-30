@@ -112,11 +112,11 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <span className="brand-mark" aria-hidden="true">R</span>
           <span>
             <strong>RepoAtlas</strong>
-            <small>Repository Walkthroughs</small>
+            <small>Source-linked Repository Briefs</small>
           </span>
         </a>
         <div className="header-badges" aria-label="Product capabilities">
-          <Badge>Deterministic static analysis</Badge>
+          <Badge>Reads files, never runs code</Badge>
           <Badge>TypeScript/JS + Python + Java</Badge>
           <Badge>{reportCapabilityCopy.headerBadge}</Badge>
         </div>
