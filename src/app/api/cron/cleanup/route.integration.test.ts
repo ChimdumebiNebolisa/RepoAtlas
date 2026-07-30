@@ -58,14 +58,23 @@ describe("authenticated cleanup route contract", () => {
     fs.rmSync(reportsDir, { recursive: true, force: true });
   });
 
-  it("accepts correct credentials for the health check", async () => {
+  it("runs the scheduled GET sweep with correct credentials", async () => {
     process.env.VERCEL = "1";
     const response = await GET(authenticatedRequest("GET"));
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
-      ok: true,
-      message: "POST with Authorization: Bearer CRON_SECRET to run cleanup sweep.",
+    await expect(response.json()).resolves.toMatchObject({
+      reports: {
+        deleted: [],
+        retained: 0,
+        scanned: 0,
+        skippedBlob: false,
+      },
+      shares: {
+        deleted: [],
+        scanned: 0,
+      },
+      scannedAt: expect.any(String),
     });
   });
 

@@ -5,10 +5,11 @@ import { sweepExpiredReports } from "@/lib/storage";
 import { sweepExpiredShareTokens } from "@/lib/sharing";
 
 function cronMisconfigured(): boolean {
-  return process.env.VERCEL === "1" && !process.env.CRON_SECRET?.trim();
+  const production = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
+  return production && !process.env.CRON_SECRET?.trim();
 }
 
-export async function POST(request: Request) {
+async function runCleanup(request: Request) {
   if (cronMisconfigured()) {
     return Response.json(
       { code: "MISCONFIGURED", message: "CRON_SECRET is required in production." },
@@ -49,25 +50,12 @@ export async function POST(request: Request) {
   }
 }
 
-/** Authenticated health check only — no inventory scan. */
+/** Vercel Cron invokes the configured path with GET. */
 export async function GET(request: Request) {
-  if (cronMisconfigured()) {
-    return Response.json(
-      { ok: false, message: "CRON_SECRET is required in production." },
-      { status: 503 }
-    );
-  }
+  return runCleanup(request);
+}
 
-  const secret = process.env.CRON_SECRET?.trim();
-  if (secret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return Response.json({ code: "UNAUTHORIZED", message: "Invalid cron secret." }, { status: 401 });
-    }
-  }
-
-  return Response.json({
-    ok: true,
-    message: "POST with Authorization: Bearer CRON_SECRET to run cleanup sweep.",
-  });
+/** Manual/operator entrypoint with the same authentication and behavior. */
+export async function POST(request: Request) {
+  return runCleanup(request);
 }

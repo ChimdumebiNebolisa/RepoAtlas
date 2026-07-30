@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { sweepExpiredReportsMock, sweepExpiredShareTokensMock } = vi.hoisted(() => ({
   sweepExpiredReportsMock: vi.fn(),
@@ -21,13 +21,27 @@ describe("cron cleanup route", () => {
     sweepExpiredShareTokensMock.mockReset();
     delete process.env.CRON_SECRET;
     delete process.env.VERCEL;
+    vi.stubEnv("NODE_ENV", "test");
   });
 
-  it("GET returns ok health when not in production", async () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("GET runs the scheduled sweeps when not in production", async () => {
+    sweepExpiredReportsMock.mockResolvedValue({
+      deleted: ["old-id"],
+      retained: 1,
+      scanned: 2,
+      skippedBlob: false,
+    });
+    sweepExpiredShareTokensMock.mockResolvedValue({ deleted: ["tok"], scanned: 1 });
+
     const response = await GET(new Request("http://localhost/api/cron/cleanup"));
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.ok).toBe(true);
+    expect(body.reports.deleted).toEqual(["old-id"]);
+    expect(body.shares.deleted).toEqual(["tok"]);
   });
 
   it("GET fails closed on Vercel without CRON_SECRET", async () => {
@@ -56,6 +70,18 @@ describe("cron cleanup route", () => {
   it("POST fails closed on Vercel without CRON_SECRET", async () => {
     process.env.VERCEL = "1";
     const response = await POST(new Request("http://localhost/api/cron/cleanup", { method: "POST" }));
+    expect(response.status).toBe(503);
+    expect(sweepExpiredReportsMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["GET", GET],
+    ["POST", POST],
+  ])("%s fails closed in self-hosted production without CRON_SECRET", async (method, handler) => {
+    vi.stubEnv("NODE_ENV", "production");
+    const response = await handler(
+      new Request("http://localhost/api/cron/cleanup", { method })
+    );
     expect(response.status).toBe(503);
     expect(sweepExpiredReportsMock).not.toHaveBeenCalled();
   });
