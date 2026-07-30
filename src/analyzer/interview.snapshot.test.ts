@@ -86,6 +86,7 @@ describe("Candidate Brief byte stability", () => {
       [
         "d2577cfa2ffb6e47206331c6bc0942bc4038bdd8cc86ffbb819b2b59b6e191a5",
         "9f9f35aa1963746fee744c6e3bc9b07e5a6e2139071deac4e3641d0248a3e31f",
+        "f8f59df0b38d7a5ed599859d73da4b7efc8404f502a4ea4e1119e47ff274065d",
       ],
     ],
     [
@@ -94,6 +95,7 @@ describe("Candidate Brief byte stability", () => {
       [
         "2ab9ef2a975c2c5a8896f442ae59e573f9e9bd07120313384ebf19f99a92fa40",
         "056846ba4dc67b9fec3901019466e7abdf70ad37b3a30b31c6ef7b4cb4af28a4",
+        "2d4dd5b0674ebed7f11820a6d51184d22a7b09d5e8b062dc9a4ef700fb71ae89",
       ],
     ],
     [
@@ -102,6 +104,7 @@ describe("Candidate Brief byte stability", () => {
       [
         "fc374270ab8529bfdd17db4ef64796ab8358dc0df38eb613ab7642483f1327f6",
         "e3c33c40fdf9bb708ff60691fc826224db5ea36fe60365f0a3ec72aaea90d584",
+        "856d5ad943c2235c0796d297eb7df0be500dd6c0603842ec0a5beffa107d4ff7",
       ],
     ],
     [
@@ -110,6 +113,7 @@ describe("Candidate Brief byte stability", () => {
       [
         "df98e00f7330fd10e043e64df1cfd11aa1b473145dfd4d86010421aabd88d324",
         "b2873d77a966d105fa69d47b568361f336cf90e75448177d973fe801824b30ca",
+        "0f9e593845ac86b28909d29425f7a7175c483aa6d03f2b6af2a38d2f8067fb27",
       ],
     ],
   ])("preserves the %s fixture byte-for-byte", async (_label, fixture, expectedDigests) => {
