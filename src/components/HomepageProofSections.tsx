@@ -47,9 +47,13 @@ function HomepageFaqAnswer({ answer, link }: Pick<HomepageFaqItem, "answer" | "l
 
 export function HomepageHero({
   onGenerateSample,
+  sampleReport,
 }: {
   onGenerateSample: () => void;
+  sampleReport: Report;
 }) {
+  const sample = buildHomepageSamplePreview(sampleReport);
+
   return (
     <section id="top" className="hero page-container">
       <div className="hero-copy">
@@ -76,16 +80,47 @@ export function HomepageHero({
       <div className="hero-visual" aria-label="Example source-linked repository brief">
         <div className="sample-hero-card" data-testid="hero-output-card">
           <div className="sample-hero-header">
-            <span>Repository brief</span>
+            <div>
+              <span>Bundled sample</span>
+              <strong>{sample?.repositoryName ?? "Repository brief"}</strong>
+            </div>
             <span className="brief-status">source-linked</span>
           </div>
-          <blockquote>
-            Purpose, key files, connections, and next steps.
-          </blockquote>
-          <div className="sample-hero-evidence">
-            <span>Evidence</span>
-            <EvidenceTag id="claims cite files" path="confidence shown" />
-          </div>
+          {sample ? (
+            <>
+              <div className="sample-hero-summary">
+                <div>
+                  <span>Repository purpose</span>
+                  <span className="brief-status">{sample.confidence} confidence</span>
+                </div>
+                <p>{sample.summary}</p>
+              </div>
+              <div className="sample-hero-details">
+                <article>
+                  <span>Start here</span>
+                  <code>{sample.readingStep.path}</code>
+                  <small>{sample.readingStep.why}</small>
+                </article>
+                <article>
+                  <span>Detected connection</span>
+                  <p>{sample.architecture.explanation}</p>
+                </article>
+              </div>
+              <div className="sample-hero-evidence">
+                <span>Evidence linked</span>
+                {sample.readingStep.evidence && (
+                  <EvidenceTag
+                    id={sample.readingStep.evidence.id}
+                    path={sample.readingStep.evidence.path}
+                  />
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="sample-hero-fallback">
+              Purpose, key files, connections, and evidence in one repository brief.
+            </p>
+          )}
         </div>
       </div>
     </section>

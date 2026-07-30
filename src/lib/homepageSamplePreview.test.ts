@@ -84,7 +84,7 @@ describe("buildHomepageSamplePreview", () => {
 
     expect(buildHomepageSamplePreview(report)?.architecture).toEqual({
       explanation:
-        "This sample does not contain enough supported dependency evidence for a system-flow claim.",
+        "This sample does not contain enough supported dependency evidence to describe a system connection.",
       evidence: null,
     });
   });

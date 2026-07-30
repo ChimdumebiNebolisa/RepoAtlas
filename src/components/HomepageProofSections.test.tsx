@@ -43,7 +43,10 @@ describe("HomepageHero", () => {
     const user = userEvent.setup();
     const onGenerateSample = vi.fn();
 
-    render(<HomepageHero onGenerateSample={onGenerateSample} />);
+    const report = buildSampleReport();
+    const preview = buildHomepageSamplePreview(report)!;
+
+    render(<HomepageHero onGenerateSample={onGenerateSample} sampleReport={report} />);
 
     expect(
       screen.getByRole("heading", {
@@ -52,6 +55,18 @@ describe("HomepageHero", () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId("hero-output-card")).not.toHaveTextContent(
       "prioritized reading path"
+    );
+    expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
+      preview.repositoryName
+    );
+    expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
+      preview.summary
+    );
+    expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
+      preview.readingStep.path
+    );
+    expect(screen.getByTestId("hero-output-card")).toHaveTextContent(
+      preview.architecture.explanation
     );
     expect(
       screen.getByRole("link", { name: /Paste a GitHub URL or upload a ZIP/ })
