@@ -129,9 +129,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .hero h1 {
-  max-width: 13ch;
-  margin: 1rem 0 0;
-  font-size: clamp(3.2rem, 5.5vw, 5.9rem);
+  max-width: 15ch;
+  margin: 0;
+  font-size: clamp(3.2rem, 4.25vw, 4.6rem);
   font-weight: 680;
   letter-spacing: -0.065em;
   line-height: 0.98;
@@ -139,11 +139,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .hero-description {
-  max-width: 42rem;
-  margin: 1.6rem 0 0;
+  max-width: 38rem;
+  margin: 1.35rem 0 0;
   color: #3f554c;
   font-size: clamp(1rem, 1.35vw, 1.15rem);
-  line-height: 1.75;
+  line-height: 1.65;
   text-wrap: pretty;
 }
 
@@ -154,8 +154,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   gap: 0.8rem;
 }
 
-.hero-actions { margin-top: 2rem; }
-.hero-microcopy { margin: 1.1rem 0 0; color: #61756b; font-size: 0.74rem; }
+.hero-actions { margin-top: 1.6rem; }
 
 .btn, .text-action {
   display: inline-flex;
@@ -594,7 +593,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   box-shadow: var(--shadow-card);
 }
 .analyze-card h2 {
-  margin: 0.65rem 0 0;
+  margin: 0;
   font-size: clamp(1.55rem, 2.5vw, 2.15rem);
   letter-spacing: -0.035em;
 }
@@ -870,7 +869,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 
 .sample-report-section { padding-block: 6rem; border-top: 1px solid var(--line); }
 .sample-report-heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; }
-.sample-report-heading h2 { margin-top: 0.6rem; }
+.sample-report-heading h2 { margin-top: 0; }
 .sample-report-copy { max-width: 42rem; }
 .sample-proof-preview {
   overflow: hidden;
@@ -1095,7 +1094,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 .homepage-guide-intro h3 {
   max-width: 19rem;
-  margin: 0.55rem 0 0;
+  margin: 0;
   color: var(--ink);
   font-size: clamp(1.15rem, 1.9vw, 1.45rem);
   font-weight: 680;
@@ -2969,7 +2968,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 960px) {
   .hero {
     grid-template-columns: 1fr;
-    gap: 2.5rem;
+    gap: 2rem;
     padding-block: 4rem 5rem;
   }
   .hero h1 { max-width: 15ch; }
@@ -3024,8 +3023,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .page-container { width: min(calc(100% - 2rem), var(--container)); }
   .site-header { min-height: 4.25rem; }
   .header-badges { display: none; }
-  .hero { min-height: auto; padding-block: 2.5rem 3.25rem; }
-  .hero h1 { font-size: clamp(2.65rem, 14vw, 4.2rem); }
+  .hero { min-height: auto; padding-block: 2rem 2.75rem; }
+  .hero h1 { font-size: clamp(2.15rem, 9vw, 2.5rem); }
   .hero-description { font-size: 0.95rem; }
   .hero-actions, .form-actions { align-items: stretch; flex-direction: column; }
   .hero-actions .btn, .hero-actions .text-action, .form-actions .btn { width: 100%; }

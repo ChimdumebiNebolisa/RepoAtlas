@@ -72,14 +72,14 @@ describe("HomepageHero", () => {
       preview.readingStep.evidence!.id
     );
     expect(
-      screen.getByRole("link", { name: /Paste a GitHub URL or upload a ZIP/ })
+      screen.getByRole("link", { name: /Analyze your repository/ })
     ).toHaveAttribute(
       "href",
       "#analyze"
     );
 
     await user.click(
-      screen.getByRole("button", { name: /Generate a sample repository brief/ })
+      screen.getByRole("button", { name: /Generate sample brief/ })
     );
 
     expect(onGenerateSample).toHaveBeenCalledOnce();

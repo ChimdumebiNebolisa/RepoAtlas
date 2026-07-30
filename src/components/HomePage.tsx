@@ -140,10 +140,9 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
         className={`action-section action-section-single page-container ${report ? "action-section-complete" : ""}`}
       >
         <article className="analyze-card">
-          <p className="section-kicker">Analyze your repository</p>
-          <h2>Paste a public GitHub URL or upload a ZIP.</h2>
+          <h2>Analyze your repository.</h2>
           <p>
-            Choose a goal. RepoAtlas builds the brief and cites the files behind each conclusion.
+            Paste a public GitHub URL or upload a ZIP, then choose what you need to understand.
           </p>
           <InputForm
             ref={inputFormRef}
