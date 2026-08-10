@@ -1687,6 +1687,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .guide-architecture-section { color: #eaf8f1; background: var(--slate); }
+.guide-architecture-section .section-kicker,
+.code-review-example-section .section-kicker,
+.code-review-priority-section .section-kicker {
+  color: #74d9ad;
+}
 .guide-architecture-layout {
   display: grid;
   grid-template-columns: minmax(18rem, 0.75fr) minmax(28rem, 1.25fr);

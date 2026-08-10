@@ -78,7 +78,7 @@ export async function expectCompletedReportInViewport(page: Page): Promise<void>
 
 export async function runSampleAnalyzeOnPage(page: Page): Promise<void> {
   await page.goto("/");
-  await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+  await page.getByRole("button", { name: /Generate the bundled sample brief/i }).click();
   await expectCompletedReportInViewport(page);
 }
 

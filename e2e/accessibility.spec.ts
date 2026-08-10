@@ -43,4 +43,23 @@ test.describe("Accessibility", () => {
 
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
   });
+
+  test("candidate guides have no serious axe violations", async ({ page }) => {
+    const routes = [
+      "/repository-walkthrough-interview",
+      "/how-to-walk-through-a-project-in-an-interview",
+      "/codebase-interview-preparation",
+      "/ai-codebase-summary",
+      "/code-review-interview",
+    ];
+
+    for (const route of routes) {
+      await page.goto(route);
+      const results = await new AxeBuilder({ page }).analyze();
+      const serious = results.violations.filter(
+        (violation) => violation.impact === "serious" || violation.impact === "critical"
+      );
+      expect(serious, route).toEqual([]);
+    }
+  });
 });

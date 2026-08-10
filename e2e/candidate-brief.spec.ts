@@ -227,18 +227,21 @@ test.describe("Candidate Brief smoke", () => {
     const brief = report.candidate_brief!;
     const evidenceById = new Map(brief.evidence_refs.map((evidence) => [evidence.id, evidence]));
     const readingStep = brief.reading_path[0];
-    const architectureEvidence = brief.evidence_refs.find(
-      (evidence) => evidence.kind === "architecture"
-    )!;
+    const architectureEdge = report.architecture.edges[0];
+    const architectureLabels = new Map(
+      report.architecture.nodes.map((node) => [node.id, node.label])
+    );
+    const architectureConnection = `${
+      architectureLabels.get(architectureEdge.from) ?? architectureEdge.from
+    } connects to ${architectureLabels.get(architectureEdge.to) ?? architectureEdge.to}.`;
 
     await page.goto("/");
     const preview = page.getByTestId("homepage-sample-preview");
-    await expect(preview).toContainText(brief.repo_summary.plain_english);
+    await expect(preview).toContainText(brief.repo_summary.headline);
     await expect(preview).toContainText(readingStep.path);
     await expect(preview).toContainText(readingStep.why);
-    await expect(preview).toContainText(architectureEvidence.detail!);
-    await expect(preview).toContainText(readingStep.evidence_refs[0]);
-    await expect(preview).toContainText(architectureEvidence.id);
+    await expect(preview).toContainText(evidenceById.get(readingStep.evidence_refs[0])!.path!);
+    await expect(preview).toContainText(architectureConnection);
     await expect(preview).not.toContainText("src/analyzer/index.ts");
     await expect(preview).not.toContainText("src/analyzer/scoring.ts");
   });

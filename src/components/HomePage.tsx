@@ -92,7 +92,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const generateSampleBrief = () => {
     inputFormRef.current?.generateSample();
     requestAnimationFrame(() => {
-      sampleButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      sampleButtonRef.current?.scrollIntoView({ block: "center" });
     });
   };
 

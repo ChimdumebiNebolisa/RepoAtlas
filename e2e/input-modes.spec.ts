@@ -79,7 +79,7 @@ test.describe("Repository input modes", () => {
     await page.keyboard.press("ArrowRight");
     await expect(githubTab).toBeFocused();
     await expect(githubTab).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("radio", { name: /Interview walkthrough/i })).toBeChecked();
+    await expect(page.getByRole("radio", { name: /Prepare for an interview/i })).toBeChecked();
     await expect(
       page.getByRole("radio", { name: /Investigate a bug/i, includeHidden: true })
     ).not.toBeVisible();
@@ -102,7 +102,7 @@ test.describe("Repository input modes", () => {
     await expect(page.getByRole("radio", { name: /Discuss a pull request/i })).toBeVisible();
     await page.getByRole("radio", { name: /Investigate a bug/i }).check();
     await expect(disclosure).toContainText("Selected: Investigate a bug");
-    await page.getByRole("radio", { name: /Interview walkthrough/i }).check();
+    await page.getByRole("radio", { name: /Prepare for an interview/i }).check();
     await expect(disclosure.locator("xpath=..")).not.toHaveAttribute("open", "");
   });
 

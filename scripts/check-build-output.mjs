@@ -35,6 +35,19 @@ async function sanitizeRuntimeDataTraces(directory) {
   return removed;
 }
 
+async function findBrowserSourceMaps(directory) {
+  const sourceMaps = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      sourceMaps.push(...(await findBrowserSourceMaps(entryPath)));
+      continue;
+    }
+    if (entry.name.endsWith(".map")) sourceMaps.push(entryPath);
+  }
+  return sourceMaps;
+}
+
 // RepoAtlas deliberately walks repository files supplied at request time. The
 // current Turbopack tracer follows those dynamic paths back to the project root;
 // Webpack's supported production builder keeps that runtime boundary intact.
@@ -103,6 +116,16 @@ child.on("close", async (code, signal) => {
     if (tracedFiles.some(isRuntimeReportPath)) {
       console.error(
         "Build failed because runtime report data was included in the deployed analysis route."
+      );
+      process.exitCode = 1;
+      return;
+    }
+    const browserSourceMaps = await findBrowserSourceMaps(
+      path.join(process.cwd(), ".next", "static")
+    );
+    if (browserSourceMaps.length > 0) {
+      console.error(
+        `Build failed because ${browserSourceMaps.length} browser source map files would be publicly deployed.`
       );
       process.exitCode = 1;
       return;

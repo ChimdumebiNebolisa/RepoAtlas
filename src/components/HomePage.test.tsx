@@ -157,7 +157,7 @@ describe("HomePage completion coordination", () => {
     cleanup();
   });
 
-  it("starts the bundled sample from the hero and schedules the sample control into view", async () => {
+  it("starts the bundled sample from the hero without leaving a smooth scroll that can race completion", async () => {
     const user = userEvent.setup();
     render(<HomePage sampleReport={buildSampleReport()} />);
 
@@ -166,10 +166,7 @@ describe("HomePage completion coordination", () => {
     expect(generateSample).toHaveBeenCalledTimes(1);
     expect(animationFrames).toHaveLength(1);
     runNextFrame();
-    expect(scrollIntoView).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "center",
-    });
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
   });
 
   it("consumes a direct sample request once and keeps its bounded attribution", () => {
