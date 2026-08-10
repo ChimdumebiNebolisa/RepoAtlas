@@ -70,6 +70,7 @@ describe("AI codebase summary comparison page", () => {
     const matrix = screen.getByRole("table", {
       name: "AI summary and Candidate Brief comparison",
     });
+    expect(matrix).toHaveAttribute("tabindex", "0");
     expect(within(matrix).getByRole("rowheader", { name: "Source traceability" })).toBeInTheDocument();
     expect(within(matrix).getByRole("rowheader", { name: "Limits" })).toBeInTheDocument();
 

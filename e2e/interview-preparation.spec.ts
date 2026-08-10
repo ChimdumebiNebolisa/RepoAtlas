@@ -9,10 +9,10 @@ test("interview-preparation page leads to the measurable analysis start", async 
   ).toBeVisible();
   await expect(page.getByText("Walk me through this repository.")).toBeVisible();
   for (const output of [
-    "Start in the right place",
-    "Explain the system",
-    "Prepare for follow-up questions",
-    "Support what you say",
+    "Repository purpose",
+    "Important folders and files",
+    "Architecture and dependencies",
+    "Evidence and next questions",
   ]) {
     await expect(page.getByRole("heading", { name: output })).toBeVisible();
   }
@@ -81,7 +81,7 @@ for (const comparison of [
       analysisIntent: "interview",
     });
     await expect(
-      page.getByRole("heading", { name: "Your Candidate Brief is ready" }),
+      page.getByRole("heading", { name: "Your repository brief is ready" }),
     ).toBeVisible();
   });
 
@@ -164,7 +164,7 @@ test("repository walkthrough guide teaches the method and opens the bundled samp
     analysisIntent: "interview",
   });
   await expect(
-    page.getByRole("heading", { name: "Your Candidate Brief is ready" })
+    page.getByRole("heading", { name: "Your repository brief is ready" })
   ).toBeVisible();
 });
 
@@ -294,7 +294,7 @@ test("authored project guide separates candidate intent from repository evidence
     analysisIntent: "interview",
   });
   await expect(
-    page.getByRole("heading", { name: "Your Candidate Brief is ready" })
+    page.getByRole("heading", { name: "Your repository brief is ready" })
   ).toBeVisible();
 });
 

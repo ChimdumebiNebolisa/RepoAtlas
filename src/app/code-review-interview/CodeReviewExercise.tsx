@@ -40,7 +40,7 @@ export function CodeReviewExercise() {
             </p>
           </header>
 
-          <pre aria-label="TypeScript code review exercise">
+          <pre aria-label="TypeScript code review exercise" tabIndex={0}>
             <code>{`01 export async function invite(request: Request) {
 02   const user = await currentUser(request)
 03   const email = user.email

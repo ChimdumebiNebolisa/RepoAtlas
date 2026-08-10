@@ -12,16 +12,29 @@ export type HomepageFaqItem = {
   };
 };
 
-export const homepageMetadata = {
-  title: "Source-linked Repository Briefs | RepoAtlas",
-  description: `Analyze a public GitHub repository or ZIP without running code. Get a source-linked TypeScript/JavaScript, Python, or Java brief with ${dependableExportFormats} exports.`,
-} as const;
-
 export const siteIdentity = {
   name: "RepoAtlas",
   description:
     "Create source-linked repository briefs from public GitHub repositories or ZIP uploads without running code.",
   url: "https://repo-atlas-phi.vercel.app/",
+} as const;
+
+export const homepageMetadata = {
+  title: "Source-linked Repository Briefs | RepoAtlas",
+  description: `Analyze a public GitHub repository or ZIP without running code. Get a source-linked TypeScript/JavaScript, Python, or Java brief with ${dependableExportFormats} exports.`,
+  alternates: { canonical: siteIdentity.url },
+  openGraph: {
+    title: "Source-linked Repository Briefs | RepoAtlas",
+    description: siteIdentity.description,
+    type: "website",
+    url: siteIdentity.url,
+    siteName: siteIdentity.name,
+  },
+  twitter: {
+    card: "summary",
+    title: "Source-linked Repository Briefs | RepoAtlas",
+    description: siteIdentity.description,
+  },
 } as const;
 
 export const homepageFaqItems: readonly HomepageFaqItem[] = [

@@ -17,7 +17,7 @@ test("homepage exposes synchronized Product and FAQPage JSON-LD in the head", as
     "@type": "Product",
     name: "RepoAtlas",
     description:
-      "Generate evidence-backed Candidate Briefs and repository analysis from ZIP uploads. No AI required.",
+      "Create source-linked repository briefs from public GitHub repositories or ZIP uploads without running code.",
     url: "https://repo-atlas-phi.vercel.app/",
   });
 

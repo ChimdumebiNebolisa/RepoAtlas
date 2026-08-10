@@ -1,13 +1,8 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import {
-  REPORTS_DIR,
-  VALID_UUID,
   analyzeSample,
-  minimalReport,
-  writeReport,
   zipFixture,
   expireShareToken,
 } from "./helpers";
@@ -199,39 +194,24 @@ test.describe("API edge cases", () => {
     expect(body.message).toMatch(/expired|not found/i);
   });
 
-  test("GET /api/cron/cleanup returns health metadata", async ({ request }) => {
+  test("GET /api/cron/cleanup fails closed without the production secret", async ({ request }) => {
     const res = await request.get("/api/cron/cleanup");
-    expect(res.ok()).toBe(true);
+    expect(res.status()).toBe(503);
     const body = await res.json();
-    expect(body.ok).toBe(true);
-    expect(body.message).toMatch(/cleanup sweep/i);
+    expect(body).toMatchObject({
+      code: "MISCONFIGURED",
+      message: "CRON_SECRET is required in production.",
+    });
   });
 
-  test("POST /api/cron/cleanup runs sweep", async ({ request }) => {
-    const oldId = VALID_UUID;
-    const oldDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
-    writeReport(
-      oldId,
-      minimalReport({
-        repo_metadata: {
-          name: "stale-e2e",
-          url: "zip",
-          branch: "main",
-          clone_hash: null,
-          analyzed_at: oldDate,
-        },
-      })
-    );
-
+  test("POST /api/cron/cleanup fails closed without the production secret", async ({ request }) => {
     const res = await request.post("/api/cron/cleanup");
-    expect(res.ok()).toBe(true);
+    expect(res.status()).toBe(503);
     const body = await res.json();
-    expect(body.reports).toBeDefined();
-    expect(Array.isArray(body.reports.deleted)).toBe(true);
-
-    if (body.reports.deleted.includes(oldId)) {
-      expect(fs.existsSync(path.join(REPORTS_DIR, `${oldId}.json`))).toBe(false);
-    }
+    expect(body).toMatchObject({
+      code: "MISCONFIGURED",
+      message: "CRON_SECRET is required in production.",
+    });
   });
 
   test("multipart zip upload analyzes repo-ts fixture", async ({ request }) => {

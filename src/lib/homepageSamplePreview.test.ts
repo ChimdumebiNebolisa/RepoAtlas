@@ -136,6 +136,26 @@ describe("buildHomepageSamplePreview", () => {
     });
   });
 
+  it("describes sparse architecture evidence without inventing missing node labels", () => {
+    const noEdges = buildSampleReport();
+    noEdges.architecture.edges = [];
+
+    expect(buildHomepageSamplePreview(noEdges)?.architecture.connection).toBe(
+      "No supported file connection was detected in this sample."
+    );
+
+    const missingLabels = buildSampleReport();
+    missingLabels.architecture.edges[0] = {
+      ...missingLabels.architecture.edges[0],
+      from: "missing-source",
+      to: "missing-target",
+    };
+
+    expect(buildHomepageSamplePreview(missingLabels)?.architecture.connection).toBe(
+      "missing-source connects to missing-target."
+    );
+  });
+
   it("uses the first complete reading step with resolvable evidence", () => {
     const report = buildSampleReport();
     const brief = report.candidate_brief!;

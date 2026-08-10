@@ -29,6 +29,20 @@ describe("homepage structured data", () => {
     for (const capability of REPORT_CAPABILITY_RULES.storageDependent) {
       expect(homepageMetadata.description).not.toContain(capability);
     }
+
+    expect(homepageMetadata.alternates).toEqual({ canonical: siteIdentity.url });
+    expect(homepageMetadata.openGraph).toEqual({
+      title: homepageMetadata.title,
+      description: siteIdentity.description,
+      type: "website",
+      url: siteIdentity.url,
+      siteName: siteIdentity.name,
+    });
+    expect(homepageMetadata.twitter).toEqual({
+      card: "summary",
+      title: homepageMetadata.title,
+      description: siteIdentity.description,
+    });
   });
 
   it("keeps homepage metadata distinct from the focused interview page", () => {

@@ -34,7 +34,7 @@ async function openControlledInlineReport(
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+  await page.getByRole("button", { name: /Generate the bundled sample brief/i }).click();
   await expectCompletedReportInViewport(page);
   if (expectShare) {
     await expect(page.getByRole("button", { name: "Share Candidate Brief" })).toBeVisible();
@@ -336,7 +336,7 @@ test.describe("Report UI flows", () => {
 
     await page.goto("/");
     await expect(page.getByRole("button", { name: /Share Candidate Brief/i })).toHaveCount(0);
-    await page.getByRole("button", { name: /Generate sample Candidate Brief/i }).click();
+    await page.getByRole("button", { name: /Generate the bundled sample brief/i }).click();
     await expectCompletedReportInViewport(page);
 
     const exportSummary = page.getByText(
