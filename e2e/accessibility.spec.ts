@@ -68,6 +68,12 @@ test.describe("Accessibility", () => {
         await matrix.focus();
         await expect(matrix).toBeFocused();
       }
+
+      if (route === "/code-review-interview") {
+        const exercise = page.getByLabel("TypeScript code review exercise");
+        await exercise.focus();
+        await expect(exercise).toBeFocused();
+      }
     }
   });
 });

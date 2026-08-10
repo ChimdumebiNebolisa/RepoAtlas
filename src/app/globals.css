@@ -2766,6 +2766,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: #10201a;
   box-shadow: 0 20px 60px rgba(4, 12, 9, 0.28);
 }
+.code-review-example-layout pre:focus-visible {
+  outline: 3px solid #74d9ad;
+  outline-offset: 4px;
+}
 .code-review-example-layout code {
   font-size: clamp(0.72rem, 1.2vw, 0.88rem);
   line-height: 1.85;

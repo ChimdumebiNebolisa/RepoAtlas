@@ -31,9 +31,9 @@ describe("code review interview guide", () => {
     );
     expect(screen.getAllByText("Establish the contract")).toHaveLength(1);
     expect(screen.getByText("Trace one complete path")).toBeInTheDocument();
-    expect(screen.getByLabelText("TypeScript code review exercise")).toHaveTextContent(
-      "saveInvite",
-    );
+    const exercise = screen.getByLabelText("TypeScript code review exercise");
+    expect(exercise).toHaveTextContent("saveInvite");
+    expect(exercise).toHaveAttribute("tabindex", "0");
     expect(screen.getByText("The input contract is not enforced")).toBeInTheDocument();
     expect(screen.getByText("A failed write can be reported as success")).toBeInTheDocument();
     expect(screen.getByText("Normalization happens after the duplicate check")).toBeInTheDocument();
