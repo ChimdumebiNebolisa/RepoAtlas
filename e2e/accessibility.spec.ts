@@ -60,6 +60,14 @@ test.describe("Accessibility", () => {
         (violation) => violation.impact === "serious" || violation.impact === "critical"
       );
       expect(serious, route).toEqual([]);
+
+      if (route === "/ai-codebase-summary") {
+        const matrix = page.getByRole("table", {
+          name: "AI summary and Candidate Brief comparison",
+        });
+        await matrix.focus();
+        await expect(matrix).toBeFocused();
+      }
     }
   });
 });

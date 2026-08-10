@@ -100,7 +100,12 @@ export function AiSummaryComparison({
           </p>
         </header>
 
-        <div className="ai-summary-matrix" role="table" aria-label="AI summary and Candidate Brief comparison">
+        <div
+          className="ai-summary-matrix"
+          role="table"
+          aria-label="AI summary and Candidate Brief comparison"
+          tabIndex={0}
+        >
           <div className="ai-summary-matrix-header" role="row">
             <span role="columnheader">Criterion</span>
             <span role="columnheader">AI codebase summary</span>

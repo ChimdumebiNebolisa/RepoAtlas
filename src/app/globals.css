@@ -2325,6 +2325,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
   margin-top: clamp(3.5rem, 7vw, 6rem);
   border-block: 1px solid #bfcfc7;
 }
+.ai-summary-matrix:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
 .ai-summary-matrix-header, .ai-summary-matrix-row {
   display: grid;
   grid-template-columns: minmax(8rem, 0.42fr) minmax(14rem, 0.79fr) minmax(14rem, 0.79fr);
