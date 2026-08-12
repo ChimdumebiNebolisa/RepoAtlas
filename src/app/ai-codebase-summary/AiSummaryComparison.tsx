@@ -15,7 +15,7 @@ const comparisonRows = [
   {
     criterion: "Source traceability",
     summary: "Check whether the product links each repository-specific statement to its source.",
-    brief: "Links repository claims to inspectable files and configuration.",
+    brief: "Links supported repository claims to inspectable files, relationships, and configuration.",
   },
   {
     criterion: "Interview format",

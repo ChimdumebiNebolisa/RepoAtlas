@@ -53,6 +53,9 @@ describe("AI codebase summary comparison page", () => {
       "Real file-backed sample",
     );
     expect(screen.getByText(/Get a reading route, timed walkthroughs/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Inspect the public FastAPI repository example/i }),
+    ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
 
     expect(screen.getByRole("link", { name: /learn the complete evidence-first walkthrough/i })).toHaveAttribute(
       "href",

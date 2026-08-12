@@ -143,7 +143,7 @@ export default async function CodebaseInterviewPreparationPage() {
               <h3>The conversation can move across the system.</h3>
               <ul>
                 <li>The repository is unfamiliar or large enough to lose your place.</li>
-                <li>You need a reading order, architecture path, tests, and tradeoff evidence.</li>
+                <li>You need a reading order, architecture context, test signals, and evidence gaps.</li>
                 <li>You want the same facts to support both a short and a detailed answer.</li>
               </ul>
               <p>Keep the process bounded. Structure should reduce the codebase, not catalogue it.</p>
@@ -202,7 +202,7 @@ export default async function CodebaseInterviewPreparationPage() {
                 <span>Your judgment</span>
                 <h3>Supply intent and personal rationale.</h3>
                 <p>
-                  Files can show technical choices. They cannot prove why maintainers chose them,
+                  Files can support some technical choices. They cannot prove why maintainers chose them,
                   which alternatives they rejected, or what happens in production.
                 </p>
               </article>
@@ -216,7 +216,7 @@ export default async function CodebaseInterviewPreparationPage() {
             <h2 id="proof-heading">Let the files carry facts. Keep the judgment yours.</h2>
             <p>
               RepoAtlas reads repository files as text. It does not execute code or call AI. Its
-              Candidate Brief organizes file-backed entry points, reading order, architecture,
+              Candidate Brief organizes ranked starting files, reading order, architecture context,
               structural risk signals, tests, timed walkthroughs, and an evidence index.
             </p>
           </header>

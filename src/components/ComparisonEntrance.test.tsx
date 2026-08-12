@@ -64,6 +64,9 @@ describe("ComparisonEntrance", () => {
       "src/bootstrap.tsRisk 79 out of 100, with complexity 9 and 2 outgoing file links.",
     );
     expect(screen.getByTestId("comparison-sample-proof")).not.toHaveTextContent("start-1");
+    expect(
+      screen.getByRole("link", { name: /Inspect the public FastAPI repository example/i }),
+    ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
   });
 
   it("renders the AI-summary action with the same exact bundled proof", () => {
@@ -78,6 +81,9 @@ describe("ComparisonEntrance", () => {
     expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
       "src/bootstrap.tsRisk 79 out of 100",
     );
+    expect(
+      screen.getByRole("link", { name: /Inspect the public FastAPI repository example/i }),
+    ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
   });
 
   it("keeps the first file-backed reading item when the comparison proof is unavailable", () => {
