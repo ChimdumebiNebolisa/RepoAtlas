@@ -184,6 +184,33 @@ describe("HomePage completion coordination", () => {
     );
   });
 
+  it("consumes a restored direct sample marker when the report completes", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?source=comparison_structured_preparation&sample=1#analyze",
+    );
+
+    render(<HomePage sampleReport={buildSampleReport()} />);
+    expect(generateSample).toHaveBeenCalledTimes(1);
+
+    // Simulate the framework restoring its hydrated search string after the
+    // mount effect has already consumed the one-shot marker.
+    window.history.replaceState(
+      {},
+      "",
+      "/?source=comparison_structured_preparation&sample=1#analyze",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
+
+    expect(
+      window.location.href.endsWith(
+        "/?source=comparison_structured_preparation#analyze",
+      ),
+    ).toBe(true);
+    expect(generateSample).toHaveBeenCalledTimes(1);
+  });
+
   it("opens the complete sample proof and schedules it into view", async () => {
     const user = userEvent.setup();
     render(<HomePage sampleReport={buildSampleReport()} />);

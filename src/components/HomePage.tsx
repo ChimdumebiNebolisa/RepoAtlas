@@ -18,6 +18,19 @@ function Badge({ children }: { children: React.ReactNode }) {
   return <span className="badge">{children}</span>;
 }
 
+function consumeDirectSampleQuery() {
+  const searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.get("sample") !== "1") return;
+
+  searchParams.delete("sample");
+  const nextSearch = searchParams.toString();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`,
+  );
+}
+
 export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const [report, setReport] = useState<Report | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
@@ -42,18 +55,16 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
 
     directSampleStartedRef.current = true;
     inputFormRef.current?.generateSample();
-
-    searchParams.delete("sample");
-    const nextSearch = searchParams.toString();
-    window.history.replaceState(
-      window.history.state,
-      "",
-      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`,
-    );
+    consumeDirectSampleQuery();
   }, []);
 
   useEffect(() => {
     if (!report) return;
+
+    // Next.js can restore the hydrated search string after the mount effect.
+    // Consume the one-shot marker again after a direct sample completes so it
+    // cannot survive in the stable report URL or trigger another run on reload.
+    if (directSampleStartedRef.current) consumeDirectSampleQuery();
 
     let cancelled = false;
     let settleFrame: number | null = null;
