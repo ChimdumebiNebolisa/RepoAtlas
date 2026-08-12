@@ -256,6 +256,44 @@ describe("HomePage completion coordination", () => {
     expect(document.documentElement.style.scrollBehavior).toBe("smooth");
   });
 
+  it("waits for repository fonts before positioning the completed brief", async () => {
+    let resolveFonts!: () => void;
+    const fontsReady = new Promise<void>((resolve) => {
+      resolveFonts = resolve;
+    });
+    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts");
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready: fontsReady },
+    });
+
+    try {
+      render(<HomePage sampleReport={buildSampleReport()} />);
+      fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
+      const heading = screen.getByTestId("completed-report-heading");
+
+      expect(animationFrames).toHaveLength(0);
+      expect(heading).not.toHaveFocus();
+
+      await act(async () => {
+        resolveFonts();
+        await fontsReady;
+      });
+
+      expect(animationFrames).toHaveLength(1);
+      runNextFrame();
+      runNextFrame();
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+      expect(heading).toHaveFocus();
+    } finally {
+      if (originalFonts) {
+        Object.defineProperty(document, "fonts", originalFonts);
+      } else {
+        Reflect.deleteProperty(document, "fonts");
+      }
+    }
+  });
+
   it("cancels a pending completion focus when the report is cleared or the page unmounts", () => {
     const { unmount } = render(<HomePage sampleReport={buildSampleReport()} />);
 

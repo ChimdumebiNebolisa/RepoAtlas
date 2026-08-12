@@ -55,19 +55,33 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   useEffect(() => {
     if (!report) return;
 
+    let cancelled = false;
+    let settleFrame: number | null = null;
     let positionFrame: number | null = null;
-    const frame = requestAnimationFrame(() => {
-      reportSectionRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
-      positionFrame = requestAnimationFrame(() => {
-        // Repeat after one paint so scroll anchoring from the replaced report
-        // cannot move the completed heading back above the viewport.
+    const positionCompletedReport = () => {
+      if (cancelled) return;
+
+      settleFrame = requestAnimationFrame(() => {
         reportSectionRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
-        reportHeadingRef.current?.focus({ preventScroll: true });
+        positionFrame = requestAnimationFrame(() => {
+          // Repeat after one paint so scroll anchoring from the replaced report
+          // cannot move the completed heading back above the viewport.
+          reportSectionRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+          reportHeadingRef.current?.focus({ preventScroll: true });
+        });
       });
-    });
+    };
+
+    const fontsReady = document.fonts?.ready;
+    if (fontsReady) {
+      void fontsReady.then(positionCompletedReport);
+    } else {
+      positionCompletedReport();
+    }
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelled = true;
+      if (settleFrame !== null) cancelAnimationFrame(settleFrame);
       if (positionFrame !== null) cancelAnimationFrame(positionFrame);
     };
   }, [report]);
