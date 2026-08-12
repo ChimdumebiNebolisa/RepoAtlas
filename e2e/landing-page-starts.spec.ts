@@ -191,19 +191,30 @@ test.describe("candidate landing-page starts", () => {
             ? candidatePage.sampleAction
             : "Use a public GitHub repository";
         const startAction = entrance.getByRole("link", { name: actionName });
-        const directSampleRequest =
-          inputMode === "sample" && candidatePage.directSample
-            ? page.waitForRequest(
-                (request) =>
-                  request.method() === "POST" &&
-                  new URL(request.url()).pathname === "/api/analyze",
-              )
-            : null;
+        const startsSampleDirectly =
+          inputMode === "sample" && candidatePage.directSample;
+        const attributedStartUrl = `/?source=${candidatePage.source}#analyze`;
+        const directSampleStartUrl = `/?source=${candidatePage.source}&sample=1#analyze`;
+        await expect(startAction).toHaveAttribute(
+          "href",
+          startsSampleDirectly ? directSampleStartUrl : attributedStartUrl,
+        );
+        const directSampleRequest = startsSampleDirectly
+          ? page.waitForRequest(
+              (request) =>
+                request.method() === "POST" &&
+                new URL(request.url()).pathname === "/api/analyze",
+            )
+          : null;
         await focusWithKeyboard(page, startAction);
         await page.keyboard.press("Enter");
 
         await expect(page).toHaveURL(
-          new RegExp(`\\?source=${candidatePage.source}#analyze$`),
+          startsSampleDirectly
+            ? new RegExp(
+                `\\?source=${candidatePage.source}(?:&sample=1)?#analyze$`,
+              )
+            : new RegExp(`\\?source=${candidatePage.source}#analyze$`),
         );
         await expect(
           page.getByRole("radio", { name: /Prepare for an interview/i }),
