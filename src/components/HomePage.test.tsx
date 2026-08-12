@@ -240,7 +240,7 @@ describe("HomePage completion coordination", () => {
     ).toBeInTheDocument();
   });
 
-  it("focuses a completed brief without smooth scrolling and restores the page setting", () => {
+  it("positions and focuses a completed brief without inheriting smooth scrolling", () => {
     document.documentElement.style.scrollBehavior = "smooth";
     render(<HomePage sampleReport={buildSampleReport()} />);
 
@@ -248,10 +248,11 @@ describe("HomePage completion coordination", () => {
     const heading = screen.getByTestId("completed-report-heading");
     runNextFrame();
 
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
-    expect(heading).toHaveFocus();
-    expect(document.documentElement.style.scrollBehavior).toBe("auto");
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "instant", block: "start" });
+    expect(heading).not.toHaveFocus();
     runNextFrame();
+    expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(heading).toHaveFocus();
     expect(document.documentElement.style.scrollBehavior).toBe("smooth");
   });
 
@@ -272,13 +273,13 @@ describe("HomePage completion coordination", () => {
     expect(animationFrames).toHaveLength(0);
   });
 
-  it("restores smooth scrolling if a completed brief is cleared before the restore frame", () => {
+  it("keeps the page scroll setting when a completed brief is cleared", () => {
     document.documentElement.style.scrollBehavior = "smooth";
     render(<HomePage sampleReport={buildSampleReport()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
     runNextFrame();
-    expect(document.documentElement.style.scrollBehavior).toBe("auto");
+    expect(document.documentElement.style.scrollBehavior).toBe("smooth");
 
     fireEvent.click(screen.getByRole("button", { name: "Start analysis" }));
 

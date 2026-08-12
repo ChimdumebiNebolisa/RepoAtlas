@@ -55,30 +55,20 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   useEffect(() => {
     if (!report) return;
 
-    let restoreFrame: number | null = null;
-    let documentElement: HTMLElement | null = null;
-    let previousScrollBehavior: string | null = null;
-
+    let positionFrame: number | null = null;
     const frame = requestAnimationFrame(() => {
-      documentElement = document.documentElement;
-      previousScrollBehavior = documentElement.style.scrollBehavior;
-
-      documentElement.style.scrollBehavior = "auto";
-      reportSectionRef.current?.scrollIntoView({ block: "start" });
-      reportHeadingRef.current?.focus({ preventScroll: true });
-      restoreFrame = requestAnimationFrame(() => {
-        if (documentElement && previousScrollBehavior !== null) {
-          documentElement.style.scrollBehavior = previousScrollBehavior;
-        }
+      reportSectionRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+      positionFrame = requestAnimationFrame(() => {
+        // Repeat after one paint so scroll anchoring from the replaced report
+        // cannot move the completed heading back above the viewport.
+        reportSectionRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+        reportHeadingRef.current?.focus({ preventScroll: true });
       });
     });
 
     return () => {
       cancelAnimationFrame(frame);
-      if (restoreFrame !== null) cancelAnimationFrame(restoreFrame);
-      if (documentElement && previousScrollBehavior !== null) {
-        documentElement.style.scrollBehavior = previousScrollBehavior;
-      }
+      if (positionFrame !== null) cancelAnimationFrame(positionFrame);
     };
   }, [report]);
 
