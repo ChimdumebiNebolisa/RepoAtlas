@@ -44,6 +44,9 @@ const sample: HomepageSamplePreview = {
   },
 };
 
+const evidenceBackedBriefPromise =
+  "Prepare to explain a repository with the ranked reading path, architecture context, source-backed commands, test inventory, and structural risk signals shown in the public FastAPI example. The example contains 12 starting files, 35 architecture nodes, 8 commands, 17 test files, and 133 risk signals. Its risk signals guide inspection; they do not prove runtime behavior, bugs, or vulnerabilities.";
+
 afterEach(cleanup);
 
 describe("ComparisonEntrance", () => {
@@ -64,6 +67,7 @@ describe("ComparisonEntrance", () => {
       "src/bootstrap.tsRisk 79 out of 100, with complexity 9 and 2 outgoing file links.",
     );
     expect(screen.getByTestId("comparison-sample-proof")).not.toHaveTextContent("start-1");
+    expect(screen.getByText(evidenceBackedBriefPromise)).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Inspect the public FastAPI repository example/i }),
     ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
@@ -81,6 +85,7 @@ describe("ComparisonEntrance", () => {
     expect(screen.getByTestId("comparison-sample-proof")).toHaveTextContent(
       "src/bootstrap.tsRisk 79 out of 100",
     );
+    expect(screen.getByText(evidenceBackedBriefPromise)).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Inspect the public FastAPI repository example/i }),
     ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
