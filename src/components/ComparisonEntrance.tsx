@@ -5,25 +5,23 @@ import type { ComparisonSourceToken } from "@/lib/analysisAttribution";
 
 type ComparisonEntranceVariant = "structured-preparation" | "ai-summary";
 
+const evidenceBackedBriefPromise =
+  "Prepare to explain a repository with the ranked reading path, architecture context, source-backed commands, test inventory, and structural risk signals shown in the public FastAPI example. The example contains 12 starting files, 35 architecture nodes, 8 commands, 17 test files, and 133 risk signals. Its risk signals guide inspection; they do not prove runtime behavior, bugs, or vulnerabilities.";
+
 const entranceCopy: Record<
   ComparisonEntranceVariant,
   {
     action: string;
     entrySource: ComparisonSourceToken;
-    whatYouGet: string;
   }
 > = {
   "structured-preparation": {
     action: "Try the sample interview route",
     entrySource: "comparison_structured_preparation",
-    whatYouGet:
-      "Get a reading route, timed walkthroughs, risk signals, and evidence you can inspect. Use the same file-backed proof for a short introduction or a deeper technical answer.",
   },
   "ai-summary": {
     action: "Try the evidence-linked sample",
     entrySource: "comparison_ai_summary",
-    whatYouGet:
-      "Get a reading route, timed walkthroughs, risk signals, and evidence you can inspect. Use the same file-backed proof for a short introduction or a deeper technical answer.",
   },
 };
 
@@ -45,7 +43,7 @@ export function ComparisonEntrance({
       <div className="comparison-entrance-heading">
         <span>Bundled Candidate Brief</span>
         <strong>See what you will receive.</strong>
-        <p>{copy.whatYouGet}</p>
+        <p>{evidenceBackedBriefPromise}</p>
       </div>
 
       {sample ? (

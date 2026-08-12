@@ -35,24 +35,25 @@ test("interview-preparation page leads to the measurable analysis start", async 
   ).toBeVisible();
 });
 
+const evidenceBackedBriefPromise =
+  "Prepare to explain a repository with the ranked reading path, architecture context, source-backed commands, test inventory, and structural risk signals shown in the public FastAPI example. The example contains 12 starting files, 35 architecture nodes, 8 commands, 17 test files, and 133 risk signals. Its risk signals guide inspection; they do not prove runtime behavior, bugs, or vulnerabilities.";
+
 for (const comparison of [
   {
     path: "/codebase-interview-preparation",
     source: "comparison_structured_preparation",
     action: "Try the sample interview route",
-    whatYouGet: "Get a reading route, timed walkthroughs, risk signals, and evidence you can inspect.",
   },
   {
     path: "/ai-codebase-summary",
     source: "comparison_ai_summary",
     action: "Try the evidence-linked sample",
-    whatYouGet: "Get a reading route, timed walkthroughs, risk signals, and evidence you can inspect.",
   },
 ] as const) {
   test(`${comparison.path} preserves the bounded interview start`, async ({ page }) => {
     await page.goto(comparison.path);
 
-    await expect(page.getByText(comparison.whatYouGet)).toBeVisible();
+    await expect(page.getByText(evidenceBackedBriefPromise)).toBeVisible();
     await expect(page.getByTestId("comparison-sample-proof")).toContainText(
       "Real file-backed sample",
     );
