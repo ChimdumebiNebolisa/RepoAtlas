@@ -2026,6 +2026,118 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-size: 0.7rem;
   line-height: 1.55;
 }
+.comparison-example-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  color: var(--accent-dark);
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-color: rgba(8, 122, 85, 0.32);
+  text-underline-offset: 0.2em;
+}
+.comparison-example-link:hover { text-decoration-color: var(--accent); }
+.comparison-example-link:focus-visible {
+  outline: 3px solid rgba(8, 122, 85, 0.25);
+  outline-offset: 4px;
+}
+.example-hero {
+  align-items: start;
+  grid-template-columns: minmax(0, 1.08fr) minmax(22rem, 0.92fr);
+}
+.example-hero-copy h1 { max-width: 13ch; }
+.example-snapshot {
+  display: grid;
+  gap: 1.25rem;
+}
+.example-snapshot > span,
+.example-boundary > span {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.example-snapshot h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.4vw, 1.8rem);
+  letter-spacing: -0.04em;
+}
+.example-snapshot dl {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+}
+.example-snapshot dl > div {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #d5e0da;
+}
+.example-snapshot dt {
+  color: #667a70;
+  font-size: 0.7rem;
+}
+.example-snapshot dd {
+  min-width: 0;
+  margin: 0;
+  color: #315d4b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+.example-snapshot a,
+.example-report-section a,
+.example-boundary a {
+  color: var(--accent-dark);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(8, 122, 85, 0.35);
+  text-underline-offset: 0.2em;
+}
+.example-snapshot a:focus-visible,
+.example-report-section a:focus-visible,
+.example-boundary a:focus-visible {
+  outline: 3px solid rgba(8, 122, 85, 0.25);
+  outline-offset: 3px;
+}
+.example-report-section {
+  padding-block: clamp(6rem, 11vw, 10rem);
+  border-top: 1px solid var(--line);
+}
+.example-report-section .comparison-workflow code {
+  color: #315d4b;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+.example-report-section .comparison-workflow li > div > p { color: var(--accent); }
+.example-boundary {
+  display: grid;
+  gap: 1rem;
+  margin-top: clamp(3rem, 6vw, 5rem);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid rgba(8, 122, 85, 0.28);
+  border-radius: var(--radius-card);
+  background: rgba(250, 253, 251, 0.92);
+}
+.example-boundary h3 {
+  max-width: 24ch;
+  margin: 0;
+  font-size: clamp(1.4rem, 2.8vw, 2.2rem);
+  letter-spacing: -0.045em;
+}
+.example-boundary p {
+  max-width: 72ch;
+  margin: 0;
+  color: #40564d;
+  font-size: 0.84rem;
+  line-height: 1.75;
+}
 .comparison-route-section {
   padding-block: 0 clamp(4.5rem, 8vw, 7rem);
 }
@@ -3195,6 +3307,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
     font-size: 0.64rem;
     line-height: 1.4;
   }
+  .comparison-example-link { margin-top: 0.55rem; font-size: 0.67rem; }
+  .example-hero { gap: 2rem; padding-block: 2.5rem 4rem; }
+  .example-hero-copy h1 { max-width: 15ch; }
+  .example-snapshot { padding: 1rem; }
+  .example-snapshot dl > div { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.65rem; }
+  .example-report-section { padding-block: 5.5rem; }
   .comparison-route-section { padding-bottom: 4.5rem; }
   .authored-answer-map { padding: 1.1rem; }
   .comparison-primary-action { width: 100%; }

@@ -103,6 +103,12 @@ export function ComparisonEntrance({
       <p className="comparison-action-note">
         No upload is needed for the sample. RepoAtlas reads files without executing code.
       </p>
+      <Link
+        className="comparison-example-link"
+        href="/examples/fastapi-candidate-brief"
+      >
+        Inspect the public FastAPI repository example <span aria-hidden="true">→</span>
+      </Link>
     </aside>
   );
 }

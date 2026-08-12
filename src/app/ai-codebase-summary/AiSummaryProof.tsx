@@ -15,7 +15,7 @@ export function AiSummaryProof() {
         <article>
           <span>Included</span>
           <h3>Interview-ready structure</h3>
-          <p>Entry points, reading order, architecture, risk signals, timed scripts, questions, and evidence.</p>
+          <p>Ranked starting files, reading order, architecture context, risk signals, timed scripts, questions, and evidence.</p>
         </article>
         <article>
           <span>Bounded</span>

@@ -66,6 +66,17 @@ for (const comparison of [
     await expect(
       page.getByRole("link", { name: "Use a public GitHub repository" }),
     ).toHaveAttribute("href", `/?source=${comparison.source}#analyze`);
+    const publicExample = page.getByRole("link", {
+      name: "Inspect the public FastAPI repository example",
+    });
+    await expect(publicExample).toHaveAttribute(
+      "href",
+      "/examples/fastapi-candidate-brief",
+    );
+    const exampleResponse = await page.request.get(
+      "/examples/fastapi-candidate-brief",
+    );
+    expect(exampleResponse.status()).toBe(200);
     const analyzeRequest = page.waitForRequest(
       (request) =>
         request.method() === "POST" &&

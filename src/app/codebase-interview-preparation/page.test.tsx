@@ -54,6 +54,9 @@ describe("codebase interview preparation page", () => {
       "Real file-backed sample",
     );
     expect(screen.getByText(/Get a reading route, timed walkthroughs/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Inspect the public FastAPI repository example/i }),
+    ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
 
     expect(screen.getAllByRole("link", { name: /repository walkthrough interview guide/i })[0]).toHaveAttribute(
       "href",
