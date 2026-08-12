@@ -184,6 +184,33 @@ describe("HomePage completion coordination", () => {
     );
   });
 
+  it("consumes a restored direct sample marker when the report completes", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?source=comparison_structured_preparation&sample=1#analyze",
+    );
+
+    render(<HomePage sampleReport={buildSampleReport()} />);
+    expect(generateSample).toHaveBeenCalledTimes(1);
+
+    // Simulate the framework restoring its hydrated search string after the
+    // mount effect has already consumed the one-shot marker.
+    window.history.replaceState(
+      {},
+      "",
+      "/?source=comparison_structured_preparation&sample=1#analyze",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
+
+    expect(
+      window.location.href.endsWith(
+        "/?source=comparison_structured_preparation#analyze",
+      ),
+    ).toBe(true);
+    expect(generateSample).toHaveBeenCalledTimes(1);
+  });
+
   it("opens the complete sample proof and schedules it into view", async () => {
     const user = userEvent.setup();
     render(<HomePage sampleReport={buildSampleReport()} />);
@@ -240,7 +267,7 @@ describe("HomePage completion coordination", () => {
     ).toBeInTheDocument();
   });
 
-  it("focuses a completed brief without smooth scrolling and restores the page setting", () => {
+  it("positions and focuses a completed brief without inheriting smooth scrolling", () => {
     document.documentElement.style.scrollBehavior = "smooth";
     render(<HomePage sampleReport={buildSampleReport()} />);
 
@@ -248,11 +275,50 @@ describe("HomePage completion coordination", () => {
     const heading = screen.getByTestId("completed-report-heading");
     runNextFrame();
 
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
-    expect(heading).toHaveFocus();
-    expect(document.documentElement.style.scrollBehavior).toBe("auto");
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "instant", block: "start" });
+    expect(heading).not.toHaveFocus();
     runNextFrame();
+    expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(heading).toHaveFocus();
     expect(document.documentElement.style.scrollBehavior).toBe("smooth");
+  });
+
+  it("waits for repository fonts before positioning the completed brief", async () => {
+    let resolveFonts!: () => void;
+    const fontsReady = new Promise<void>((resolve) => {
+      resolveFonts = resolve;
+    });
+    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts");
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready: fontsReady },
+    });
+
+    try {
+      render(<HomePage sampleReport={buildSampleReport()} />);
+      fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
+      const heading = screen.getByTestId("completed-report-heading");
+
+      expect(animationFrames).toHaveLength(0);
+      expect(heading).not.toHaveFocus();
+
+      await act(async () => {
+        resolveFonts();
+        await fontsReady;
+      });
+
+      expect(animationFrames).toHaveLength(1);
+      runNextFrame();
+      runNextFrame();
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+      expect(heading).toHaveFocus();
+    } finally {
+      if (originalFonts) {
+        Object.defineProperty(document, "fonts", originalFonts);
+      } else {
+        Reflect.deleteProperty(document, "fonts");
+      }
+    }
   });
 
   it("cancels a pending completion focus when the report is cleared or the page unmounts", () => {
@@ -272,13 +338,13 @@ describe("HomePage completion coordination", () => {
     expect(animationFrames).toHaveLength(0);
   });
 
-  it("restores smooth scrolling if a completed brief is cleared before the restore frame", () => {
+  it("keeps the page scroll setting when a completed brief is cleared", () => {
     document.documentElement.style.scrollBehavior = "smooth";
     render(<HomePage sampleReport={buildSampleReport()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
     runNextFrame();
-    expect(document.documentElement.style.scrollBehavior).toBe("auto");
+    expect(document.documentElement.style.scrollBehavior).toBe("smooth");
 
     fireEvent.click(screen.getByRole("button", { name: "Start analysis" }));
 
