@@ -1,0 +1,15 @@
+{
+  "testFiles": [
+    "test/advanced.ts",
+    "test/basic.ts",
+    "test/debug.ts",
+    "test/priority-queue.ts",
+    "test/rate-limit.ts",
+    "test/strict.ts",
+    "test/validation.ts"
+  ],
+  "nonTestFiles": [
+    "src/test-helper.ts",
+    "src/contest/entry.ts"
+  ]
+}
