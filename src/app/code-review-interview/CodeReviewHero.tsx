@@ -1,4 +1,5 @@
 import { GuideStartPanel } from "@/components/GuideStartPanel";
+import { candidateBriefProofPromise } from "@/lib/candidateBriefContent";
 
 export function CodeReviewHero() {
   return (
@@ -16,7 +17,7 @@ export function CodeReviewHero() {
           <GuideStartPanel
             ariaLabel="Prepare a repository for a code review interview"
             heading="Practice with a real repository."
-            description="Open an evidence-linked Candidate Brief, then use the review method below."
+            description={candidateBriefProofPromise}
             startSample={false}
           />
         </div>

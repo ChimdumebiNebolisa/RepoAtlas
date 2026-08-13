@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
+import { candidateBriefProofPromise } from "@/lib/candidateBriefContent";
 
 const analysisHref = "/?source=interview_preparation#analyze";
 
@@ -12,7 +13,7 @@ type GuideStartPanelProps = {
 
 export function GuideStartPanel({
   ariaLabel = "Start a repository walkthrough",
-  description = "Open a Candidate Brief now, then use the method below to explain it.",
+  description = candidateBriefProofPromise,
   heading = "Start with a repository.",
   startSample = true,
 }: GuideStartPanelProps = {}) {

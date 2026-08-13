@@ -1,6 +1,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GuideStartPanel } from "@/components/GuideStartPanel";
+import { candidateBriefProofPromise } from "@/lib/candidateBriefContent";
 
 vi.mock("@/lib/productAnalytics", () => ({
   captureProductEvent: vi.fn(),
@@ -39,7 +40,7 @@ describe("GuideStartPanel", () => {
       <GuideStartPanel
         ariaLabel="Start an authored-project brief"
         heading="Add the file-backed structure."
-        description="RepoAtlas supplies entry points, architecture, tests, and evidence. You supply the rationale, constraints, and outcomes."
+        description={`${candidateBriefProofPromise} You supply the rationale, constraints, and outcomes.`}
       />,
     );
 
@@ -48,7 +49,7 @@ describe("GuideStartPanel", () => {
     });
 
     expect(panel).toHaveTextContent(
-      "RepoAtlas supplies entry points, architecture, tests, and evidence.",
+      candidateBriefProofPromise,
     );
     expect(panel).toHaveTextContent(
       "You supply the rationale, constraints, and outcomes.",

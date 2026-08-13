@@ -1,5 +1,8 @@
 import type { RefObject } from "react";
-import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
+import {
+  candidateBriefProofPromise,
+  candidateBriefWalkthroughOutputs,
+} from "@/lib/candidateBriefContent";
 import {
   homepageFaqItems,
   homepageInterviewGuides,
@@ -59,8 +62,7 @@ export function HomepageHero({
       <div className="hero-copy">
         <h1>Understand unfamiliar repositories fast.</h1>
         <p className="hero-description">
-          Before an interview or onboarding, turn a public GitHub repository or ZIP into a
-          file-cited brief without running its code.
+          Use a public GitHub repository or ZIP. <span>{candidateBriefProofPromise}</span>
         </p>
         <div className="hero-actions">
           <button className="btn btn-primary" type="button" onClick={onGenerateSample}>

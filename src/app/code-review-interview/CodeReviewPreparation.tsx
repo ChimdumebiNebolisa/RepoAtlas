@@ -64,10 +64,11 @@ export function CodeReviewPreparation() {
             the files that support each claim.
           </p>
           <p>
-            RepoAtlas can turn a public GitHub repository or permitted ZIP into an evidence-linked
-            Candidate Brief with reading order, architecture, risk signals, and a pull-request
-            discussion path. It reads files as text and does not execute the code or call AI, so
-            runtime behavior, author intent, and business impact still require verification.
+            RepoAtlas can turn a public GitHub repository or permitted ZIP into a Candidate Brief
+            with a ranked reading path and file-backed talking points. Use the architecture,
+            source-backed commands, test inventory, and structural risk signals to choose what to
+            inspect first. RepoAtlas reads files as text and does not execute the code or call AI,
+            so runtime behavior, author intent, and business impact still require verification.
           </p>
           <div className="guide-answer-formulas">
             <p>
