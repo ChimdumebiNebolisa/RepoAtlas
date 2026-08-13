@@ -870,6 +870,26 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .sample-report-section { padding-block: 6rem; border-top: 1px solid var(--line); }
 .sample-report-heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; }
 .sample-report-heading h2 { margin-top: 0; }
+.sample-example-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  color: var(--accent-dark);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-color: rgba(8, 122, 85, 0.32);
+  text-underline-offset: 0.2em;
+}
+.sample-example-link:hover { text-decoration-color: currentColor; }
+.sample-example-link:focus-visible {
+  border-radius: 0.25rem;
+  outline: 3px solid rgba(8, 122, 85, 0.25);
+  outline-offset: 4px;
+}
 .sample-report-copy { max-width: 42rem; }
 .sample-proof-preview {
   overflow: hidden;
