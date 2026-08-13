@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { ProjectProfile } from "@/types/report";
 import { stripPythonCommentsAndStrings } from "./packs/python/signals";
+import { stripJavaCommentsAndLiterals } from "./packs/javaShared";
 
 const DJANGO_MANAGEMENT_IMPORT_RE =
   /^\s*from\s+django\.core\.management\s+import\s+(?:\([^)]*\bexecute_from_command_line\b[^)]*\)|[^\r\n]*\bexecute_from_command_line\b)/m;
@@ -121,7 +122,10 @@ export function detectProjectProfile(
     for (const file of files) {
       if (!file.endsWith(".java")) continue;
       const content = readWorkspaceFile(workspacePath, file);
-      if (content && /@SpringBootApplication/.test(content)) {
+      if (
+        content &&
+        /@SpringBootApplication/.test(stripJavaCommentsAndLiterals(content))
+      ) {
         type = "spring-boot";
         label = "Spring Boot application";
         signals.push(`${file} (@SpringBootApplication)`);
