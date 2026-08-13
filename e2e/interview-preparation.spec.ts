@@ -21,8 +21,21 @@ test("interview-preparation page leads to the measurable analysis start", async 
   await expect(page.getByText(/Markdown and saved server links require saved report storage/)).toBeVisible();
   await expect(page.getByText(/Deeper TypeScript\/JavaScript, Python, and Java analysis/)).toBeVisible();
   await expect(page.getByText(/without executing code or calling AI/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Start with the route you can prove." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Evidence-first repository walkthrough method" }),
+  ).toContainText("Prepare file-backed talking points.");
+
+  const publicExample = page.getByRole("link", {
+    name: "Inspect the exact-commit FastAPI Candidate Brief",
+  });
+  await expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
+  expect((await page.request.get("/examples/fastapi-candidate-brief")).status()).toBe(200);
 
   const primaryAction = page.getByRole("link", { name: "Prepare my Candidate Brief" });
+  await expect(page.locator("a.btn-primary")).toHaveCount(1);
   await expect(primaryAction).toHaveAttribute(
     "href",
     "/?source=interview_preparation#analyze"
