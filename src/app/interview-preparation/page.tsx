@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
 import {
+  candidateBriefProofPromise,
   candidateBriefLanguageCoverage,
   candidateBriefWalkthroughOutputs,
 } from "@/lib/candidateBriefContent";
@@ -34,11 +35,7 @@ export default function InterviewPreparationPage() {
         <div className="interview-hero-copy">
           <p className="eyebrow">Repository interview preparation</p>
           <h1>Prepare to explain your code, file by file.</h1>
-          <p className="interview-hero-description">
-            When the conversation turns to your repository, use a Candidate Brief to find likely
-            entry points, follow a reading order, map the architecture, and inspect risk signals
-            with file-backed talking points.
-          </p>
+          <p className="interview-hero-description">{candidateBriefProofPromise}</p>
           <Suspense
             fallback={
               <Link

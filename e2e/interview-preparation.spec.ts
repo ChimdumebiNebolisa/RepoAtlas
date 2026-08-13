@@ -264,7 +264,7 @@ test("authored project guide separates candidate intent from repository evidence
     name: "Start an authored-project brief",
   });
   await expect(startPanel).toContainText(
-    "RepoAtlas supplies entry points, architecture, tests, and evidence.",
+    "Answer “Where would you start?” with a ranked reading path and file-backed talking points.",
   );
   await expect(startPanel).toContainText(
     "You supply the rationale, constraints, and outcomes.",

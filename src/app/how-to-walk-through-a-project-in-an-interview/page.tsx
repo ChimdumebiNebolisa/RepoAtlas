@@ -4,6 +4,7 @@ import { GuideComparisonLinks } from "@/components/GuideComparisonLinks";
 import { GuideStartPanel } from "@/components/GuideStartPanel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { analyzeBundledSample } from "@/lib/bundledSample";
+import { candidateBriefProofPromise } from "@/lib/candidateBriefContent";
 import {
   authoredProjectAnswerSequence,
   authoredProjectEvidenceLayers,
@@ -48,7 +49,7 @@ export default async function AuthoredProjectWalkthroughPage() {
             <GuideStartPanel
               ariaLabel="Start an authored-project brief"
               heading="Add the file-backed structure."
-              description="RepoAtlas supplies entry points, architecture, tests, and evidence. You supply the rationale, constraints, and outcomes."
+              description={`${candidateBriefProofPromise} You supply the rationale, constraints, and outcomes.`}
             />
           </div>
 
