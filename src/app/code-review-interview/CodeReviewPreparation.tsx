@@ -69,6 +69,9 @@ export function CodeReviewPreparation() {
             source-backed commands, test inventory, and structural risk signals to choose what to
             inspect first. RepoAtlas reads files as text and does not execute the code or call AI,
             so runtime behavior, author intent, and business impact still require verification.
+            {" "}<Link href="/examples/fastapi-candidate-brief">
+              Inspect the public FastAPI Candidate Brief
+            </Link>{" "}to see those evidence limits on an exact repository commit.
           </p>
           <div className="guide-answer-formulas">
             <p>

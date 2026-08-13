@@ -34,5 +34,11 @@ describe("FastAPI Candidate Brief example", () => {
     );
     expect(screen.getByText(/did not promote the dependency name into a framework classification/)).toBeInTheDocument();
     expect(screen.getByText(/204 TypeScript and JavaScript import edges remained unresolved/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Turn this report into an interview walkthrough" }),
+    ).toHaveAttribute("href", "/repository-walkthrough-interview");
+    expect(
+      screen.getByRole("link", { name: "Run your public GitHub repository" }),
+    ).toHaveAttribute("href", "/?source=fastapi_example#analyze");
   });
 });
