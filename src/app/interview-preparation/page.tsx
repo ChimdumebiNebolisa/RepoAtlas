@@ -72,6 +72,52 @@ export default function InterviewPreparationPage() {
         </div>
       </section>
 
+      <section className="interview-method page-container" aria-labelledby="interview-method-heading">
+        <header>
+          <p className="section-kicker">How to answer the walkthrough question</p>
+          <h2 id="interview-method-heading">Start with the route you can prove.</h2>
+          <p>
+            When an interviewer says, &quot;Walk me through this repository,&quot; build the answer in
+            four passes. Keep each claim tied to a file, configuration value, or supported
+            relationship.
+          </p>
+          <Link className="interview-example-link" href="/examples/fastapi-candidate-brief">
+            Inspect the exact-commit FastAPI Candidate Brief <span aria-hidden="true">→</span>
+          </Link>
+        </header>
+
+        <ol aria-label="Evidence-first repository walkthrough method">
+          <li>
+            <span>01</span>
+            <div>
+              <h3>Identify entry points.</h3>
+              <p>Find the files and configuration that show where the system starts.</p>
+            </div>
+          </li>
+          <li>
+            <span>02</span>
+            <div>
+              <h3>Establish a reading order.</h3>
+              <p>Follow the main path from the entry point into the next meaningful boundary.</p>
+            </div>
+          </li>
+          <li>
+            <span>03</span>
+            <div>
+              <h3>Inspect architecture and risk signals.</h3>
+              <p>Use supported connections and structural signals to choose what to inspect next.</p>
+            </div>
+          </li>
+          <li>
+            <span>04</span>
+            <div>
+              <h3>Prepare file-backed talking points.</h3>
+              <p>Explain what the evidence shows, then name what the repository cannot prove.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
       <section className="interview-outcome page-container">
         <header>
           <p className="section-kicker">What you take into the conversation</p>
