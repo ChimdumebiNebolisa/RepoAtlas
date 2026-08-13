@@ -182,6 +182,12 @@ export default function FastApiCandidateBriefExamplePage() {
               unresolved. Those limits travel with the proof instead of being hidden.
             </p>
             <p>
+              <Link href="/repository-walkthrough-interview">
+                Turn this report into an interview walkthrough
+              </Link>
+              {" "}with a defensible reading order and clear evidence limits.
+            </p>
+            <p>
               <Link href="/?source=fastapi_example#analyze">Run your public GitHub repository</Link>
               {" "}or inspect the{" "}
               <a href={`${repositoryUrl}/tree/${commit}`}>exact source revision</a>.

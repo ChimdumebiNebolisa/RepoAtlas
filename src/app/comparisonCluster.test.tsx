@@ -19,6 +19,7 @@ const clusterPages: ClusterPage[] = [
     name: "repository walkthrough guide",
     renderPage: RepositoryWalkthroughInterviewPage,
     requiredDestinations: [
+      "/examples/fastapi-candidate-brief",
       "/codebase-interview-preparation",
       "/ai-codebase-summary",
       "/code-review-interview",
@@ -29,6 +30,7 @@ const clusterPages: ClusterPage[] = [
     name: "authored project guide",
     renderPage: AuthoredProjectWalkthroughPage,
     requiredDestinations: [
+      "/examples/fastapi-candidate-brief",
       "/codebase-interview-preparation",
       "/ai-codebase-summary",
       "/code-review-interview",
@@ -57,6 +59,7 @@ const clusterPages: ClusterPage[] = [
     name: "code review interview guide",
     renderPage: CodeReviewInterviewPage,
     requiredDestinations: [
+      "/examples/fastapi-candidate-brief",
       "/repository-walkthrough-interview",
       "/codebase-interview-preparation",
     ],

@@ -407,3 +407,57 @@ test("homepage connects both interview guides without replacing the sample actio
     "/how-to-walk-through-a-project-in-an-interview"
   );
 });
+
+test("every public proof cluster route connects proof, guidance, and a Candidate Brief start", async ({
+  page,
+  request,
+}) => {
+  const proofRoutes = [
+    {
+      path: "/",
+      linkName: "Inspect a real FastAPI Candidate Brief",
+    },
+    {
+      path: "/interview-preparation",
+      linkName: "Inspect the exact-commit FastAPI Candidate Brief",
+    },
+    {
+      path: "/codebase-interview-preparation",
+      linkName: "Inspect the public FastAPI repository example",
+    },
+    {
+      path: "/ai-codebase-summary",
+      linkName: "Inspect the public FastAPI repository example",
+    },
+    {
+      path: "/repository-walkthrough-interview",
+      linkName: "Compare the method with the exact-commit FastAPI Candidate Brief",
+    },
+    {
+      path: "/how-to-walk-through-a-project-in-an-interview",
+      linkName: "See the file-backed half in the public FastAPI Candidate Brief",
+    },
+    {
+      path: "/code-review-interview",
+      linkName: "Inspect the public FastAPI Candidate Brief",
+    },
+  ] as const;
+
+  for (const route of proofRoutes) {
+    expect((await request.get(route.path)).status()).toBe(200);
+    await page.goto(route.path);
+    await expect(page.getByRole("link", { name: route.linkName })).toHaveAttribute(
+      "href",
+      "/examples/fastapi-candidate-brief",
+    );
+  }
+
+  expect((await request.get("/examples/fastapi-candidate-brief")).status()).toBe(200);
+  await page.goto("/examples/fastapi-candidate-brief");
+  await expect(
+    page.getByRole("link", { name: "Turn this report into an interview walkthrough" }),
+  ).toHaveAttribute("href", "/repository-walkthrough-interview");
+  await expect(
+    page.getByRole("link", { name: "Run your public GitHub repository" }),
+  ).toHaveAttribute("href", "/?source=fastapi_example#analyze");
+});

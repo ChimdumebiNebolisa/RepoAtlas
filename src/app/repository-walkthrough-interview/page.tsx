@@ -203,7 +203,10 @@ export default async function RepositoryWalkthroughInterviewPage() {
             </Link>
           </div>
           <p className="guide-product-boundary">
-            RepoAtlas reads repository files as text. It does not execute code or call AI. It
+            <Link href="/examples/fastapi-candidate-brief">
+              Compare the method with the exact-commit FastAPI Candidate Brief
+            </Link>
+            . RepoAtlas reads repository files as text. It does not execute code or call AI. It
             provides deeper analysis for TypeScript/JavaScript, Python, and Java, and keeps
             confidence gaps visible.
           </p>
