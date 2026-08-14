@@ -243,6 +243,75 @@ public class UserController { }
 });
 
 describe("runJavaPack test proximity", () => {
+  it("requires a matching Java test class in the same package", () => {
+    const workspace = writeWorkspace({
+      [relKey("service", "src", "main", "java", "com", "example", "Exact.java")]: `package com.example;
+public class Exact { }
+`,
+      [relKey("service", "src", "main", "java", "com", "example", "Integrated.java")]: `package com.example;
+public class Integrated { }
+`,
+      [relKey("service", "src", "main", "java", "com", "example", "Unrelated.java")]: `package com.example;
+public class Unrelated { }
+`,
+      [relKey("service", "src", "main", "java", "com", "other", "Uncovered.java")]: `package com.other;
+public class Uncovered { }
+`,
+      [relKey("service", "src", "test", "java", "com", "example", "ExactTest.java")]: `package com.example;
+public class ExactTest { }
+`,
+      [relKey("service", "src", "test", "java", "com", "example", "IntegratedIT.java")]: `package com.example;
+public class IntegratedIT { }
+`,
+    });
+    const exact = relKey("service", "src", "main", "java", "com", "example", "Exact.java");
+    const integrated = relKey(
+      "service",
+      "src",
+      "main",
+      "java",
+      "com",
+      "example",
+      "Integrated.java"
+    );
+    const unrelated = relKey(
+      "service",
+      "src",
+      "main",
+      "java",
+      "com",
+      "example",
+      "Unrelated.java"
+    );
+    const uncovered = relKey(
+      "service",
+      "src",
+      "main",
+      "java",
+      "com",
+      "other",
+      "Uncovered.java"
+    );
+    const pipeline = buildPipeline([
+      exact,
+      integrated,
+      unrelated,
+      uncovered,
+      relKey("service", "src", "test", "java", "com", "example", "ExactTest.java"),
+      relKey("service", "src", "test", "java", "com", "example", "IntegratedIT.java"),
+    ]);
+
+    try {
+      const result = runJavaPack(workspace, pipeline);
+      expect(result.testProximity?.get(exact)).toBe(100);
+      expect(result.testProximity?.get(integrated)).toBe(90);
+      expect(result.testProximity?.get(unrelated)).toBe(0);
+      expect(result.testProximity?.get(uncovered)).toBe(0);
+    } finally {
+      fs.rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("scores 100 for exact test mirror (FooTest.java)", () => {
     const workspace = writeWorkspace({
       [relKey("src", "main", "java", "com", "example", "UserService.java")]: `package com.example;
