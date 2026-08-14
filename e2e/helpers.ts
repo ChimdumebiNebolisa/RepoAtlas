@@ -63,6 +63,15 @@ export async function expectCompletedReportInViewport(page: Page): Promise<void>
   await expect(heading).toBeVisible({ timeout: 90_000 });
   await expect(heading).toBeFocused();
 
+  await expect
+    .poll(async () => {
+      return heading.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.top >= -1 && rect.bottom <= window.innerHeight + 1;
+      });
+    })
+    .toBe(true);
+
   const position = await heading.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return { top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight };
