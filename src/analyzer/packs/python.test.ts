@@ -405,11 +405,37 @@ describe("computeTestProximityScore", () => {
     expect(score).toBe(0);
   });
 
-  it("recognizes same-folder and __tests__ proximity", () => {
-    expect(computeTestProximityScore("pkg/service.py", new Set(["pkg/test_other.py"]))).toBe(100);
-    expect(
-      computeTestProximityScore("pkg/service.py", new Set(["pkg/__tests__/test_other.py"]))
-    ).toBe(90);
+  it.each([
+    {
+      relationship: "exact colocated test",
+      testFile: "pkg/test_service.py",
+      expectedScore: 100,
+    },
+    {
+      relationship: "exact __tests__ test",
+      testFile: "pkg/__tests__/test_service.py",
+      expectedScore: 90,
+    },
+    {
+      relationship: "exact mirrored tests/ test",
+      testFile: "tests/pkg/service.py",
+      expectedScore: 80,
+    },
+    {
+      relationship: "unrelated colocated test",
+      testFile: "pkg/test_other.py",
+      expectedScore: 0,
+    },
+    {
+      relationship: "unrelated __tests__ test",
+      testFile: "pkg/__tests__/test_other.py",
+      expectedScore: 0,
+    },
+  ])("scores $expectedScore for an $relationship", ({ testFile, expectedScore }) => {
+    expect(computeTestProximityScore("pkg/service.py", new Set([testFile]))).toBe(expectedScore);
+  });
+
+  it("detects supported Python test filenames", () => {
     expect(detectTestFiles(["pkg/test_one.py", "pkg/two_test.py", "pkg/code.py"])).toEqual(
       new Set(["pkg/test_one.py", "pkg/two_test.py"])
     );

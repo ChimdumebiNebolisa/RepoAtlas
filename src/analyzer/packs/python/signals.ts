@@ -36,12 +36,18 @@ export function computeTestProximityScore(filePath: string, testFiles: Set<strin
   for (const testFile of testFiles) {
     const normalizedTest = normalizeRelPath(testFile);
     const testDir = path.posix.dirname(normalizedTest);
+    const matchesFileName =
+      stripTestSuffix(path.posix.basename(normalizedTest)) ===
+      path.posix.basename(normalizedFile);
 
-    if (testDir === fileDir) {
+    if (testDir === fileDir && matchesFileName) {
       best = Math.max(best, 100);
       continue;
     }
-    if (testDir === `${fileDir}/__tests__` || normalizedTest.startsWith(`${fileDir}/__tests__/`)) {
+    if (
+      matchesFileName &&
+      (testDir === `${fileDir}/__tests__` || normalizedTest.startsWith(`${fileDir}/__tests__/`))
+    ) {
       best = Math.max(best, 90);
       continue;
     }

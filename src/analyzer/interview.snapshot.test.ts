@@ -98,6 +98,7 @@ describe("Candidate Brief byte stability", () => {
         "056846ba4dc67b9fec3901019466e7abdf70ad37b3a30b31c6ef7b4cb4af28a4",
         "2d4dd5b0674ebed7f11820a6d51184d22a7b09d5e8b062dc9a4ef700fb71ae89",
         "1a6167611327e1c269feaddc645c1be40eb0b4b063fede78ebb5404610a93203",
+        "2f1ac9bea7158b299c682ca8932532f5577c64cfe3366860e65901bc6c3c3fcb",
       ],
     ],
     [
