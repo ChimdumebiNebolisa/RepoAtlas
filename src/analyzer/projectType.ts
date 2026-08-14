@@ -1,6 +1,11 @@
 import fs from "fs";
 import path from "path";
 import type { ProjectProfile } from "@/types/report";
+import { stripPythonCommentsAndStrings } from "./packs/python/signals";
+
+const DJANGO_MANAGEMENT_IMPORT_RE =
+  /^\s*from\s+django\.core\.management\s+import\s+(?:\([^)]*\bexecute_from_command_line\b[^)]*\)|[^\r\n]*\bexecute_from_command_line\b)/m;
+const DJANGO_MANAGEMENT_CALL_RE = /^\s*execute_from_command_line\s*\(/m;
 
 function hasFile(files: Set<string>, pattern: RegExp): boolean {
   return Array.from(files).some((f) => pattern.test(f.replace(/\\/g, "/")));
@@ -37,6 +42,25 @@ function findFile(files: Set<string>, pattern: RegExp): string | undefined {
     })[0];
 }
 
+function hasDjangoManagementEntrypoint(
+  workspacePath: string,
+  files: Set<string>
+): boolean {
+  for (const file of files) {
+    if (!/(^|\/)manage\.py$/.test(file)) continue;
+    const content = readWorkspaceFile(workspacePath, file);
+    if (content === null) continue;
+    const code = stripPythonCommentsAndStrings(content);
+    if (
+      DJANGO_MANAGEMENT_IMPORT_RE.test(code) &&
+      DJANGO_MANAGEMENT_CALL_RE.test(code)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function readPackageJson(workspacePath: string): Record<string, unknown> | null {
   const content = readWorkspaceFile(workspacePath, "package.json");
   if (content === null) return null;
@@ -62,7 +86,7 @@ export function detectProjectProfile(
   let label = "Unknown project type";
   let confidence: ProjectProfile["confidence"] = "low";
 
-  if (hasFile(files, /(^|\/)manage\.py$/)) {
+  if (hasDjangoManagementEntrypoint(workspacePath, files)) {
     type = "django";
     label = "Django application";
     signals.push("manage.py");
