@@ -17,6 +17,11 @@ export interface EntrypointHit {
   reason: string;
 }
 
+interface PackageManifest {
+  dir: string;
+  value: Record<string, unknown>;
+}
+
 function readJson(abs: string): Record<string, unknown> | null {
   try {
     const raw = JSON.parse(fs.readFileSync(abs, "utf-8"));
@@ -64,34 +69,63 @@ function collectExportEntryPaths(
   return out;
 }
 
+function appRouterReason(file: string): string | null {
+  if (
+    /^((src\/)?app)\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(file) ||
+    /^((src\/)?app)\/.*\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(file)
+  ) {
+    return "Next.js App Router page";
+  }
+  if (
+    /^((src\/)?app)\/layout\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(file) ||
+    /^((src\/)?app)\/.*\/layout\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(file)
+  ) {
+    return "Next.js App Router layout";
+  }
+  if (/^((src\/)?app)\/(?:.+\/)?route\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(file)) {
+    return "Next.js App Router route handler";
+  }
+  return null;
+}
+
+function declaresNextJs(pkg: Record<string, unknown>): boolean {
+  return ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"].some(
+    (field) => {
+      const dependencies = pkg[field];
+      if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) {
+        return false;
+      }
+      const version = (dependencies as Record<string, unknown>).next;
+      return typeof version === "string" && version.trim().length > 0;
+    }
+  );
+}
+
+function nearestNestedManifest(
+  file: string,
+  manifests: PackageManifest[]
+): PackageManifest | undefined {
+  return manifests
+    .filter(({ dir }) => dir !== "." && file.startsWith(`${dir}/`))
+    .sort((a, b) => b.dir.length - a.dir.length)[0];
+}
+
 function detectNextEntrypoints(
   files: string[],
-  fileByNormalized: Map<string, string>
+  manifests: PackageManifest[]
 ): Map<string, string> {
   const out = new Map<string, string>();
   for (const file of files) {
     const n = normalizeRelPath(file);
     if (TEST_PATH_RE.test(n)) continue;
-    if (
-      /^((src\/)?app)\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n) ||
-      /^((src\/)?app)\/.*\/page\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n)
-    ) {
-      out.set(file, "Next.js App Router page");
-    } else if (
-      /^((src\/)?app)\/layout\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n) ||
-      /^((src\/)?app)\/.*\/layout\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n)
-    ) {
-      out.set(file, "Next.js App Router layout");
-    } else if (
-      /^((src\/)?app)\/(?:.+\/)?route\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n)
-    ) {
-      out.set(file, "Next.js App Router route handler");
+    const rootAppRouterReason = appRouterReason(n);
+    if (rootAppRouterReason) {
+      out.set(file, rootAppRouterReason);
     } else if (
       /^((src\/)?middleware)\.(ts|tsx|js|jsx|mjs|cjs)$/i.test(n)
     ) {
       out.set(file, "Next.js middleware");
     } else if (
-      fileByNormalized.has(n) &&
       /^((src\/)?pages)\/.+\.(ts|tsx|js|jsx)$/i.test(n) &&
       !/\._app\./i.test(n)
     ) {
@@ -99,6 +133,12 @@ function detectNextEntrypoints(
       if (!/\/(_app|_document|_error)\./i.test(n)) {
         out.set(file, "Next.js Pages Router page");
       }
+    } else {
+      const manifest = nearestNestedManifest(n, manifests);
+      if (!manifest || !declaresNextJs(manifest.value)) continue;
+      const packageRelative = n.slice(manifest.dir.length + 1);
+      const nestedAppRouterReason = appRouterReason(packageRelative);
+      if (nestedAppRouterReason) out.set(file, nestedAppRouterReason);
     }
   }
   return out;
@@ -116,7 +156,20 @@ export function detectTsJsEntrypoints(
     fileByNormalized.set(normalizeRelPath(file), file);
   }
 
-  for (const [file, reason] of detectNextEntrypoints(files, fileByNormalized)) {
+  const manifests: PackageManifest[] = [];
+  for (const pkgRel of packageJsonRels) {
+    const pkg = readJson(path.join(workspacePath, pkgRel));
+    if (!pkg) {
+      warnings.push(`Could not parse ${normalizeRelPath(pkgRel)} for entrypoints`);
+      continue;
+    }
+    manifests.push({
+      dir: path.posix.dirname(normalizeRelPath(pkgRel)),
+      value: pkg,
+    });
+  }
+
+  for (const [file, reason] of detectNextEntrypoints(files, manifests)) {
     entrypoints.set(file, reason);
   }
 
@@ -137,15 +190,7 @@ export function detectTsJsEntrypoints(
     }
   }
 
-  for (const pkgRel of packageJsonRels) {
-    const abs = path.join(workspacePath, pkgRel);
-    const pkg = readJson(abs);
-    if (!pkg) {
-      warnings.push(`Could not parse ${normalizeRelPath(pkgRel)} for entrypoints`);
-      continue;
-    }
-
-    const pkgDir = path.posix.dirname(normalizeRelPath(pkgRel));
+  for (const { dir: pkgDir, value: pkg } of manifests) {
     const withPkgDir = (candidate: string) => {
       const packageRelative = normalizeRelPath(candidate);
       return pkgDir === "."
