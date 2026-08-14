@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { runTsJsPack } from "./tsjs";
-import type { IndexingPipelineResult } from "../pipeline";
+import { runIndexingPipeline, type IndexingPipelineResult } from "../pipeline";
 
 const relKey = (...segments: string[]) => path.posix.join(...segments);
 const normalizeKey = (value: string) => value.replace(/\\/g, "/");
@@ -122,6 +122,26 @@ describe("runTsJsPack import resolution", () => {
 });
 
 describe("runTsJsPack deterministic signals", () => {
+  it("recognizes TypeScript files in a root test directory without matching test-like source paths", async () => {
+    const workspace = path.join(
+      process.cwd(),
+      "fixtures",
+      "repo-ts-test-directory"
+    );
+    const expected = JSON.parse(
+      fs.readFileSync(path.join(workspace, "expected-test-files.json"), "utf-8")
+    ) as { testFiles: string[]; nonTestFiles: string[] };
+    const pipeline = await runIndexingPipeline(workspace);
+
+    const result = runTsJsPack(workspace, pipeline);
+
+    expect(new Set(result.testFiles)).toEqual(new Set(expected.testFiles));
+    expect(result.testFiles.size).toBe(7);
+    for (const filePath of expected.nonTestFiles) {
+      expect(result.testFiles.has(filePath)).toBe(false);
+    }
+  });
+
   it("detects entrypoints from scripts, Next app router, and common files", () => {
     const workspace = writeWorkspace({
       "package.json": JSON.stringify(

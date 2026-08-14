@@ -28,7 +28,7 @@ import { detectTsJsEntrypoints } from "./tsjsEntrypoints";
 
 const TEST_PATTERNS = [
   /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/i,
-  /__tests__\//,
+  /(?:^|\/)(?:tests?|__tests__)\//i,
 ];
 
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
