@@ -28,9 +28,24 @@ afterEach(() => {
 });
 
 describe("detectProjectProfile", () => {
-  it("classifies Django from a nested manage.py signal", () => {
+  it.each([
+    ["empty", ""],
+    ["comment-only", "# execute_from_command_line(sys.argv)\n"],
+    ["string-only", 'example = "execute_from_command_line(sys.argv)"\n'],
+  ])("does not classify Django from a %s manage.py", (_case, content) => {
+    const workspace = createWorkspace({ "manage.py": content });
+
+    expect(detectProjectProfile(workspace.root, workspace.inventory)).toBeUndefined();
+  });
+
+  it("classifies Django from an executable nested management entrypoint", () => {
     const workspace = createWorkspace({
-      "services/web/manage.py": "from django.core.management import execute_from_command_line",
+      "services/web/manage.py": [
+        "import sys",
+        "from django.core.management import execute_from_command_line",
+        "execute_from_command_line(sys.argv)",
+        "",
+      ].join("\n"),
       "services/web/app.py": "print('ready')",
     });
 
