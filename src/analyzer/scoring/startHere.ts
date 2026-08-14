@@ -124,7 +124,7 @@ export function computeStartHere(
       if (/__main__\.py$/i.test(normalized)) {
         candidate.rawScore += 90;
         addReason(candidate, "runnable module (__main__.py)");
-      } else if (/manage\.py$/i.test(normalized)) {
+      } else if (/manage\.py$/i.test(normalized) && python.entrypoints.has(filePath)) {
         candidate.rawScore += 85;
         addReason(candidate, "Django management command");
       } else if (baseName === "main.py") {

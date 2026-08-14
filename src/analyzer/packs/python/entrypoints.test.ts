@@ -24,6 +24,35 @@ afterEach(() => {
 });
 
 describe("detectEntrypoints", () => {
+  it("requires executable Django evidence before treating manage.py as an entrypoint", () => {
+    const workspace = writeWorkspace({
+      "empty/manage.py": "",
+      "comment-only/manage.py": [
+        "# from django.core.management import execute_from_command_line",
+        "# execute_from_command_line([])",
+      ].join("\n"),
+      "string-only/manage.py": [
+        `EXAMPLE = "from django.core.management import execute_from_command_line"`,
+        `CALL = "execute_from_command_line([])"`,
+      ].join("\n"),
+      "genuine/manage.py": [
+        "import sys",
+        "from django.core.management import execute_from_command_line",
+        "",
+        `if __name__ == "__main__":`,
+        "    execute_from_command_line(sys.argv)",
+      ].join("\n"),
+    });
+    const files = [
+      "empty/manage.py",
+      "comment-only/manage.py",
+      "string-only/manage.py",
+      "genuine/manage.py",
+    ];
+
+    expect([...detectEntrypoints(files, workspace)]).toEqual(["genuine/manage.py"]);
+  });
+
   it("recognizes conventional names and __main__ modules case-insensitively", () => {
     const workspace = writeWorkspace({});
     const files = [

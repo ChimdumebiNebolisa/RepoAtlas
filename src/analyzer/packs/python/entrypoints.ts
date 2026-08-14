@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { normalizeRelPath } from "./shared";
+import { stripPythonCommentsAndStrings } from "./signals";
 
-const COMMON_ENTRY_NAMES = ["main.py", "app.py", "cli.py", "server.py", "manage.py", "run.py"];
+const COMMON_ENTRY_NAMES = ["main.py", "app.py", "cli.py", "server.py", "run.py"];
+const DJANGO_MANAGEMENT_CALL_RE = /\bexecute_from_command_line\s*\(/;
 const PYPROJECT_SCRIPTS_HEADER_RE = /^\s*\[project\.scripts\]\s*$/m;
 const PYPROJECT_SCRIPT_RE =
   /^\s*[\w.-]+\s*=\s*["']([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*):[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*["']/gm;
@@ -61,6 +63,17 @@ export function detectEntrypoints(files: string[], workspacePath: string): Set<s
     const normalized = normalizeRelPath(file);
     if (/__main__\.py$/i.test(normalized)) entrypoints.add(file);
     const base = path.posix.basename(normalized);
+    if (base.toLowerCase() === "manage.py") {
+      try {
+        const content = fs.readFileSync(path.join(workspacePath, file), "utf-8");
+        if (DJANGO_MANAGEMENT_CALL_RE.test(stripPythonCommentsAndStrings(content))) {
+          entrypoints.add(file);
+        }
+      } catch {
+        // An unreadable manage.py has no executable evidence.
+      }
+      continue;
+    }
     if (COMMON_ENTRY_NAMES.some((name) => base.toLowerCase() === name.toLowerCase())) {
       entrypoints.add(file);
     }
