@@ -236,7 +236,7 @@ describe("computeStartHere", () => {
         ["tests/test_worker.py", 1],
         ["pkg/worker_test.py", 1],
       ]),
-      entrypoints: new Set(["pkg/__main__.py"]),
+      entrypoints: new Set(["pkg/__main__.py", "manage.py"]),
     });
 
     const result = computeStartHere(pipeline, null, python);
@@ -257,6 +257,30 @@ describe("computeStartHere", () => {
     expect(explanation("tests/test_worker.py")).toBe("");
     expect(explanation("pkg/worker_test.py")).toBe("");
     expect(result).toHaveLength(11);
+  });
+
+  it("requires a detected manage.py entrypoint before adding the Django management reason", () => {
+    const files = [
+      "empty/manage.py",
+      "comment-only/manage.py",
+      "string-only/manage.py",
+      "genuine/manage.py",
+    ];
+    const pipeline = mockPipeline({ file_metadata: mockMetadata(files) });
+    const python = mockPack({
+      entrypoints: new Set(["genuine/manage.py"]),
+    });
+
+    const result = computeStartHere(pipeline, null, python);
+    const explanation = (filePath: string) =>
+      result.find((item) => item.path === filePath)?.explanation ?? "";
+
+    expect(explanation("empty/manage.py")).toBe("");
+    expect(explanation("comment-only/manage.py")).toBe("");
+    expect(explanation("string-only/manage.py")).toBe("");
+    expect(explanation("genuine/manage.py")).toContain("Django management command");
+    expect(explanation("genuine/manage.py")).toContain("detected entrypoint");
+    expect(result).toHaveLength(1);
   });
 
   it("covers Java build definitions, entrypoint distance, and test penalties", () => {
