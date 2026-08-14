@@ -42,7 +42,7 @@ const riskSignals = [
   },
   {
     path: "frontend/src/client/core/serverSentEvents.gen.ts",
-    score: 87,
+    score: 88,
     detail: "7,204 bytes, 2 incoming and 1 outgoing file link, complexity 124, and no nearby tests.",
   },
   {
@@ -84,7 +84,7 @@ export default function FastApiCandidateBriefExamplePage() {
               </div>
               <div>
                 <dt>Analyzed</dt>
-                <dd>2026-08-12 17:01 UTC</dd>
+                <dd>2026-08-14 12:17 UTC</dd>
               </div>
               <div>
                 <dt>Report label</dt>
@@ -92,7 +92,7 @@ export default function FastApiCandidateBriefExamplePage() {
               </div>
               <div>
                 <dt>Confidence</dt>
-                <dd>High, with analyzer warnings shown below</dd>
+                <dd>Medium, with analyzer warnings shown below</dd>
               </div>
             </dl>
           </aside>
@@ -103,8 +103,8 @@ export default function FastApiCandidateBriefExamplePage() {
             <p className="section-kicker">What production returned</p>
             <h2 id="snapshot-heading">A compact map before the file-by-file detail.</h2>
             <p>
-              RepoAtlas found 12 ranked starting files, 133 structural risk signals, 8 run
-              commands, 17 test files, and an architecture view with 35 nodes and 22 supported
+              RepoAtlas found 12 ranked starting files, 127 structural risk signals, 8 run
+              commands, 23 test files, and an architecture view with 35 nodes and 22 supported
               edges.
             </p>
           </header>

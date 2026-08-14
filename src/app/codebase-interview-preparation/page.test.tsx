@@ -55,7 +55,7 @@ describe("codebase interview preparation page", () => {
     );
     expect(
       screen.getByText(/Prepare to explain a repository with the ranked reading path/),
-    ).toHaveTextContent("12 starting files, 35 architecture nodes, 8 commands, 17 test files, and 133 risk signals");
+    ).toHaveTextContent("12 starting files, 35 architecture nodes, 8 commands, 23 test files, and 127 risk signals");
     expect(
       screen.getByRole("link", { name: /Inspect the public FastAPI repository example/i }),
     ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");

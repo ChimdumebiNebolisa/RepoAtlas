@@ -49,7 +49,7 @@ test("interview-preparation page leads to the measurable analysis start", async 
 });
 
 const evidenceBackedBriefPromise =
-  "Prepare to explain a repository with the ranked reading path, architecture context, source-backed commands, test inventory, and structural risk signals shown in the public FastAPI example. The example contains 12 starting files, 35 architecture nodes, 8 commands, 17 test files, and 133 risk signals. Its risk signals guide inspection; they do not prove runtime behavior, bugs, or vulnerabilities.";
+  "Prepare to explain a repository with the ranked reading path, architecture context, source-backed commands, test inventory, and structural risk signals shown in the public FastAPI example. The example contains 12 starting files, 35 architecture nodes, 8 commands, 23 test files, and 127 risk signals. Its risk signals guide inspection; they do not prove runtime behavior, bugs, or vulnerabilities.";
 
 for (const comparison of [
   {

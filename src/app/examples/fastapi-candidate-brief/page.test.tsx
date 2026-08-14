@@ -27,7 +27,9 @@ describe("FastAPI Candidate Brief example", () => {
     );
     expect(screen.getByText("c350936d2888ef16ff4f5549684fd8db54935a89")).toBeInTheDocument();
     expect(screen.getByText("Python project")).toBeInTheDocument();
-    expect(screen.getByText(/12 ranked starting files, 133 structural risk signals/)).toBeInTheDocument();
+    expect(screen.getByText(/12 ranked starting files, 127 structural risk signals/)).toBeInTheDocument();
+    expect(screen.getByText("2026-08-14 12:17 UTC")).toBeInTheDocument();
+    expect(screen.getByText("Medium, with analyzer warnings shown below")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "backend/app/api/main.py" })).toHaveAttribute(
       "href",
       expect.stringContaining("/blob/c350936d2888ef16ff4f5549684fd8db54935a89/backend/app/api/main.py"),
