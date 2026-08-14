@@ -56,7 +56,6 @@ export function computeTestProximityScore(
       return 100;
     }
     if (testBase === `${baseName}IT`) return 90;
-    return 80;
   }
 
   const mainMatch = normalizedFile.match(/^(.*)src\/main\/java\/(.+)$/);
@@ -68,15 +67,6 @@ export function computeTestProximityScore(
   if (normalizedTests.has(`${testDir}/${baseName}IT.java`)) return 90;
   if (normalizedTests.has(`${testDir}/${baseName}Tests.java`)) return 100;
 
-  const productPackageDir = normalizedFile
-    .replace(/\/src\/main\/java\//, "/")
-    .replace(/\/[^/]+\.java$/, "");
-  for (const testFile of normalizedTests) {
-    const testPackageDir = testFile
-      .replace(/\/src\/test\/java\//, "/")
-      .replace(/\/[^/]+\.java$/, "");
-    if (testPackageDir === productPackageDir) return 80;
-  }
   return 0;
 }
 
