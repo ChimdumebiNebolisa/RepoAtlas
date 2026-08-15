@@ -4,6 +4,7 @@ import type {
   AnalysisEvent,
   AnalysisEventDetails,
   AnalysisInputType,
+  ControlledCheckProperties,
   ProductEventProperties,
   ReportExportFailureClass,
   ReportExportFormat,
@@ -12,6 +13,21 @@ import type {
   ReportVariant,
   WalkthroughFormat,
 } from "@/lib/productAnalytics/contracts";
+
+const CONTROLLED_CHECK_STORAGE_KEY = "repoatlas-controlled-check";
+
+function controlledCheckProperties(): ControlledCheckProperties {
+  try {
+    // The release-check browser context seeds this private state directly.
+    // Candidate inputs and public URL parameters never participate.
+    return typeof window !== "undefined" &&
+      window.localStorage?.getItem(CONTROLLED_CHECK_STORAGE_KEY) === "true"
+      ? { is_controlled_check: true }
+      : {};
+  } catch {
+    return {};
+  }
+}
 
 export function captureAnalysisEvent(
   event: AnalysisEvent,
@@ -23,6 +39,7 @@ export function captureAnalysisEvent(
     ...properties,
     input_type: inputType,
     analysis_intent: analysisIntent,
+    ...controlledCheckProperties(),
   } as ProductEventProperties[typeof event]);
 }
 
@@ -39,6 +56,7 @@ export function captureReportShared(
 export function captureReportViewed(reportVariant: ReportVariant) {
   captureProductEvent("report_viewed", {
     report_variant: reportVariant,
+    ...controlledCheckProperties(),
   });
 }
 
@@ -49,6 +67,7 @@ export function captureWalkthroughCopied(
   captureProductEvent("walkthrough_copied", {
     report_variant: reportVariant,
     format: walkthroughFormat,
+    ...controlledCheckProperties(),
   });
 }
 

@@ -405,6 +405,66 @@ describe("event-specific property allowlists", () => {
 });
 
 describe("public capture helpers", () => {
+  it("marks report use from automated release checks", async () => {
+    const analytics = await loadInitializedAnalytics();
+    vi.stubGlobal("window", {
+      localStorage: { getItem: vi.fn(() => "true") },
+    });
+
+    analytics.captureAnalysisEvent("analysis_started", "sample", "interview");
+    analytics.captureAnalysisEvent("analysis_completed", "sample", "interview");
+    analytics.captureReportViewed("live");
+    analytics.captureWalkthroughCopied("live", "30_second");
+
+    expect(posthog.capture).toHaveBeenNthCalledWith(1, "analysis_started", {
+      input_type: "sample",
+      analysis_intent: "interview",
+      is_controlled_check: true,
+    });
+    expect(posthog.capture).toHaveBeenNthCalledWith(2, "analysis_completed", {
+      input_type: "sample",
+      analysis_intent: "interview",
+      is_controlled_check: true,
+    });
+    expect(posthog.capture).toHaveBeenNthCalledWith(3, "report_viewed", {
+      report_variant: "live",
+      is_controlled_check: true,
+    });
+    expect(posthog.capture).toHaveBeenNthCalledWith(4, "walkthrough_copied", {
+      report_variant: "live",
+      format: "30_second",
+      is_controlled_check: true,
+    });
+  });
+
+  it("leaves ordinary candidate report use unmarked", async () => {
+    const analytics = await loadInitializedAnalytics();
+    vi.stubGlobal("window", {
+      localStorage: { getItem: vi.fn(() => null) },
+    });
+
+    analytics.captureAnalysisEvent("analysis_started", "github", "interview");
+    analytics.captureAnalysisEvent("analysis_completed", "github", "interview");
+    analytics.captureReportViewed("live");
+    analytics.captureWalkthroughCopied("live", "2_minute");
+
+    expect(posthog.capture).toHaveBeenNthCalledWith(1, "analysis_started", {
+      input_type: "github",
+      analysis_intent: "interview",
+    });
+    expect(posthog.capture).toHaveBeenNthCalledWith(2, "analysis_completed", {
+      input_type: "github",
+      analysis_intent: "interview",
+    });
+    expect(posthog.capture).toHaveBeenNthCalledWith(3, "report_viewed", {
+      report_variant: "live",
+    });
+    expect(posthog.capture).toHaveBeenNthCalledWith(4, "walkthrough_copied", {
+      report_variant: "live",
+      format: "2_minute",
+    });
+  });
+
   it("routes analysis events through the shared allowlist", async () => {
     const analytics = await loadInitializedAnalytics();
 
