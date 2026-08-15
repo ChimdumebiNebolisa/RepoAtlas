@@ -136,6 +136,41 @@ describe("detectProjectProfile", () => {
     });
   });
 
+  it.each([
+    {
+      family: "comment-only",
+      manifest: "pom.xml",
+      source: "// @SpringBootApplication\nclass App {}\n",
+    },
+    {
+      family: "string-only",
+      manifest: "build.gradle",
+      source: 'class App { String example = "@SpringBootApplication"; }\n',
+    },
+    {
+      family: "text-block-only",
+      manifest: "build.gradle.kts",
+      source:
+        'class App { String example = """\n@SpringBootApplication\n"""; }\n',
+    },
+  ])(
+    "keeps $family Spring Boot text classified as a generic Java build project",
+    ({ manifest, source }) => {
+      const workspace = createWorkspace({
+        [manifest]: "plugins {}",
+        "src/main/java/com/example/App.java": source,
+      });
+
+      expect(detectProjectProfile(workspace.root, workspace.inventory)).toEqual({
+        type: "java-maven-gradle",
+        label: "Java Maven/Gradle project",
+        confidence: "medium",
+        signals: ["pom.xml or build.gradle"],
+        evidence_refs: [],
+      });
+    }
+  );
+
   it.each(["pom.xml", "build.gradle.kts"])(
     "classifies Java build projects from %s",
     (manifest) => {
