@@ -164,6 +164,34 @@ describe("detectTsJsEntrypoints", () => {
     ]);
   });
 
+  it("uses the nearest package manifest for nested Next.js app routes", () => {
+    const workspace = createWorkspace({
+      "package.json": {
+        dependencies: { next: "^14.0.0" },
+      },
+      "packages/web/package.json": {
+        dependencies: { next: "^14.0.0" },
+      },
+      "packages/tool/package.json": {
+        dependencies: { react: "^18.0.0" },
+      },
+    });
+    const files = [
+      "packages/web/app/page.tsx",
+      "packages/tool/app/page.tsx",
+    ];
+
+    const result = detectTsJsEntrypoints(files, workspace, [
+      "package.json",
+      "packages/web/package.json",
+      "packages/tool/package.json",
+    ]);
+
+    expect([...result.entrypoints]).toEqual([
+      ["packages/web/app/page.tsx", "Next.js App Router page"],
+    ]);
+  });
+
   it("warns once per unreadable or non-object package manifest", () => {
     const workspace = createWorkspace({
       "invalid.json": "{not-json",

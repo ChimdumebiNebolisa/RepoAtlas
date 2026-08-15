@@ -7,7 +7,6 @@
   "high_coupling_files": ["packages/api/index.js", "packages/web/app/page.tsx"],
   "unresolved_imports": [],
   "known_gaps": [
-    "Cross-package workspace imports are not labeled yet; expand when monorepo gold coverage deepens",
-    "Next.js app-router entrypoints under packages/* may be missed when only the root package.json is scanned for scripts"
+    "Cross-package workspace imports are not labeled yet; expand when monorepo gold coverage deepens"
   ]
 }

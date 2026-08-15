@@ -120,6 +120,8 @@ describe("Candidate Brief byte stability", () => {
         "b2873d77a966d105fa69d47b568361f336cf90e75448177d973fe801824b30ca",
         "0f9e593845ac86b28909d29425f7a7175c483aa6d03f2b6af2a38d2f8067fb27",
         "3e16cc89cdf6bf58bbd1b66a0fbbdf7387caf75071298bdeba14dc2216416a59",
+        "07b5feba6965e45bbf57de55bb0ac24d805aca218366b711a73490aa1328d5ed",
+        "12782df522c9e5a0d330ba6fd3a28af7e56ab02413342ffcdc2a4f05dbf17d11",
       ],
     ],
   ])("preserves the %s fixture byte-for-byte", async (_label, fixture, expectedDigests) => {
