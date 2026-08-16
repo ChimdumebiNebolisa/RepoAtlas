@@ -100,6 +100,37 @@ function installDeterministicPortableCodec() {
 }
 
 test.describe("Report UI flows", () => {
+  test("completed briefs open a privacy-bounded usefulness message", async ({ page }) => {
+    await openControlledInlineReport(page);
+
+    const prompt = page.locator(".report-usefulness-prompt");
+    await expect(
+      prompt.getByRole("heading", {
+        name: "Which section would you use in an interview or code discussion?",
+      })
+    ).toBeVisible();
+    await expect(prompt.getByRole("button", { name: "Open feedback message" })).toBeDisabled();
+
+    await prompt.getByLabel("Section").selectOption("Reading Path");
+    await prompt.getByLabel("Optional comment").fill("I would use this before the walkthrough.");
+
+    const href = await prompt.getByRole("link", { name: "Open feedback message" }).getAttribute("href");
+    expect(href).toBeTruthy();
+    const message = new URL(href!);
+    expect(message.pathname).toBe("repo-atlas-phi@mail.tin.computer");
+    expect(message.searchParams.get("body")).toBe(
+      "Which section would you use in an interview or code discussion?\n\n" +
+        "Section: Reading Path\nComment: I would use this before the walkthrough."
+    );
+    expect(message.searchParams.get("body")).not.toContain("github.com");
+    expect(message.searchParams.get("body")).not.toContain("repo-ts");
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
   test("all report tabs render after sample analyze", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
 

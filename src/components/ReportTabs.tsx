@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import type { Report } from "@/types/report";
 import { captureReportViewed, type ReportVariant } from "@/lib/productAnalytics";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
+import { CandidateBriefUsefulnessPrompt } from "./CandidateBriefUsefulnessPrompt";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { FolderMapTree } from "./FolderMapTree";
 import {
@@ -135,7 +136,10 @@ function ReportWorkspace({
               reportVariant={variant}
             />
             {variant === "live" && report.candidate_brief && (
-              <CandidateBriefSharePrompt actions={actions} tabsId={tabsId} />
+              <>
+                <CandidateBriefSharePrompt actions={actions} tabsId={tabsId} />
+                <CandidateBriefUsefulnessPrompt />
+              </>
             )}
           </div>
         )}
