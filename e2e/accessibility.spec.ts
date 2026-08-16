@@ -48,6 +48,7 @@ test.describe("Accessibility", () => {
     const routes = [
       "/repository-walkthrough-interview",
       "/how-to-walk-through-a-project-in-an-interview",
+      "/take-home-coding-interview",
       "/codebase-interview-preparation",
       "/ai-codebase-summary",
       "/code-review-interview",

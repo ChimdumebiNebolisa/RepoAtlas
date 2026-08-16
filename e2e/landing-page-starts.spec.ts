@@ -32,6 +32,14 @@ const candidatePages = [
     directSample: true,
   },
   {
+    label: "take-home coding interview guide",
+    path: "/take-home-coding-interview",
+    source: "interview_preparation",
+    entranceLabel: "Start a take-home coding interview review",
+    sampleAction: "Run the bundled sample",
+    directSample: true,
+  },
+  {
     label: "structured preparation comparison",
     path: "/codebase-interview-preparation",
     source: "comparison_structured_preparation",

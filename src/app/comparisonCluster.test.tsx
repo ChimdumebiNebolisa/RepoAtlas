@@ -6,6 +6,7 @@ import CodebaseInterviewPreparationPage from "./codebase-interview-preparation/p
 import CodeReviewInterviewPage from "./code-review-interview/page";
 import AuthoredProjectWalkthroughPage from "./how-to-walk-through-a-project-in-an-interview/page";
 import RepositoryWalkthroughInterviewPage from "./repository-walkthrough-interview/page";
+import TakeHomeCodingInterviewPage from "./take-home-coding-interview/page";
 
 type ClusterPage = {
   name: string;
@@ -22,6 +23,7 @@ const clusterPages: ClusterPage[] = [
       "/examples/fastapi-candidate-brief",
       "/codebase-interview-preparation",
       "/ai-codebase-summary",
+      "/take-home-coding-interview",
       "/code-review-interview",
     ],
     primaryActionHref: "/?source=interview_preparation&sample=1#analyze",
@@ -33,7 +35,18 @@ const clusterPages: ClusterPage[] = [
       "/examples/fastapi-candidate-brief",
       "/codebase-interview-preparation",
       "/ai-codebase-summary",
+      "/take-home-coding-interview",
       "/code-review-interview",
+    ],
+    primaryActionHref: "/?source=interview_preparation&sample=1#analyze",
+  },
+  {
+    name: "take-home coding interview guide",
+    renderPage: TakeHomeCodingInterviewPage,
+    requiredDestinations: [
+      "/examples/fastapi-candidate-brief",
+      "/repository-walkthrough-interview",
+      "/how-to-walk-through-a-project-in-an-interview",
     ],
     primaryActionHref: "/?source=interview_preparation&sample=1#analyze",
   },

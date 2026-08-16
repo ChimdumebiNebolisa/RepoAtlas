@@ -386,7 +386,31 @@ test("authored project guide has its exact search-result promise", async ({
   );
 });
 
-test("homepage connects both interview guides without replacing the sample action", async ({
+test("take-home coding interview guide is indexed and connects its public proof", async ({
+  page,
+  request,
+}) => {
+  const response = await request.get("/sitemap.xml");
+
+  expect(response.ok()).toBe(true);
+  await expect(response.text()).resolves.toContain("/take-home-coding-interview");
+
+  await page.goto("/take-home-coding-interview");
+  await expect(page).toHaveTitle("Take-home Coding Interview Review Guide | RepoAtlas");
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    "Review a take-home coding assignment before the interview. Prepare the core path, decisions, tests, limits, and file-backed talking points.",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Review your take-home before you explain it." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Inspect the FastAPI Candidate Brief" }),
+  ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
+  await expect(page.locator(".guide-page .btn-primary")).toHaveCount(1);
+});
+
+test("homepage connects all three interview guides without replacing the sample action", async ({
   page,
 }) => {
   await page.goto("/");
@@ -406,6 +430,9 @@ test("homepage connects both interview guides without replacing the sample actio
     "href",
     "/how-to-walk-through-a-project-in-an-interview"
   );
+  await expect(
+    guideNav.getByRole("link", { name: /Review a submitted take-home/ })
+  ).toHaveAttribute("href", "/take-home-coding-interview");
 });
 
 test("every public proof cluster route connects proof, guidance, and a Candidate Brief start", async ({
@@ -436,6 +463,10 @@ test("every public proof cluster route connects proof, guidance, and a Candidate
     {
       path: "/how-to-walk-through-a-project-in-an-interview",
       linkName: "See the file-backed half in the public FastAPI Candidate Brief",
+    },
+    {
+      path: "/take-home-coding-interview",
+      linkName: "Inspect the FastAPI Candidate Brief",
     },
     {
       path: "/code-review-interview",
