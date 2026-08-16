@@ -1,0 +1,12 @@
+[
+  {
+    "source": "build.gradle.kts",
+    "command": "./gradlew test",
+    "description": "test"
+  },
+  {
+    "source": "build.gradle.kts",
+    "command": "./gradlew build",
+    "description": "build"
+  }
+]
