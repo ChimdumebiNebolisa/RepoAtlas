@@ -8,6 +8,7 @@ import CodeReviewInterviewPage from "./code-review-interview/page";
 import AuthoredProjectWalkthroughPage from "./how-to-walk-through-a-project-in-an-interview/page";
 import InterviewPreparationPage from "./interview-preparation/page";
 import RepositoryWalkthroughInterviewPage from "./repository-walkthrough-interview/page";
+import TakeHomeCodingInterviewPage from "./take-home-coding-interview/page";
 
 vi.mock("@/lib/productAnalytics", () => ({
   captureProductEvent: vi.fn(),
@@ -44,6 +45,10 @@ const candidateSurfaces: CandidateSurface[] = [
   {
     name: "code review interview guide",
     renderSurface: CodeReviewInterviewPage,
+  },
+  {
+    name: "take-home coding interview guide",
+    renderSurface: TakeHomeCodingInterviewPage,
   },
 ];
 

@@ -125,4 +125,9 @@ export const homepageInterviewGuides = [
       "Separate your decisions from the repository evidence that supports them.",
     href: "/how-to-walk-through-a-project-in-an-interview",
   },
+  {
+    title: "Review a submitted take-home",
+    description: "Defend the core path, one tradeoff, the proof, and the next change.",
+    href: "/take-home-coding-interview",
+  },
 ] as const;
