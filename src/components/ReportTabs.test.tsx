@@ -152,8 +152,18 @@ describe("ReportTabs walkthrough analytics", () => {
       expect(captureReportViewed).toHaveBeenCalledWith(variant);
       if (variant === "live") {
         expect(screen.getByRole("button", { name: "Share Candidate Brief" })).toBeEnabled();
+        expect(
+          screen.getByRole("heading", {
+            name: "Which section would you use in an interview or code discussion?",
+          })
+        ).toBeInTheDocument();
       } else {
         expect(screen.queryByRole("button", { name: "Share Candidate Brief" })).toBeNull();
+        expect(
+          screen.queryByRole("heading", {
+            name: "Which section would you use in an interview or code discussion?",
+          })
+        ).toBeNull();
       }
 
       rerender(<ReportTabs report={report} variant={variant} />);
@@ -208,6 +218,11 @@ describe("ReportTabs walkthrough analytics", () => {
       screen.getByText(/Candidate Brief is not available for this report/i)
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Share Candidate Brief" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Which section would you use in an interview or code discussion?",
+      })
+    ).toBeNull();
     expect(captureReportViewed).not.toHaveBeenCalled();
   });
 
