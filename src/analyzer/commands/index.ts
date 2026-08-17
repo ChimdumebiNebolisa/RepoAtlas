@@ -143,12 +143,12 @@ export function extractJavaCommands(workspacePath: string): RunCommand[] {
     commands.push({ source: "pom.xml", command: "mvn test", description: "test" });
     commands.push({ source: "pom.xml", command: "mvn package", description: "package" });
   }
-  if (
-    hasSafeFile(workspacePath, "build.gradle") ||
-    hasSafeFile(workspacePath, "build.gradle.kts")
-  ) {
-    commands.push({ source: "build.gradle", command: "./gradlew test", description: "test" });
-    commands.push({ source: "build.gradle", command: "./gradlew build", description: "build" });
+  const gradleManifest = ["build.gradle", "build.gradle.kts"].find((file) =>
+    hasSafeFile(workspacePath, file)
+  );
+  if (gradleManifest) {
+    commands.push({ source: gradleManifest, command: "./gradlew test", description: "test" });
+    commands.push({ source: gradleManifest, command: "./gradlew build", description: "build" });
   }
   return commands;
 }

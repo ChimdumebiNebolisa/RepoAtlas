@@ -135,18 +135,44 @@ describe("Python command extraction", () => {
 });
 
 describe("Java and Compose command extraction", () => {
-  it("extracts Maven and Gradle commands together", () => {
-    const workspace = createWorkspace({ "pom.xml": "", "build.gradle.kts": "" });
-    expect(extractJavaCommands(workspace).map((item) => item.command)).toEqual([
-      "mvn test",
-      "mvn package",
-      "./gradlew test",
-      "./gradlew build",
+  it("uses the Kotlin Gradle manifest as command evidence", () => {
+    const fixture = path.resolve(process.cwd(), "fixtures/repo-java-gradle-kotlin");
+    const expected = JSON.parse(
+      fs.readFileSync(path.join(fixture, "expected-run-commands.json"), "utf-8")
+    );
+
+    expect(extractJavaCommands(fixture)).toEqual(expected);
+  });
+
+  it("preserves Groovy Gradle command evidence", () => {
+    const workspace = createWorkspace({ "build.gradle": "plugins { id 'java' }\n" });
+    expect(extractJavaCommands(workspace)).toEqual([
+      { source: "build.gradle", command: "./gradlew test", description: "test" },
+      { source: "build.gradle", command: "./gradlew build", description: "build" },
     ]);
   });
 
-  it("returns no Java commands without a recognized build file", () => {
+  it("extracts Maven and Kotlin Gradle commands together in established order", () => {
+    const workspace = createWorkspace({ "pom.xml": "", "build.gradle.kts": "" });
+    expect(extractJavaCommands(workspace)).toEqual([
+      { source: "pom.xml", command: "mvn test", description: "test" },
+      { source: "pom.xml", command: "mvn package", description: "package" },
+      { source: "build.gradle.kts", command: "./gradlew test", description: "test" },
+      { source: "build.gradle.kts", command: "./gradlew build", description: "build" },
+    ]);
+  });
+
+  it("returns no Java commands when build manifests are missing", () => {
     expect(extractJavaCommands(createWorkspace())).toEqual([]);
+  });
+
+  it("returns no Java commands when recognized build manifests are unreadable", () => {
+    const workspace = createWorkspace();
+    fs.mkdirSync(path.join(workspace, "pom.xml"));
+    fs.mkdirSync(path.join(workspace, "build.gradle"));
+    fs.mkdirSync(path.join(workspace, "build.gradle.kts"));
+
+    expect(extractJavaCommands(workspace)).toEqual([]);
   });
 
   it.each(["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"])(
