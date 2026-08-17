@@ -200,7 +200,7 @@ export function HomepageSampleProof({
         <div>
           <h2 id="sample-proof-heading">See a complete sample brief.</h2>
           <a className="sample-example-link" href="/examples/fastapi-candidate-brief">
-            Inspect a real FastAPI Candidate Brief <Arrow />
+            Inspect the FastAPI Candidate Brief <Arrow />
           </a>
         </div>
         {!showSampleReport && (

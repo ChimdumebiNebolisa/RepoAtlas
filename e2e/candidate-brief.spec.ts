@@ -69,7 +69,7 @@ test.describe("Candidate Brief smoke", () => {
       page.getByRole("heading", { name: "See a complete sample brief." })
     ).toBeVisible();
     const publicExample = page.getByRole("link", {
-      name: "Inspect a real FastAPI Candidate Brief",
+      name: "Inspect the FastAPI Candidate Brief",
     });
     await expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
     await expect(publicExample).not.toHaveClass(/btn-primary/);

@@ -23,7 +23,7 @@ describe("FastAPI Candidate Brief example", () => {
     render(<FastApiCandidateBriefExamplePage />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "A Candidate Brief for FastAPI's full-stack template.",
+      "FastAPI Candidate Brief for the full-stack template at commit c350936.",
     );
     expect(screen.getByText("c350936d2888ef16ff4f5549684fd8db54935a89")).toBeInTheDocument();
     expect(screen.getByText("Python project")).toBeInTheDocument();

@@ -143,7 +143,7 @@ describe("HomepageSampleProof", () => {
     expect(proof).not.toHaveTextContent(preview.readingStep.evidence!.id);
     expect(proof).toHaveTextContent(preview.readingStep.evidence!.path!);
     const publicExample = screen.getByRole("link", {
-      name: /Inspect a real FastAPI Candidate Brief/,
+      name: /Inspect the FastAPI Candidate Brief/,
     });
     expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
     expect(publicExample).not.toHaveClass("btn-primary");
