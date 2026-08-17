@@ -442,7 +442,7 @@ test("every public proof cluster route connects proof, guidance, and a Candidate
   const proofRoutes = [
     {
       path: "/",
-      linkName: "Inspect a real FastAPI Candidate Brief",
+      linkName: "Inspect the FastAPI Candidate Brief",
     },
     {
       path: "/interview-preparation",

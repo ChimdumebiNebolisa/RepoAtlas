@@ -62,7 +62,9 @@ export default function FastApiCandidateBriefExamplePage() {
         <header className="guide-hero example-hero page-container">
           <div className="guide-hero-copy example-hero-copy">
             <p className="eyebrow">Public repository example</p>
-            <h1>A Candidate Brief for FastAPI&apos;s full-stack template.</h1>
+            <h1>
+              FastAPI Candidate Brief for the full-stack template at commit {commit.slice(0, 7)}.
+            </h1>
             <p>
               This is a dated production snapshot from one exact public commit. It shows the
               reading route, structural risk signals, architecture context, and confidence limits
