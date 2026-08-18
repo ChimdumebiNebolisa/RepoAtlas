@@ -126,6 +126,10 @@ export default function InterviewPreparationPage() {
             RepoAtlas turns detected repository signals into 30-second and 2-minute walkthroughs.
             It does not invent business logic, assert bugs, or claim what the code cannot prove.
           </p>
+          <Link className="interview-example-link" href="/code-review-interview">
+            Practice code review interview questions with a worked example{" "}
+            <span aria-hidden="true">→</span>
+          </Link>
         </header>
 
         <div className="interview-brief-list">
