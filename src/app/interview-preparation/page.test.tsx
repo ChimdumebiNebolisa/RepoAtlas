@@ -38,6 +38,11 @@ describe("interview preparation page", () => {
     expect(
       screen.getByRole("link", { name: "Inspect the exact-commit FastAPI Candidate Brief" }),
     ).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
+    expect(
+      screen.getByRole("link", {
+        name: "Practice code review interview questions with a worked example",
+      }),
+    ).toHaveAttribute("href", "/code-review-interview");
   });
 
   it("keeps one primary Candidate Brief action", () => {

@@ -6,13 +6,14 @@ export function CodeReviewHero() {
     <>
       <header className="guide-hero page-container code-review-hero">
         <div className="guide-hero-copy code-review-hero-copy">
-          <p className="eyebrow">Code review interview examples</p>
-          <h1>Review the behavior, then explain your judgment.</h1>
+          <p className="eyebrow">Code review interview questions</p>
+          <h1>Answer code review questions with evidence.</h1>
           <p className="guide-hero-intro">
-            A code review interview is not a contest to collect the most comments. It tests
-            whether you can understand an unfamiliar change, find the issues that matter, and
-            discuss them like a teammate. This guide gives you a repeatable 45-minute method,
-            one worked example, and language you can use when the evidence is incomplete.
+            A code review interview asks you to inspect an unfamiliar change, identify the issues
+            that matter, and explain your judgment like a teammate. You may review a short pull
+            request, a deliberately flawed function, or one change inside a larger repository.
+            This guide gives you ten common questions, a repeatable 45-minute method, one worked
+            TypeScript example, and answer language for evidence that is incomplete.
           </p>
           <GuideStartPanel
             ariaLabel="Prepare a repository for a code review interview"
@@ -58,15 +59,18 @@ export function CodeReviewHero() {
           <p>
             In a code review interview, you may receive a short pull request, a deliberately
             flawed function, or a repository with a proposed change. You are usually asked to
-            read it, leave comments, and discuss your reasoning. The exact format varies, but the
-            strongest answers make the same moves: establish intent, trace behavior, test edge
-            cases, rank findings, and communicate without overclaiming.
+            read it, leave comments, and discuss your reasoning. Some interviews are written and
+            asynchronous. Others ask you to talk through the review with an interviewer. The
+            exact format varies, but the strongest answers make the same moves: establish intent,
+            trace behavior, test edge cases, rank findings, and communicate without overclaiming.
           </p>
           <p>
             Interviewers can see whether you distinguish a blocker from a preference. They can
             also see whether you ask for missing context, connect feedback to a concrete outcome,
-            and make the next change easier for the author. A long list of generic best practices
-            does not show that judgment.
+            and make the next change easier for the author. They are not only checking whether you
+            can spot a bug. They are checking how you read, what you prioritize, how you handle
+            uncertainty, and whether another engineer could act on your comments. A long list of
+            generic best practices does not show that judgment.
           </p>
         </div>
       </section>

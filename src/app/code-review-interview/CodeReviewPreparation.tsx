@@ -2,29 +2,54 @@ import Link from "next/link";
 
 const questionAnswers = [
   {
+    question: "What is a code review interview?",
+    answer:
+      "It is a structured exercise in reading, prioritization, and technical communication. You inspect a change, identify evidence-backed concerns, and explain what should happen next. The interviewer is evaluating your reasoning, not the number of comments you produce. A useful review distinguishes behavior-changing issues from questions, maintainability notes, and optional polish.",
+  },
+  {
+    question: "How do you review unfamiliar code under time pressure?",
+    answer:
+      "I begin with the prompt, types, tests, and call sites so I can write down the intended inputs, outputs, and failure behavior. Then I trace one complete path before exploring edge cases. That order keeps me from reviewing style before I understand the contract. I reserve the final minutes to rank findings and rewrite each comment so the author can act on it.",
+  },
+  {
     question: "What did you look for first?",
     answer:
-      "I established the behavior contract, then traced one complete path. That kept me focused on outcomes before style and gave me a basis for ranking the findings.",
+      "I established the behavior contract, then traced one complete path. In the example, the route should create one invite for an authenticated user and report whether the write succeeded. That contract led me to the missing-user path and the unawaited write before I considered naming or refactoring. Starting with observable outcomes gave me a basis for ranking the findings.",
   },
   {
     question: "How did you decide severity?",
     answer:
-      "I ranked findings by the strength of the evidence and the consequence in this code path. A false success and a direct crash came before naming, duplication, or refactoring ideas.",
+      "I ranked findings by the strength of the evidence and the consequence in this code path. A missing user can cause a direct failure, and an unawaited write can return success before persistence succeeds. Those behavior-changing paths came before the normalization question. I would state that severity labels vary by team, then explain the ordering instead of defending a label as universal.",
+  },
+  {
+    question: "What kinds of issues should you look for?",
+    answer:
+      "I look first for incorrect results, lost data, unsafe state changes, missing authorization, and failures that are hidden from callers. Then I compare the change with visible contracts in types, tests, configuration, and call sites. After correctness, I consider maintainability and performance when the code provides direct evidence. Naming and formatting stay optional unless they make the behavior genuinely hard to understand.",
+  },
+  {
+    question: "How do you write a useful review comment?",
+    answer:
+      "I use four parts: the exact observation, a triggering case, the plausible consequence, and a bounded next step or question. For line 08, I would say that `saveInvite` is not awaited, ask whether the response should confirm persistence, and suggest awaiting the call plus testing the failure path. That gives the author evidence and a direction without pretending I know every system constraint.",
   },
   {
     question: "What would you test?",
     answer:
-      "I would add the smallest test that reproduces each behavior: a missing user, a rejected persistence call, and differently cased versions of the same email. Those tests also clarify the intended contract.",
+      "I would add the smallest test that reproduces each disputed behavior: a missing user, a rejected persistence call, and differently cased versions of the same email. I would start with the two behavior-changing paths because they affect whether the route can return the correct result. The email case belongs after the identity rule is confirmed. These tests protect the fix and make the intended contract visible to the next reviewer.",
   },
   {
     question: "Would you approve this change?",
     answer:
-      "Not until the two behavior-changing findings are resolved or explicitly accepted. I would keep the normalization question open until the identity contract is confirmed.",
+      "Not yet. I would ask for the missing-user path and persistence failure to be resolved or explicitly accepted because both can change the route's result. I would keep normalization as a contract question until the repository shows whether email identity is case-insensitive. That answer names the blocking evidence, separates it from uncertainty, and gives the author a clear path back to approval.",
+  },
+  {
+    question: "How do you handle disagreement with the author?",
+    answer:
+      "I return to the shared contract and the concrete case. If a test, type, caller, or documented rule supports the concern, I cite it. If the disagreement is about an unstated design choice, I ask what constraint I am missing and mark the comment as a question rather than a defect. The goal is to reach the correct change, not to win the review or defend my first reading.",
   },
   {
     question: "What are you least certain about?",
     answer:
-      "I cannot infer the authentication boundary, storage guarantees, or email identity rules from this function alone. I would inspect its caller, persistence interface, and nearby tests before widening the claim.",
+      "I cannot infer the authentication boundary, storage guarantees, or email identity rules from this function alone. The comments therefore describe plausible failure paths, not proven production incidents. I would inspect the route's caller, the persistence interface, nearby tests, and the repository's error conventions before widening the claim. Naming that uncertainty shows where the review should go next without weakening the evidence already present.",
   },
 ];
 
@@ -33,11 +58,14 @@ export function CodeReviewPreparation() {
     <>
       <section className="code-review-questions-section page-container" aria-labelledby="code-review-questions-heading">
         <header className="guide-section-heading">
-          <p className="section-kicker">Questions after the review</p>
-          <h2 id="code-review-questions-heading">Prepare to defend your decisions.</h2>
+          <p className="section-kicker">Code review interview questions and answers</p>
+          <h2 id="code-review-questions-heading">Prepare to explain the review, not recite it.</h2>
           <p>
-            The discussion often matters as much as the written comments. These answer shapes
-            show a clear process while keeping uncertainty honest.
+            The discussion often matters as much as the written comments. These example answers
+            use the worked invite route above, so each claim has a visible source. Adapt the
+            structure to your exercise: name what you observed, explain why it matters, state what
+            you would verify, and choose the next action. Do not memorize the wording. Interviewers
+            can change the code, but the reasoning pattern still holds.
           </p>
         </header>
 

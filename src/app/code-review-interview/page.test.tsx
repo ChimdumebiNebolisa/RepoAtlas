@@ -10,9 +10,9 @@ afterEach(cleanup);
 describe("code review interview guide", () => {
   it("publishes a self-canonical, indexable editorial entrance", () => {
     expect(metadata.title).toBe(
-      "Code Review Interview Examples and Preparation Guide | RepoAtlas",
+      "Code Review Interview Questions and Example Answers | RepoAtlas",
     );
-    expect(metadata.description).toContain("code review interview examples");
+    expect(metadata.description).toContain("code review interview questions");
     expect(metadata.alternates).toEqual({ canonical: canonicalUrl });
     expect(metadata.openGraph).toMatchObject({ type: "article", url: canonicalUrl });
     expect(metadata.robots).toBeUndefined();
@@ -27,7 +27,7 @@ describe("code review interview guide", () => {
     render(<CodeReviewInterviewPage />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Review the behavior, then explain your judgment.",
+      "Answer code review questions with evidence.",
     );
     expect(screen.getAllByText("Establish the contract")).toHaveLength(1);
     expect(screen.getByText("Trace one complete path")).toBeInTheDocument();
@@ -38,6 +38,12 @@ describe("code review interview guide", () => {
     expect(screen.getByText("A failed write can be reported as success")).toBeInTheDocument();
     expect(screen.getByText("Normalization happens after the duplicate check")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "What would you test?" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "What is a code review interview?" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "How do you write a useful review comment?" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/does not execute the code or call AI/)).toBeInTheDocument();
   });
 
