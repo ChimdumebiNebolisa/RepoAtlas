@@ -24,6 +24,25 @@ afterEach(() => {
 });
 
 describe("detectEntrypoints", () => {
+  it("requires executable evidence for conventional Python entrypoint names", () => {
+    const workspace = path.join(
+      process.cwd(),
+      "fixtures",
+      "repo-python-conventional-entrypoints"
+    );
+    const expected = JSON.parse(
+      fs.readFileSync(path.join(workspace, "expected-entrypoints.json"), "utf-8")
+    ) as { entrypoints: string[]; nonEntrypoints: string[] };
+    const files = [...expected.nonEntrypoints, ...expected.entrypoints];
+
+    const result = detectEntrypoints(files, workspace);
+
+    expect([...result]).toEqual(expected.entrypoints);
+    for (const filePath of expected.nonEntrypoints) {
+      expect(result.has(filePath)).toBe(false);
+    }
+  });
+
   it("requires executable Django evidence before treating manage.py as an entrypoint", () => {
     const workspace = writeWorkspace({
       "empty/manage.py": "",
@@ -54,7 +73,11 @@ describe("detectEntrypoints", () => {
   });
 
   it("recognizes conventional names and __main__ modules case-insensitively", () => {
-    const workspace = writeWorkspace({});
+    const workspace = writeWorkspace({
+      "MAIN.PY": "print('main')",
+      "services/App.py": "print('app')",
+      "tools\\CLI.PY": "print('cli')",
+    });
     const files = [
       "MAIN.PY",
       "services/App.py",
@@ -159,9 +182,10 @@ describe("detectEntrypoints", () => {
       "worker.py": "if __name__ == '__main__':\n    pass",
     });
     fs.mkdirSync(path.join(workspace, "broken.py"));
+    fs.mkdirSync(path.join(workspace, "server.py"));
 
-    expect([...detectEntrypoints(["broken.py", "worker.py"], workspace)]).toEqual([
-      "worker.py",
-    ]);
+    expect(
+      [...detectEntrypoints(["broken.py", "server.py", "worker.py"], workspace)]
+    ).toEqual(["worker.py"]);
   });
 });

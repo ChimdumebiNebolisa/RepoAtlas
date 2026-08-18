@@ -75,7 +75,14 @@ export function detectEntrypoints(files: string[], workspacePath: string): Set<s
       continue;
     }
     if (COMMON_ENTRY_NAMES.some((name) => base.toLowerCase() === name.toLowerCase())) {
-      entrypoints.add(file);
+      try {
+        const content = fs.readFileSync(path.join(workspacePath, file), "utf-8");
+        if (stripPythonCommentsAndStrings(content).trim()) {
+          entrypoints.add(file);
+        }
+      } catch {
+        // An unreadable conventional file has no executable evidence.
+      }
     }
   }
 

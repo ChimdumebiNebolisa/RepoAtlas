@@ -1,0 +1,8 @@
+{
+  "entrypoints": ["genuine/run.py"],
+  "nonEntrypoints": [
+    "empty/main.py",
+    "comment-only/app.py",
+    "docstring-only/cli.py"
+  ]
+}
