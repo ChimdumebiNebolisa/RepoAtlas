@@ -40,13 +40,13 @@ export default function InterviewPreparationPage() {
             fallback={
               <Link
                 className="btn btn-primary interview-primary-action"
-                href="/?source=interview_preparation#analyze"
+                href="/?source=interview_preparation&sample=1#analyze"
               >
-                Prepare my Candidate Brief <span aria-hidden="true">→</span>
+                See the sample Candidate Brief <span aria-hidden="true">→</span>
               </Link>
             }
           >
-            <TrackedAnalysisLink>Prepare my Candidate Brief</TrackedAnalysisLink>
+            <TrackedAnalysisLink startSample>See the sample Candidate Brief</TrackedAnalysisLink>
           </Suspense>
           <p className="interview-hero-note">
             Start with the bundled sample, a public GitHub URL, or a ZIP. RepoAtlas reads files

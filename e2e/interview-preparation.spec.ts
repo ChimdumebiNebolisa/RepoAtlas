@@ -34,18 +34,27 @@ test("interview-preparation page leads to the measurable analysis start", async 
   await expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
   expect((await page.request.get("/examples/fastapi-candidate-brief")).status()).toBe(200);
 
-  const primaryAction = page.getByRole("link", { name: "Prepare my Candidate Brief" });
+  const primaryAction = page.getByRole("link", { name: "See the sample Candidate Brief" });
   await expect(page.locator("a.btn-primary")).toHaveCount(1);
   await expect(primaryAction).toHaveAttribute(
     "href",
-    "/?source=interview_preparation#analyze"
+    "/?source=interview_preparation&sample=1#analyze"
+  );
+  const analyzeRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/analyze",
   );
   await primaryAction.click();
 
-  await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
+  expect((await analyzeRequest).postDataJSON()).toMatchObject({
+    sample: true,
+    analysisIntent: "interview",
+  });
   await expect(
-    page.getByRole("heading", { name: "Analyze your repository." })
+    page.getByRole("heading", { name: "Your repository brief is ready" })
   ).toBeVisible();
+  await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
 });
 
 const evidenceBackedBriefPromise =
@@ -489,6 +498,6 @@ test("every public proof cluster route connects proof, guidance, and a Candidate
     page.getByRole("link", { name: "Turn this report into an interview walkthrough" }),
   ).toHaveAttribute("href", "/repository-walkthrough-interview");
   await expect(
-    page.getByRole("link", { name: "Run your public GitHub repository" }),
-  ).toHaveAttribute("href", "/?source=fastapi_example#analyze");
+    page.getByRole("link", { name: "Open the bundled Candidate Brief" }),
+  ).toHaveAttribute("href", "/?source=fastapi_example&sample=1#analyze");
 });

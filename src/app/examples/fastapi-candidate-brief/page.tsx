@@ -190,7 +190,7 @@ export default function FastApiCandidateBriefExamplePage() {
               {" "}with a defensible reading order and clear evidence limits.
             </p>
             <p>
-              <Link href="/?source=fastapi_example#analyze">Run your public GitHub repository</Link>
+              <Link href="/?source=fastapi_example&sample=1#analyze">Open the bundled Candidate Brief</Link>
               {" "}or inspect the{" "}
               <a href={`${repositoryUrl}/tree/${commit}`}>exact source revision</a>.
             </p>

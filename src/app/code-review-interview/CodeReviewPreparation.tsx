@@ -117,7 +117,7 @@ export function CodeReviewPreparation() {
               .
             </p>
           </div>
-          <Link className="btn btn-secondary code-review-close-action" href="/?source=interview_preparation#analyze">
+          <Link className="btn btn-secondary code-review-close-action" href="/?source=interview_preparation&sample=1#analyze">
             Open the bundled Candidate Brief <span aria-hidden="true">→</span>
           </Link>
         </div>

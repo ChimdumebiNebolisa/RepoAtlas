@@ -76,11 +76,17 @@ describe("code review interview guide", () => {
     expect(primaryActions).toHaveLength(1);
     expect(primaryActions[0]).toHaveAttribute(
       "href",
-      "/?source=interview_preparation#analyze",
+      "/?source=interview_preparation&sample=1#analyze",
     );
     expect(screen.getByRole("link", { name: /Use a public GitHub repository/i })).toHaveAttribute(
       "href",
       "/?source=interview_preparation#analyze",
+    );
+    expect(
+      screen.getByRole("link", { name: "Open the bundled Candidate Brief" }),
+    ).toHaveAttribute(
+      "href",
+      "/?source=interview_preparation&sample=1#analyze",
     );
     expect(links.some((link) => link.getAttribute("href") === "/repository-walkthrough-interview")).toBe(
       true,

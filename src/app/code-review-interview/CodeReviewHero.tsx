@@ -19,7 +19,6 @@ export function CodeReviewHero() {
             ariaLabel="Prepare a repository for a code review interview"
             heading="Practice with a real repository."
             description={candidateBriefProofPromise}
-            startSample={false}
           />
         </div>
 

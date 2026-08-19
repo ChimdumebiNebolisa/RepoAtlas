@@ -61,7 +61,7 @@ const candidatePages = [
     source: "interview_preparation",
     entranceLabel: "Prepare a repository for a code review interview",
     sampleAction: "Run the bundled sample",
-    directSample: false,
+    directSample: true,
   },
 ] as const;
 
