@@ -50,8 +50,11 @@ describe("HomepageHero", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Understand unfamiliar repositories fast.",
+        name: "Walk me through this repository.",
       })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/ranked reading path and file-backed talking points/i)
     ).toBeInTheDocument();
     expect(screen.getByTestId("hero-output-card")).not.toHaveTextContent(
       "prioritized reading path"
@@ -72,14 +75,11 @@ describe("HomepageHero", () => {
       preview.readingStep.evidence!.id
     );
     expect(
-      screen.getByRole("link", { name: /Analyze your repository/ })
-    ).toHaveAttribute(
-      "href",
-      "#analyze"
-    );
+      screen.queryByRole("link", { name: /Analyze your repository/ })
+    ).not.toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("button", { name: /Generate sample brief/ })
+      screen.getByRole("button", { name: /See the sample Candidate Brief/ })
     );
 
     expect(onGenerateSample).toHaveBeenCalledOnce();
