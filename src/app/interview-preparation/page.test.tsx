@@ -52,7 +52,10 @@ describe("interview preparation page", () => {
       link.classList.contains("btn-primary"),
     );
     expect(primaryActions).toHaveLength(1);
-    expect(primaryActions[0]).toHaveAccessibleName("Prepare my Candidate Brief");
-    expect(primaryActions[0]).toHaveAttribute("href", "/?source=interview_preparation#analyze");
+    expect(primaryActions[0]).toHaveAccessibleName("See the sample Candidate Brief");
+    expect(primaryActions[0]).toHaveAttribute(
+      "href",
+      "/?source=interview_preparation&sample=1#analyze",
+    );
   });
 });
