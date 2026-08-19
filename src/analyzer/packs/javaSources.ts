@@ -25,6 +25,18 @@ const SPRING_RUN_RE = /SpringApplication\.run\s*\(/;
 const SPRING_CONTROLLER_RE = /@(RestController|Controller)\b/;
 const REQUEST_MAPPING_RE = /@RequestMapping\b/;
 const JAXRS_RE = /@(Path|GET|POST|PUT|DELETE|PATCH)\b/;
+const JAXRS_IMPORT_RE =
+  /^\s*import\s+(?:javax|jakarta)\.ws\.rs\.(\*|Path|GET|POST|PUT|DELETE|PATCH)\s*;/gm;
+
+function hasImportedJaxRsAnnotation(code: string): boolean {
+  const imports = new Set(
+    [...code.matchAll(JAXRS_IMPORT_RE)].map((match) => match[1])
+  );
+  if (imports.has("*")) return JAXRS_RE.test(code);
+  return [...code.matchAll(/@(Path|GET|POST|PUT|DELETE|PATCH)\b/g)].some(
+    (match) => imports.has(match[1])
+  );
+}
 
 export interface JavaSourceIndex {
   fqnToFile: Map<string, string>;
@@ -88,7 +100,7 @@ export function detectJavaEntrypoints(
       SPRING_RUN_RE.test(code) ||
       SPRING_CONTROLLER_RE.test(code) ||
       REQUEST_MAPPING_RE.test(code) ||
-      JAXRS_RE.test(code)
+      hasImportedJaxRsAnnotation(code)
     ) {
       entrypoints.add(filePath);
     } else if (MAIN_METHOD_RE.test(code)) {

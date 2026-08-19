@@ -1,0 +1,9 @@
+{
+  "entrypoints": [
+    "src/main/java/example/JakartaResource.java",
+    "src/main/java/example/JavaxResource.java"
+  ],
+  "nonEntrypoints": [
+    "src/main/java/example/CustomResource.java"
+  ]
+}
