@@ -270,7 +270,7 @@ describe("resolveImport", () => {
 describe("detectEntrypoints", () => {
   it("combines conventional, pyproject, and setup entrypoints", () => {
     const workspace = writeWorkspace({
-      "main.py": "",
+      "main.py": "print('ready')",
       "src/pkg/cli.py": "",
       "pkg/tool.py": "",
       "pyproject.toml": "[project.scripts]\nrun = 'pkg.cli:start'",
