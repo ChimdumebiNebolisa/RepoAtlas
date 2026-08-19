@@ -3,6 +3,7 @@ import fs from "fs";
 import { randomUUID } from "crypto";
 import type { Report } from "../src/types/report";
 import {
+  REPORT_TABS,
   REPORTS_DIR,
   expectCompletedReportInViewport,
   legacyReportWithoutBrief,
@@ -11,24 +12,70 @@ import {
 } from "./helpers";
 
 test.describe("Candidate Brief smoke", () => {
-  test("homepage hero leads with a complete bundled sample", async ({ page }) => {
-    await page.goto("/");
-    const hero = page.locator(".hero");
+  for (const viewport of [
+    { label: "desktop", width: 1440, height: 900 },
+    { label: "390px mobile", width: 390, height: 844 },
+  ]) {
+    test(`homepage hero opens the complete bundled sample by keyboard on ${viewport.label}`, async ({
+      page,
+    }) => {
+      const browserDiagnostics: string[] = [];
+      page.on("console", (message) => {
+        if (["error", "warning"].includes(message.type())) {
+          browserDiagnostics.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on("pageerror", (error) => {
+        browserDiagnostics.push(`pageerror: ${error.message}`);
+      });
+      page.on("response", (response) => {
+        if (
+          response.status() >= 400 &&
+          ["document", "fetch", "xhr"].includes(response.request().resourceType())
+        ) {
+          browserDiagnostics.push(
+            `HTTP ${response.status()}: ${response.request().method()} ${response.url()}`
+          );
+        }
+      });
 
-    await expect(
-      hero.getByRole("heading", {
-        name: "Walk me through this repository.",
-      })
-    ).toBeVisible();
-    await expect(
-      hero.getByText(/ranked reading path and file-backed talking points/)
-    ).toBeVisible();
-    await expect(hero.locator(".btn-primary")).toHaveCount(1);
-    await expect(hero.getByRole("link")).toHaveCount(0);
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto("/");
+      const hero = page.locator(".hero");
 
-    await hero.getByRole("button", { name: /See the sample Candidate Brief/i }).click();
-    await expectCompletedReportInViewport(page);
-  });
+      await expect(
+        hero.getByRole("heading", {
+          name: "Walk me through this repository.",
+        })
+      ).toBeVisible();
+      await expect(
+        hero.getByText(/ranked reading path and file-backed talking points/)
+      ).toBeVisible();
+      await expect(hero.locator(".btn-primary")).toHaveCount(1);
+      await expect(hero.getByRole("link")).toHaveCount(0);
+
+      const sampleAction = hero.getByRole("button", {
+        name: /See the sample Candidate Brief/i,
+      });
+      await sampleAction.focus();
+      await expect(sampleAction).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expectCompletedReportInViewport(page);
+
+      for (const tabName of REPORT_TABS) {
+        await expect(
+          page.getByRole("tab", { name: tabName, exact: true }).last()
+        ).toBeVisible();
+      }
+
+      const dimensions = await page.evaluate(() => ({
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+      }));
+      expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+      expect(browserDiagnostics).toEqual([]);
+    });
+  }
 
   test("homepage shows the four Candidate Brief outputs before analysis", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
