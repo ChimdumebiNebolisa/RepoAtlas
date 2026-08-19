@@ -17,19 +17,16 @@ test.describe("Candidate Brief smoke", () => {
 
     await expect(
       hero.getByRole("heading", {
-        name: "Understand unfamiliar repositories fast.",
+        name: "Walk me through this repository.",
       })
     ).toBeVisible();
     await expect(
-      hero.getByText(/public GitHub repository or ZIP/)
+      hero.getByText(/ranked reading path and file-backed talking points/)
     ).toBeVisible();
     await expect(hero.locator(".btn-primary")).toHaveCount(1);
-    await expect(hero.getByRole("link", { name: /Analyze your repository/i })).toHaveAttribute(
-      "href",
-      "#analyze"
-    );
+    await expect(hero.getByRole("link")).toHaveCount(0);
 
-    await hero.getByRole("button", { name: /Generate sample brief/i }).click();
+    await hero.getByRole("button", { name: /See the sample Candidate Brief/i }).click();
     await expectCompletedReportInViewport(page);
   });
 

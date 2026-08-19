@@ -77,7 +77,7 @@ async function openControlledInlineReport(
   }
 
   await page.goto("/");
-  await page.getByRole("button", { name: /Generate sample brief/i }).click();
+  await page.getByRole("button", { name: /See the sample Candidate Brief/i }).click();
   await expectCompletedReportInViewport(page);
   await expect(
     page.getByText(
@@ -295,7 +295,7 @@ test("a stalled long-report PDF reaches recovery and unlocks report actions", as
   const png = PNG.sync.read(pngBuffer);
   expect(nonWhitePixelRatio(png)).toBeGreaterThan(0.01);
 
-  await page.getByRole("button", { name: /Generate sample brief/i }).click();
+  await page.getByRole("button", { name: /See the sample Candidate Brief/i }).click();
   await expectCompletedReportInViewport(page);
   await expect(
     page.getByRole("alert").filter({

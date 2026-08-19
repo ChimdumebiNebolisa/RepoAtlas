@@ -416,7 +416,7 @@ test("homepage connects all three interview guides without replacing the sample 
   await page.goto("/");
 
   await expect(
-    page.getByRole("button", { name: /Generate sample brief/ })
+    page.getByRole("button", { name: /See the sample Candidate Brief/ })
   ).toBeVisible();
   const guideNav = page.getByRole("navigation", {
     name: "Prepare to explain a repository.",
