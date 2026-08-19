@@ -8,6 +8,7 @@ import "./globals.css";
 const manrope = Manrope({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteIdentity.url),
   title: "RepoAtlas - Candidate Brief Generator",
   description: siteIdentity.description,
 };

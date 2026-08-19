@@ -2,6 +2,16 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import sitemap from "../sitemap";
 import TakeHomeCodingInterviewPage, { metadata } from "./page";
+import {
+  alt as openGraphImageAlt,
+  contentType as openGraphImageContentType,
+  size as openGraphImageSize,
+} from "./opengraph-image";
+import {
+  alt as twitterImageAlt,
+  contentType as twitterImageContentType,
+  size as twitterImageSize,
+} from "./twitter-image";
 
 const canonicalUrl = "https://repo-atlas-phi.vercel.app/take-home-coding-interview";
 
@@ -19,6 +29,17 @@ describe("take-home coding interview guide", () => {
       changeFrequency: "monthly",
       priority: 0.8,
     });
+  });
+
+  it("publishes route-specific social preview metadata", () => {
+    expect(openGraphImageAlt).toBe(
+      "RepoAtlas take-home coding interview review with five passes from brief to next change",
+    );
+    expect(openGraphImageSize).toEqual({ width: 1200, height: 630 });
+    expect(openGraphImageContentType).toBe("image/png");
+    expect(twitterImageAlt).toBe(openGraphImageAlt);
+    expect(twitterImageSize).toEqual(openGraphImageSize);
+    expect(twitterImageContentType).toBe(openGraphImageContentType);
   });
 
   it("teaches a bounded five-pass review method", () => {
