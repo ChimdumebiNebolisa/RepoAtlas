@@ -128,7 +128,7 @@ from collections.abc import Mapping
     }
   });
 
-  it("deduplicates aliases, ignores wildcards, and reads parenthesized imports", () => {
+  it("deduplicates aliases, ignores wildcards, and rejects bare-parenthesized imports", () => {
     const content = [
       "import alpha as first, beta as second",
       "import alpha",
@@ -138,8 +138,6 @@ from collections.abc import Mapping
     expect(extractImportSpecifiers(content)).toEqual([
       "alpha",
       "beta",
-      "gamma",
-      "delta",
       ".pkg",
       ".pkg.useful",
     ]);

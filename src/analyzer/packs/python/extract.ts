@@ -246,9 +246,12 @@ export function extractImportSpecifiers(content: string): string[] {
     }
 
     if (atLineStart && content.startsWith("import", index) && !isIdentifierChar(content[index + 6] ?? "")) {
-      index = skipSpaces(content, index + 6);
+      index = skipSpacesAndContinuations(content, index + 6);
+      const isBareParenthesizedImport = content[index] === "(";
       const list = readImportNameList(content, index);
-      for (const name of list.names) add(name);
+      if (!isBareParenthesizedImport) {
+        for (const name of list.names) add(name);
+      }
       resumeAfterImportStatement(list.next);
       continue;
     }
