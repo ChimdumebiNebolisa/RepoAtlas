@@ -410,6 +410,29 @@ test("take-home coding interview guide is indexed and connects its public proof"
     "content",
     "Review a take-home coding assignment before the interview. Prepare the core path, decisions, tests, limits, and file-backed talking points.",
   );
+  const socialPreviewAlt =
+    "RepoAtlas take-home coding interview review with five passes from brief to next change";
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    "content",
+    /\/take-home-coding-interview\/opengraph-image/,
+  );
+  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
+    "content",
+    socialPreviewAlt,
+  );
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute(
+    "content",
+    /\/take-home-coding-interview\/twitter-image/,
+  );
+  await expect(page.locator('meta[name="twitter:image:alt"]')).toHaveAttribute(
+    "content",
+    socialPreviewAlt,
+  );
+  const socialPreviewResponse = await request.get(
+    "/take-home-coding-interview/opengraph-image",
+  );
+  expect(socialPreviewResponse.ok()).toBe(true);
+  expect(socialPreviewResponse.headers()["content-type"]).toContain("image/png");
   await expect(
     page.getByRole("heading", { name: "Review your take-home before you explain it." }),
   ).toBeVisible();
