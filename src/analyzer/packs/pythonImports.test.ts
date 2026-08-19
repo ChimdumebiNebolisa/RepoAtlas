@@ -61,7 +61,7 @@ describe("Python import extraction boundaries", () => {
     ]);
   });
 
-  it("keeps nested parentheses bounded and deduplicates repeated names", () => {
+  it("rejects bare-parenthesized imports while preserving parenthesized from imports", () => {
     expect(
       extractImportSpecifiers(
         [
@@ -70,7 +70,7 @@ describe("Python import extraction boundaries", () => {
           "",
         ].join("\n")
       )
-    ).toEqual(["nested", "repeated", "pkg", "pkg.child"]);
+    ).toEqual(["pkg", "pkg.child"]);
   });
 
   it("handles bare relative imports and malformed or unterminated input", () => {
