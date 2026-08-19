@@ -1,7 +1,7 @@
 export const repositoryWalkthroughMetadata = {
   title: "Repository Walkthrough Interview Guide | RepoAtlas",
   description:
-    "Learn how to explain an unfamiliar repository with a defensible reading order, architecture map, risk signals, and file-backed talking points.",
+    "Prepare for a repository walkthrough interview with a Candidate Brief that gives you a ranked reading path backed by repository files.",
   openGraphDescription:
     "A practical method for walking an interviewer through an unfamiliar repository without guessing beyond the code.",
 } as const;
@@ -84,4 +84,3 @@ export const repositoryWalkthroughEvidenceLanguage = [
     use: "Use when the repository cannot prove the answer.",
   },
 ] as const;
-
