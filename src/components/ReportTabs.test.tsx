@@ -171,6 +171,51 @@ describe("ReportTabs walkthrough analytics", () => {
     }
   );
 
+  it("shows the repository handoff only for an eligible live sample", async () => {
+    const user = userEvent.setup();
+    const report = buildSampleReport();
+    const onAnalyzeOwnRepository = vi.fn();
+    const { rerender } = render(
+      <ReportTabs
+        report={report}
+        variant="live"
+        onAnalyzeOwnRepository={onAnalyzeOwnRepository}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Analyze my public GitHub repository" })
+    );
+    expect(onAnalyzeOwnRepository).toHaveBeenCalledOnce();
+
+    rerender(
+      <ReportTabs
+        report={report}
+        variant="preview"
+        onAnalyzeOwnRepository={onAnalyzeOwnRepository}
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: "Analyze my public GitHub repository" })
+    ).not.toBeInTheDocument();
+
+    rerender(<ReportTabs report={report} variant="live" />);
+    expect(
+      screen.queryByRole("button", { name: "Analyze my public GitHub repository" })
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <ReportTabs
+        report={{ ...report, candidate_brief: undefined }}
+        variant="live"
+        onAnalyzeOwnRepository={onAnalyzeOwnRepository}
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: "Analyze my public GitHub repository" })
+    ).not.toBeInTheDocument();
+  });
+
   it("returns a replacement report to its Candidate Brief and counts the new view", async () => {
     const user = userEvent.setup();
     const firstReport = buildSampleReport();

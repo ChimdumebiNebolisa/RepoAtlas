@@ -14,9 +14,11 @@ import { AnalysisIntentSelector } from "./AnalysisIntentSelector";
 import {
   formatApiError,
   formatReportFetchError,
+  PRIMARY_ANALYSIS_INTENT,
   type InputMode,
   validateGithubInput,
 } from "./inputFormSupport";
+import type { AnalysisInputType } from "@/lib/productAnalytics";
 import { RepositoryInputControls } from "./RepositoryInputControls";
 import { useAnalysisRequest } from "./useAnalysisRequest";
 
@@ -29,7 +31,11 @@ export {
 
 interface InputFormProps {
   onAnalyzeStart: () => void;
-  onAnalyzeComplete: (report: Report, reportId: string | null) => void;
+  onAnalyzeComplete: (
+    report: Report,
+    reportId: string | null,
+    inputType: AnalysisInputType
+  ) => void;
   onAnalyzeError: (message: string) => void;
   loading: boolean;
   sampleButtonRef?: RefObject<HTMLButtonElement | null>;
@@ -37,6 +43,7 @@ interface InputFormProps {
 
 export interface InputFormHandle {
   generateSample: () => void;
+  focusGithubInput: () => void;
 }
 
 const subscribeToHydration = () => () => undefined;
@@ -162,6 +169,16 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
   useImperativeHandle(forwardedRef, () => ({
     generateSample: () => {
       void handleSample();
+    },
+    focusGithubInput: () => {
+      if (interactionsDisabled) return;
+      setMode("github");
+      setFieldError(null);
+      setAnalysisIntent(PRIMARY_ANALYSIS_INTENT.value);
+      setSecondaryIntentsOpen(false);
+      requestAnimationFrame(() => {
+        githubUrlInputRef.current?.focus({ preventScroll: true });
+      });
     },
   }));
 

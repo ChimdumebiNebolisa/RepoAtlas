@@ -321,6 +321,49 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: rgba(255, 255, 255, 0.72);
 }
 
+.report-sample-next-step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2rem;
+  padding: clamp(1.4rem, 3vw, 2rem);
+  border: 1px solid #274a3d;
+  border-radius: var(--radius-card);
+  background: #172822;
+  color: #f6f9f7;
+}
+
+.report-sample-next-step-eyebrow {
+  margin: 0 0 0.4rem;
+  color: #82d8b2;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.report-sample-next-step h2 {
+  max-width: 28ch;
+  margin: 0;
+  color: #f6f9f7;
+  font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.report-sample-next-step > div > p:last-child {
+  max-width: 58ch;
+  margin: 0.7rem 0 0;
+  color: #bdd4c8;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.report-sample-next-step-action {
+  min-width: 15rem;
+  min-height: 3rem;
+}
+
 .report-usefulness-intro { align-self: start; }
 
 .report-usefulness-eyebrow {
@@ -3596,7 +3639,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .report-toolbar-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .report-toolbar-actions .report-action:last-child { grid-column: 1 / -1; }
   .report-share-prompt,
+  .report-sample-next-step,
   .report-usefulness-prompt { grid-template-columns: 1fr; gap: 1.25rem; padding: 1.1rem; }
+  .report-sample-next-step-action { width: 100%; min-width: 0; }
   .report-share-action { min-width: 0; }
   .report-tab { min-height: 3rem; padding-inline: 0.75rem; }
   .site-footer-layout { grid-template-columns: 1fr; gap: 1.5rem; padding-block: 2rem; }

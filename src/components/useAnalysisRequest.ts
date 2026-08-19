@@ -17,7 +17,11 @@ import {
 
 interface UseAnalysisRequestOptions {
   analysisIntent: AnalysisIntent;
-  onAnalyzeComplete: (report: Report, reportId: string | null) => void;
+  onAnalyzeComplete: (
+    report: Report,
+    reportId: string | null,
+    inputType: AnalysisInputType
+  ) => void;
   onAnalyzeError: (message: string) => void;
 }
 
@@ -76,7 +80,7 @@ export function useAnalysisRequest({
           return;
         }
         captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
-        onAnalyzeComplete(validated.report, null);
+        onAnalyzeComplete(validated.report, null, inputType);
         return;
       }
 
@@ -111,7 +115,7 @@ export function useAnalysisRequest({
       }
 
       captureAnalysisEvent("analysis_completed", inputType, analysisIntent, entryProperties);
-      onAnalyzeComplete(validated.report, reportId);
+      onAnalyzeComplete(validated.report, reportId, inputType);
     } catch {
       const diagnostic = clientFailureDiagnostic("network");
       captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
