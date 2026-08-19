@@ -60,17 +60,14 @@ export function HomepageHero({
   return (
     <section id="top" className="hero page-container">
       <div className="hero-copy">
-        <h1>Understand unfamiliar repositories fast.</h1>
+        <h1>Walk me through this repository.</h1>
         <p className="hero-description">
-          Use a public GitHub repository or ZIP. <span>{candidateBriefProofPromise}</span>
+          <span>{candidateBriefProofPromise}</span>
         </p>
         <div className="hero-actions">
           <button className="btn btn-primary" type="button" onClick={onGenerateSample}>
-            Generate sample brief <Arrow />
+            See the sample Candidate Brief <Arrow />
           </button>
-          <a className="text-action" href="#analyze">
-            Analyze your repository <Arrow />
-          </a>
         </div>
       </div>
 
