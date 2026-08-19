@@ -38,6 +38,7 @@ describe("InputForm", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     cleanup();
   });
 
@@ -183,6 +184,45 @@ describe("InputForm", () => {
     act(() => ref.current?.generateSample());
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+  });
+
+  it("focuses the public GitHub input and restores interview intent", async () => {
+    const user = userEvent.setup();
+    const ref = React.createRef<React.ElementRef<typeof InputForm>>();
+    let focusFrame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      focusFrame = callback;
+      return 1;
+    });
+
+    const view = render(
+      <InputForm
+        ref={ref}
+        onAnalyzeStart={noop}
+        onAnalyzeComplete={noop}
+        onAnalyzeError={noop}
+        loading={false}
+      />
+    );
+    const form = view.container.querySelector("form.input-form");
+    if (!form) throw new Error("form not found");
+
+    await user.click(within(form).getByText(/Use a different conversation focus/i));
+    await user.click(within(form).getByRole("radio", { name: /Investigate a bug/i }));
+    await user.click(within(form).getByRole("tab", { name: /Upload ZIP/i }));
+
+    act(() => ref.current?.focusGithubInput());
+    act(() => focusFrame?.(0));
+
+    expect(within(form).getByRole("tab", { name: /Public GitHub URL/i })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(within(form).getByRole("radio", { name: /Prepare for an interview/i })).toBeChecked();
+    expect(within(form).getByLabelText(/Public GitHub repository URL/i)).toHaveFocus();
+    expect(
+      within(form).getByRole("radio", { name: /Investigate a bug/i })
+    ).not.toBeVisible();
   });
 
   it("ignores imperative and form submissions while analysis is loading", () => {
@@ -585,7 +625,7 @@ describe("InputForm", () => {
     );
     await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
 
-    expect(onAnalyzeComplete).toHaveBeenCalledWith(inlineReport, null);
+    expect(onAnalyzeComplete).toHaveBeenCalledWith(inlineReport, null, "sample");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

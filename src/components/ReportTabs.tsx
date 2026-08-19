@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import type { Report } from "@/types/report";
 import { captureReportViewed, type ReportVariant } from "@/lib/productAnalytics";
 import { CandidateBriefPanel } from "./CandidateBriefPanel";
+import { CandidateBriefSampleNextStep } from "./CandidateBriefSampleNextStep";
 import { CandidateBriefUsefulnessPrompt } from "./CandidateBriefUsefulnessPrompt";
 import { DangerZonesTable } from "./DangerZonesTable";
 import { FolderMapTree } from "./FolderMapTree";
@@ -45,6 +46,7 @@ interface ReportTabsProps {
   reportId?: string | null;
   variant?: ReportVariant;
   initialDemoMode?: boolean;
+  onAnalyzeOwnRepository?: () => void;
 }
 
 export function ReportTabs({
@@ -52,6 +54,7 @@ export function ReportTabs({
   reportId,
   variant = "live",
   initialDemoMode = false,
+  onAnalyzeOwnRepository,
 }: ReportTabsProps) {
   const workspaceKey = [
     reportId ?? "inline",
@@ -71,6 +74,7 @@ export function ReportTabs({
       reportId={reportId}
       variant={variant}
       initialDemoMode={initialDemoMode}
+      onAnalyzeOwnRepository={onAnalyzeOwnRepository}
     />
   );
 }
@@ -80,6 +84,7 @@ function ReportWorkspace({
   reportId,
   variant = "live",
   initialDemoMode = false,
+  onAnalyzeOwnRepository,
 }: ReportTabsProps) {
   const tabsId = useId();
   const [activeTab, setActiveTab] = useState<ReportTab>("Candidate Brief");
@@ -138,6 +143,11 @@ function ReportWorkspace({
             {variant === "live" && report.candidate_brief && (
               <>
                 <CandidateBriefSharePrompt actions={actions} tabsId={tabsId} />
+                {onAnalyzeOwnRepository && (
+                  <CandidateBriefSampleNextStep
+                    onAnalyzeRepository={onAnalyzeOwnRepository}
+                  />
+                )}
                 <CandidateBriefUsefulnessPrompt />
               </>
             )}

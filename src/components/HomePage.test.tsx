@@ -3,9 +3,11 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildSampleReport } from "@/lib/buildSampleReport";
+import type { AnalysisInputType } from "@/lib/productAnalytics";
 import type { Report } from "@/types/report";
 
 const generateSample = vi.hoisted(() => vi.fn());
+const focusGithubInput = vi.hoisted(() => vi.fn());
 
 vi.mock("@/components/HomepageProofSections", () => ({
   HomepageHero: ({
@@ -44,12 +46,19 @@ vi.mock("@/components/InputForm", async () => {
         sampleButtonRef,
       }: {
         onAnalyzeStart: () => void;
-        onAnalyzeComplete: (report: Report, reportId: string | null) => void;
+        onAnalyzeComplete: (
+          report: Report,
+          reportId: string | null,
+          inputType: AnalysisInputType
+        ) => void;
         onAnalyzeError: (message: string) => void;
         loading: boolean;
         sampleButtonRef?: React.RefObject<HTMLButtonElement | null>;
       },
-      forwardedRef: React.ForwardedRef<{ generateSample: () => void }>
+      forwardedRef: React.ForwardedRef<{
+        generateSample: () => void;
+        focusGithubInput: () => void;
+      }>
     ) {
       const inlineReport = buildSampleReport();
       const focusedReport = structuredClone(inlineReport);
@@ -63,7 +72,10 @@ vi.mock("@/components/InputForm", async () => {
         };
       }
 
-      ReactModule.useImperativeHandle(forwardedRef, () => ({ generateSample }));
+      ReactModule.useImperativeHandle(forwardedRef, () => ({
+        generateSample,
+        focusGithubInput,
+      }));
 
       return (
         <div>
@@ -72,19 +84,21 @@ vi.mock("@/components/InputForm", async () => {
           <button type="button" onClick={onAnalyzeStart}>Start analysis</button>
           <button
             type="button"
-            onClick={() => onAnalyzeComplete(inlineReport, null)}
+            onClick={() => onAnalyzeComplete(inlineReport, null, "sample")}
           >
             Complete inline
           </button>
           <button
             type="button"
-            onClick={() => onAnalyzeComplete(inlineReport, "saved-report-id")}
+            onClick={() =>
+              onAnalyzeComplete(inlineReport, "saved-report-id", "github")
+            }
           >
             Complete saved
           </button>
           <button
             type="button"
-            onClick={() => onAnalyzeComplete(focusedReport, null)}
+            onClick={() => onAnalyzeComplete(focusedReport, null, "zip")}
           >
             Complete focused
           </button>
@@ -104,13 +118,20 @@ vi.mock("@/components/ReportTabs", () => ({
   ReportTabs: ({
     report,
     reportId,
+    onAnalyzeOwnRepository,
   }: {
     report: Report;
     reportId?: string | null;
+    onAnalyzeOwnRepository?: () => void;
   }) => (
     <div>
       Report workspace for {report.repo_metadata.name}
       <span>{reportId ? `Saved as ${reportId}` : "Inline report"}</span>
+      {onAnalyzeOwnRepository ? (
+        <button type="button" onClick={onAnalyzeOwnRepository}>
+          Analyze my public GitHub repository
+        </button>
+      ) : null}
     </div>
   ),
 }));
@@ -136,6 +157,7 @@ describe("HomePage completion coordination", () => {
     animationFrames = new Map();
     nextFrameId = 1;
     generateSample.mockReset();
+    focusGithubInput.mockReset();
     scrollIntoView = vi.fn();
     cancelAnimationFrame = vi.fn((id: number) => {
       animationFrames.delete(id);
@@ -265,6 +287,26 @@ describe("HomePage completion coordination", () => {
         "Your bug investigation repository brief is ready. Review the linked files and confidence notes."
       )
     ).toBeInTheDocument();
+  });
+
+  it("offers the repository handoff only after a bundled sample", () => {
+    render(<HomePage sampleReport={buildSampleReport()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Analyze my public GitHub repository" })
+    );
+
+    expect(focusGithubInput).toHaveBeenCalledOnce();
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Complete saved" }));
+    expect(
+      screen.queryByRole("button", { name: "Analyze my public GitHub repository" })
+    ).not.toBeInTheDocument();
   });
 
   it("positions and focuses a completed brief without inheriting smooth scrolling", () => {

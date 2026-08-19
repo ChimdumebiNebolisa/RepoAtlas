@@ -57,10 +57,50 @@ test.describe("Candidate Brief smoke", () => {
       const sampleAction = hero.getByRole("button", {
         name: /See the sample Candidate Brief/i,
       });
+      await page
+        .locator("#analyze summary")
+        .filter({ hasText: "Use a different conversation focus" })
+        .click();
+      await page.getByRole("radio", { name: /Investigate a bug/i }).check();
       await sampleAction.focus();
       await expect(sampleAction).toBeFocused();
       await page.keyboard.press("Enter");
       await expectCompletedReportInViewport(page);
+
+      const repositoryNextStep = page.locator(".report-sample-next-step");
+      const usefulnessPrompt = page.locator(".report-usefulness-prompt");
+      await expect(
+        repositoryNextStep.getByRole("heading", {
+          name: "Now map a repository you need to explain.",
+        })
+      ).toBeVisible();
+      const repositoryAction = repositoryNextStep.getByRole("button", {
+        name: "Analyze my public GitHub repository",
+      });
+      await expect(repositoryAction).toBeVisible();
+      await expect(repositoryNextStep.getByRole("button")).toHaveCount(1);
+      await expect(usefulnessPrompt).toBeVisible();
+      expect(
+        await repositoryNextStep.evaluate((nextStep, usefulness) =>
+          Boolean(
+            usefulness &&
+              nextStep.compareDocumentPosition(usefulness) &
+                Node.DOCUMENT_POSITION_FOLLOWING
+          ), await usefulnessPrompt.elementHandle())
+      ).toBe(true);
+
+      await repositoryAction.click();
+      await expect(page.getByRole("tab", { name: "Public GitHub URL" })).toHaveAttribute(
+        "aria-selected",
+        "true"
+      );
+      await expect(page.getByLabel("Public GitHub repository URL")).toBeFocused();
+      await expect(
+        page.getByRole("radio", { name: /Prepare for an interview/i })
+      ).toBeChecked();
+      await expect(
+        page.getByRole("radio", { name: /Investigate a bug/i, includeHidden: true })
+      ).not.toBeVisible();
 
       for (const tabName of REPORT_TABS) {
         await expect(

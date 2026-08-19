@@ -12,6 +12,7 @@ import { InputForm, type InputFormHandle } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
 import { clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 import { reportCapabilityCopy } from "@/lib/reportCapabilities";
+import type { AnalysisInputType } from "@/lib/productAnalytics";
 import type { Report } from "@/types/report";
 
 function Badge({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,8 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSampleReport, setShowSampleReport] = useState(false);
+  const [completedInputType, setCompletedInputType] =
+    useState<AnalysisInputType | null>(null);
   const reportSectionRef = useRef<HTMLElement | null>(null);
   const reportHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const inputFormRef = useRef<InputFormHandle | null>(null);
@@ -111,11 +114,24 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     });
   };
 
-  const handleAnalyzeComplete = (reportData: Report, id: string | null) => {
+  const handleAnalyzeComplete = (
+    reportData: Report,
+    id: string | null,
+    inputType: AnalysisInputType
+  ) => {
     setReport(reportData);
     setReportId(id);
+    setCompletedInputType(inputType);
     setLoading(false);
     setError(null);
+  };
+
+  const focusPublicGithubInput = () => {
+    inputFormRef.current?.focusGithubInput();
+    document.getElementById("analyze")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
 
   return (
@@ -164,6 +180,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             onAnalyzeStart={() => {
               setReport(null);
               setReportId(null);
+              setCompletedInputType(null);
               setLoading(true);
               setError(null);
             }}
@@ -210,7 +227,13 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
                   : "Start with the purpose and reading path, then inspect or export the source-linked report as PDF or PNG."}
             </p>
           </div>
-          <ReportTabs report={report} reportId={reportId} />
+          <ReportTabs
+            report={report}
+            reportId={reportId}
+            onAnalyzeOwnRepository={
+              completedInputType === "sample" ? focusPublicGithubInput : undefined
+            }
+          />
         </section>
       )}
 

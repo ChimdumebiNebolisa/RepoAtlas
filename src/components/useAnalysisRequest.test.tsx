@@ -98,7 +98,7 @@ describe("useAnalysisRequest", () => {
     await act(() => request({ method: "POST" }, "github"));
 
     expect(fetchMock).toHaveBeenCalledWith("/api/analyze", { method: "POST" });
-    expect(onAnalyzeComplete).toHaveBeenCalledWith(report, null);
+    expect(onAnalyzeComplete).toHaveBeenCalledWith(report, null, "github");
     expect(onAnalyzeError).not.toHaveBeenCalled();
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -150,7 +150,7 @@ describe("useAnalysisRequest", () => {
 
     await act(() => request({}, "sample"));
 
-    expect(onAnalyzeComplete).toHaveBeenCalledWith(report, reportId);
+    expect(onAnalyzeComplete).toHaveBeenCalledWith(report, reportId, "sample");
     expect(onAnalyzeError).not.toHaveBeenCalled();
     expect(captureAnalysisEvent).toHaveBeenLastCalledWith(
       "analysis_completed",
