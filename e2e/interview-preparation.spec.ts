@@ -259,7 +259,7 @@ test("repository walkthrough guide has its exact search-result promise", async (
   );
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    "Learn how to explain an unfamiliar repository with a defensible reading order, architecture map, risk signals, and file-backed talking points."
+    "Prepare for a repository walkthrough interview with a Candidate Brief that gives you a ranked reading path backed by repository files."
   );
 });
 
