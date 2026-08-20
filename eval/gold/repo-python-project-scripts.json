@@ -1,0 +1,9 @@
+{
+  "fixture": "repo-python-project-scripts",
+  "entrypoints": ["commands.py"],
+  "internal_edges": [],
+  "run_commands": ["pep-tool", "poetry-worker", "poetry install"],
+  "onboarding_files": ["README.md", "pyproject.toml", "commands.py"],
+  "high_coupling_files": ["commands.py"],
+  "unresolved_imports": []
+}

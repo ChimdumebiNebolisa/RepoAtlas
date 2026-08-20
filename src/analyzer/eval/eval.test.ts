@@ -30,6 +30,7 @@ describe("analyzer evaluation suite (fixture gold labels)", () => {
       "repo-monorepo",
       "repo-node-api",
       "repo-python",
+      "repo-python-project-scripts",
       "repo-ts",
     ]);
   });
