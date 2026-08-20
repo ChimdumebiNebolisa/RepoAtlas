@@ -178,7 +178,8 @@ describe("Java source classification boundaries", () => {
     const files = {
       "src/main/java/app/Boot.java": "@SpringBootApplication class Boot {}",
       "src/main/java/app/Runner.java": "class Runner { void start() { SpringApplication.run(Runner.class); } }",
-      "src/main/java/app/Controller.java": "@RequestMapping class Controller {}",
+      "src/main/java/app/Controller.java":
+        "import org.springframework.web.bind.annotation.RequestMapping; @RequestMapping class Controller {}",
       "src/main/java/app/Resource.java":
         'import javax.ws.rs.Path; @Path("/items") class Resource {}',
       "src/test/java/app/ControllerFixture.java": "@Controller class ControllerFixture {}",
@@ -241,9 +242,9 @@ describe("Java source classification boundaries", () => {
       "src/main/java/app/Runner.java":
         "class Runner { void start() { SpringApplication.run(Runner.class); } }",
       "src/main/java/app/Controller.java":
-        "@RestController class Controller {}",
+        "import org.springframework.stereotype.Controller; @Controller class Controller {}",
       "src/main/java/app/Mapped.java":
-        "@RequestMapping class Mapped {}",
+        "import org.springframework.web.bind.annotation.*; @RequestMapping class Mapped {}",
       "src/main/java/app/Resource.java":
         'import jakarta.ws.rs.*; @Path("/items") class Resource {}',
     };

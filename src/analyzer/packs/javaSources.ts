@@ -22,11 +22,28 @@ const MAIN_METHOD_RE =
   /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)/;
 const SPRING_BOOT_APP_RE = /@SpringBootApplication/;
 const SPRING_RUN_RE = /SpringApplication\.run\s*\(/;
-const SPRING_CONTROLLER_RE = /@(RestController|Controller)\b/;
-const REQUEST_MAPPING_RE = /@RequestMapping\b/;
+const SPRING_WEB_RE = /@(RestController|Controller|RequestMapping)\b/g;
+const SPRING_WEB_IMPORT_RE =
+  /^\s*import\s+org\.springframework\.(web\.bind\.annotation|stereotype)\.(\*|RestController|Controller|RequestMapping)\s*;/gm;
 const JAXRS_RE = /@(Path|GET|POST|PUT|DELETE|PATCH)\b/;
 const JAXRS_IMPORT_RE =
   /^\s*import\s+(?:javax|jakarta)\.ws\.rs\.(\*|Path|GET|POST|PUT|DELETE|PATCH)\s*;/gm;
+
+function hasImportedSpringWebAnnotation(code: string): boolean {
+  const imports = new Set(
+    [...code.matchAll(SPRING_WEB_IMPORT_RE)].map(
+      (match) => `${match[1]}.${match[2]}`
+    )
+  );
+  return [...code.matchAll(SPRING_WEB_RE)].some((match) => {
+    const annotation = match[1];
+    const packageName = annotation === "Controller" ? "stereotype" : "web.bind.annotation";
+    return (
+      imports.has(`${packageName}.${annotation}`) ||
+      imports.has(`${packageName}.*`)
+    );
+  });
+}
 
 function hasImportedJaxRsAnnotation(code: string): boolean {
   const imports = new Set(
@@ -98,8 +115,7 @@ export function detectJavaEntrypoints(
     if (
       SPRING_BOOT_APP_RE.test(code) ||
       SPRING_RUN_RE.test(code) ||
-      SPRING_CONTROLLER_RE.test(code) ||
-      REQUEST_MAPPING_RE.test(code) ||
+      hasImportedSpringWebAnnotation(code) ||
       hasImportedJaxRsAnnotation(code)
     ) {
       entrypoints.add(filePath);
