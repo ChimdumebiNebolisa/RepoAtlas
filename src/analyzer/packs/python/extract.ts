@@ -71,7 +71,7 @@ function readImportNameList(source: string, start: number): { names: string[]; n
 
   const pushName = (raw: string) => {
     const cleaned = raw.replace(/\s+as\s+\S+$/i, "").trim();
-    if (cleaned && cleaned !== "*") names.push(cleaned.split(/\s+/)[0]!);
+    if (cleaned && cleaned !== "*" && !/\s/.test(cleaned)) names.push(cleaned);
   };
 
   if (source[index] === "(") {
