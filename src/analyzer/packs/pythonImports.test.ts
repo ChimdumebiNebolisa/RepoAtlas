@@ -61,6 +61,19 @@ describe("Python import extraction boundaries", () => {
     ]);
   });
 
+  it("rejects numeric aliases while preserving valid aliased imports", () => {
+    expect(
+      extractImportSpecifiers(
+        [
+          "import gamma as 123",
+          "import delta as renamed",
+          "from package import child as child_alias",
+          "",
+        ].join("\n")
+      )
+    ).toEqual(["delta", "package", "package.child"]);
+  });
+
   it("keeps nested parentheses bounded and deduplicates repeated names", () => {
     expect(
       extractImportSpecifiers(

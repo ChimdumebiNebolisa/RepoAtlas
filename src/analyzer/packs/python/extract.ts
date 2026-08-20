@@ -70,6 +70,8 @@ function readImportNameList(source: string, start: number): { names: string[]; n
   let parenDepth = 0;
 
   const pushName = (raw: string) => {
+    const alias = raw.match(/\s+as\s+(\S+)\s*$/i)?.[1];
+    if (alias && /^[0-9]/.test(alias)) return;
     const cleaned = raw.replace(/\s+as\s+\S+$/i, "").trim();
     if (cleaned && cleaned !== "*") names.push(cleaned.split(/\s+/)[0]!);
   };
