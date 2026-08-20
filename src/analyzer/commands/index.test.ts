@@ -87,7 +87,7 @@ describe("Makefile command extraction", () => {
 });
 
 describe("Python command extraction", () => {
-  it("extracts PEP 621 and Poetry scripts plus Poetry setup commands", () => {
+  it("extracts PEP 621 and Poetry scripts without inventing an undeclared pytest command", () => {
     const workspace = createWorkspace({
       "pyproject.toml": [
         "[project.scripts]",
@@ -102,6 +102,22 @@ describe("Python command extraction", () => {
 
     expect(extractPythonCommands(workspace)).toEqual([
       { source: "pyproject.toml", command: "repoatlas", description: "script: repoatlas" },
+      { source: "pyproject.toml", command: "worker", description: "script: worker" },
+      { source: "pyproject.toml", command: "poetry install", description: "install" },
+    ]);
+  });
+
+  it("extracts the Poetry pytest command when pytest is declared", () => {
+    const workspace = createWorkspace({
+      "pyproject.toml": [
+        "[tool.poetry.scripts]",
+        'worker = "app:worker"',
+        "[tool.poetry.group.test.dependencies]",
+        'pytest = "^8.0"',
+      ].join("\n"),
+    });
+
+    expect(extractPythonCommands(workspace)).toEqual([
       { source: "pyproject.toml", command: "worker", description: "script: worker" },
       { source: "pyproject.toml", command: "poetry install", description: "install" },
       { source: "pyproject.toml", command: "poetry run pytest", description: "test" },

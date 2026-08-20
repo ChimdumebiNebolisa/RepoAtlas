@@ -50,6 +50,21 @@ describe("analyzer evaluation suite (fixture gold labels)", () => {
     });
   });
 
+  it("matches every human-labeled Python project-script command without extras", async () => {
+    const gold = goldLabels.find((item) => item.fixture === "repo-python-project-scripts");
+    expect(gold).toBeDefined();
+
+    const result = await evaluateFixture(gold!);
+
+    expect(result.run_commands).toMatchObject({
+      true_positives: 3,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
+  });
+
   it.each(goldLabels.map((gold) => [gold.fixture, gold] as const))(
     "meets baseline accuracy floors for %s",
     async (_name, gold) => {
