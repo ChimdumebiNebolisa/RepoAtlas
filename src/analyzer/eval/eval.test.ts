@@ -26,12 +26,30 @@ describe("analyzer evaluation suite (fixture gold labels)", () => {
     expect(goldLabels.map((item) => item.fixture).sort()).toEqual([
       "repo-fastapi",
       "repo-java",
+      "repo-java-fully-qualified",
       "repo-java-maven",
       "repo-monorepo",
       "repo-node-api",
       "repo-python",
       "repo-ts",
     ]);
+  });
+
+  it("recognizes only the executable fully qualified Java reference", async () => {
+    const gold = goldLabels.find(
+      (item) => item.fixture === "repo-java-fully-qualified"
+    );
+    expect(gold).toBeDefined();
+
+    const result = await evaluateFixture(gold!);
+
+    expect(result.internal_edges).toMatchObject({
+      true_positives: 1,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
   });
 
   it("detects every human-labeled monorepo entrypoint without extras", async () => {

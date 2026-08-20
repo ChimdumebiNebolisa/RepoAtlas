@@ -1,0 +1,19 @@
+{
+  "fixture": "repo-java-fully-qualified",
+  "entrypoints": ["src/main/java/com/example/app/App.java"],
+  "internal_edges": [
+    {
+      "from": "src/main/java/com/example/app/App.java",
+      "to": "src/main/java/com/example/util/Helper.java"
+    }
+  ],
+  "run_commands": [],
+  "onboarding_files": [
+    "README.md",
+    "src/main/java/com/example/app/App.java"
+  ],
+  "high_coupling_files": [
+    "src/main/java/com/example/util/Helper.java"
+  ],
+  "unresolved_imports": []
+}
