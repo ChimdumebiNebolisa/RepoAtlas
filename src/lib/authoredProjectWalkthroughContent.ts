@@ -1,7 +1,7 @@
 export const authoredProjectWalkthroughMetadata = {
   title: "How to Walk Through a Project in an Interview | RepoAtlas",
   description:
-    "Use a practical project interview structure for your contribution, architecture, technical decisions, tradeoffs, results, and next improvement.",
+    "Prepare a personal project interview walkthrough that separates your contribution and decisions from file-backed architecture, tests, tradeoffs, and limits.",
   openGraphDescription:
     "A practical method for explaining a personal project or take-home assignment with clear authorship and file-backed technical evidence.",
 } as const;

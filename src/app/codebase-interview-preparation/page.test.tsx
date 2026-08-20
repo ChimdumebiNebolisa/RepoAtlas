@@ -9,8 +9,8 @@ afterEach(cleanup);
 
 describe("codebase interview preparation page", () => {
   it("publishes a self-canonical, indexable comparison entrance", () => {
-    expect(metadata.title).toBe("Structured Codebase Interview Preparation | RepoAtlas");
-    expect(metadata.description).toContain("structured, evidence-first codebase interview preparation");
+    expect(metadata.title).toBe("Codebase Interview Preparation Methods | RepoAtlas");
+    expect(metadata.description).toContain("evidence-first codebase interview workflow");
     expect(metadata.alternates).toEqual({ canonical: canonicalUrl });
     expect(metadata.openGraph).toMatchObject({ type: "article", url: canonicalUrl });
     expect(metadata.robots).toBeUndefined();

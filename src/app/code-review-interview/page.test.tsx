@@ -10,7 +10,7 @@ afterEach(cleanup);
 describe("code review interview guide", () => {
   it("publishes a self-canonical, indexable editorial entrance", () => {
     expect(metadata.title).toBe(
-      "Code Review Interview Questions and Example Answers | RepoAtlas",
+      "Code Review Interview Questions & Answers | RepoAtlas",
     );
     expect(metadata.description).toContain("code review interview questions");
     expect(metadata.alternates).toEqual({ canonical: canonicalUrl });

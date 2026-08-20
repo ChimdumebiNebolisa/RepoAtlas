@@ -7,9 +7,9 @@ import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
 
 const canonicalUrl = "https://repo-atlas-phi.vercel.app/codebase-interview-preparation";
 
-const title = "Structured Codebase Interview Preparation | RepoAtlas";
+const title = "Codebase Interview Preparation Methods | RepoAtlas";
 const description =
-  "Compare ad hoc repository browsing with a structured, evidence-first codebase interview preparation workflow you can turn into a verified walkthrough.";
+  "Compare ad hoc repository browsing with an evidence-first codebase interview workflow for reading order, system paths, tests, risks, and timed answers.";
 
 export const metadata: Metadata = {
   title,

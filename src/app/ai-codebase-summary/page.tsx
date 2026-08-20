@@ -11,7 +11,7 @@ const canonicalUrl = "https://repo-atlas-phi.vercel.app/ai-codebase-summary";
 
 const title = "AI Codebase Summary vs. Evidence-Linked Brief | RepoAtlas";
 const description =
-  "Compare an AI codebase summary with a deterministic, evidence-linked Candidate Brief for repository interview preparation.";
+  "Compare an AI codebase summary with a file-backed Candidate Brief for interviews, including source traceability, architecture, risks, tests, and limits.";
 
 export const metadata: Metadata = {
   title,
