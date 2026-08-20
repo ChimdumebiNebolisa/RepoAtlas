@@ -8,7 +8,7 @@ const commit = "c350936d2888ef16ff4f5549684fd8db54935a89";
 
 const title = "FastAPI Candidate Brief Example | RepoAtlas";
 const description =
-  "Inspect a production RepoAtlas Candidate Brief captured from FastAPI's public full-stack template at an exact commit.";
+  "Inspect an exact-commit FastAPI Candidate Brief with ranked starting files, architecture context, structural risk signals, commands, and source-linked evidence.";
 
 export const metadata: Metadata = {
   title,

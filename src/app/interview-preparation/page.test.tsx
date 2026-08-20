@@ -12,7 +12,7 @@ afterEach(cleanup);
 
 describe("interview preparation page", () => {
   it("publishes self-canonical interview-preparation metadata", () => {
-    expect(metadata.title).toBe("Code Interview Preparation with a Candidate Brief | RepoAtlas");
+    expect(metadata.title).toBe("Repository Interview Preparation Guide | RepoAtlas");
     expect(metadata.alternates).toEqual({ canonical: canonicalUrl });
     expect(metadata.openGraph).toMatchObject({ type: "website", url: canonicalUrl });
     expect(metadata.robots).toBeUndefined();

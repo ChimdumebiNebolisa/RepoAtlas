@@ -1,7 +1,7 @@
 export const takeHomeInterviewMetadata = {
   title: "Take-home Coding Interview Review Guide | RepoAtlas",
   description:
-    "Review a take-home coding assignment before the interview. Prepare the core path, decisions, tests, limits, and file-backed talking points.",
+    "Review a take-home coding assignment before the interview with a five-pass, file-backed story covering the core path, decisions, tests, limits, and next change.",
   openGraphDescription:
     "Prepare a clear, evidence-backed walkthrough of your take-home coding assignment before the interview.",
 } as const;

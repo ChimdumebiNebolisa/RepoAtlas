@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("interview-preparation page leads to the measurable analysis start", async ({ page }) => {
   await page.goto("/interview-preparation");
 
-  await expect(page).toHaveTitle(/Code Interview Preparation with a Candidate Brief/);
+  await expect(page).toHaveTitle("Repository Interview Preparation Guide | RepoAtlas");
   await expect(
     page.getByRole("heading", { name: "Prepare to explain your code, file by file." })
   ).toBeVisible();
@@ -391,7 +391,7 @@ test("authored project guide has its exact search-result promise", async ({
   );
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    "Use a practical project interview structure for your contribution, architecture, technical decisions, tradeoffs, results, and next improvement."
+    "Prepare a personal project interview walkthrough that separates your contribution and decisions from file-backed architecture, tests, tradeoffs, and limits."
   );
 });
 
@@ -408,7 +408,7 @@ test("take-home coding interview guide is indexed and connects its public proof"
   await expect(page).toHaveTitle("Take-home Coding Interview Review Guide | RepoAtlas");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    "Review a take-home coding assignment before the interview. Prepare the core path, decisions, tests, limits, and file-backed talking points.",
+    "Review a take-home coding assignment before the interview with a five-pass, file-backed story covering the core path, decisions, tests, limits, and next change.",
   );
   const socialPreviewAlt =
     "RepoAtlas take-home coding interview review with five passes from brief to next change";

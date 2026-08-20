@@ -49,7 +49,7 @@ describe("homepage structured data", () => {
     expect(homepageMetadata.title).not.toBe(interviewPreparationMetadata.title);
     expect(homepageMetadata.description).not.toBe(interviewPreparationMetadata.description);
     expect(interviewPreparationMetadata.description).toBe(
-      "Turn a repository into an evidence-linked Candidate Brief with likely entry points, architecture, risk signals, reading order, and talking points.",
+      "Prepare for a repository interview with a file-backed Candidate Brief covering entry points, architecture, risk signals, reading order, and talking points.",
     );
     expect(interviewPreparationMetadata.description.length).toBeLessThanOrEqual(160);
   });

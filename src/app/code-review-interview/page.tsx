@@ -8,12 +8,12 @@ import { CodeReviewPreparation } from "./CodeReviewPreparation";
 const canonicalUrl = "https://repo-atlas-phi.vercel.app/code-review-interview";
 
 export const metadata: Metadata = {
-  title: "Code Review Interview Questions and Example Answers | RepoAtlas",
+  title: "Code Review Interview Questions & Answers | RepoAtlas",
   description:
-    "Practice code review interview questions with a worked TypeScript example, prioritized comments, answer frameworks, and a 45-minute preparation method.",
+    "Practice code review interview questions with a worked TypeScript example, prioritized findings, answer frameworks, and a 45-minute file-backed plan.",
   alternates: { canonical: canonicalUrl },
   openGraph: {
-    title: "Code Review Interview Questions and Example Answers | RepoAtlas",
+    title: "Code Review Interview Questions & Answers | RepoAtlas",
     description:
       "Ten code review interview questions, a worked TypeScript exercise, and an evidence-first method for explaining priorities and tradeoffs.",
     type: "article",
