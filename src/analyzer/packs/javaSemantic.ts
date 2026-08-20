@@ -10,6 +10,8 @@ import {
 } from "./javaShared";
 
 const IMPORT_RE = /^\s*import\s+(static\s+)?([\w.]+(?:\.\*)?)\s*;/gm;
+const QUALIFIED_REFERENCE_RE =
+  /\b[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)+\b/g;
 
 export interface JavaSemanticGraph {
   imports: Map<string, Set<string>>;
@@ -53,15 +55,35 @@ function resolveImport(
   return [];
 }
 
+function executableBody(content: string): string {
+  return stripJavaCommentsAndLiterals(content)
+    .split("\n")
+    .filter((line) => !/^\s*(?:package|import)\s+/.test(line))
+    .join("\n");
+}
+
+export function collectFullyQualifiedRefs(
+  content: string,
+  selfPath: string,
+  sourceIndex: JavaSourceIndex
+): string[] {
+  const refs = new Set<string>();
+  const body = executableBody(content);
+  QUALIFIED_REFERENCE_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = QUALIFIED_REFERENCE_RE.exec(body))) {
+    const [target] = resolveImport(match[0], sourceIndex);
+    if (target && target !== selfPath) refs.add(target);
+  }
+  return [...refs];
+}
+
 export function collectSamePackageRefs(
   content: string,
   selfPath: string,
   siblings: string[]
 ): string[] {
-  const body = stripJavaCommentsAndLiterals(content)
-    .split("\n")
-    .filter((line) => !/^\s*(?:package|import)\s+/.test(line))
-    .join("\n");
+  const body = executableBody(content);
   const refs: string[] = [];
   for (const sibling of siblings) {
     if (sibling === selfPath) continue;
@@ -95,6 +117,15 @@ export function buildJavaSemanticGraph(
           ) {
             targets.add(target);
           }
+        }
+      }
+      for (const target of collectFullyQualifiedRefs(
+        content,
+        filePath,
+        sourceIndex
+      )) {
+        if (pipeline.file_metadata.has(target) && !shouldSkipPath(target)) {
+          targets.add(target);
         }
       }
       const packageName = packageNameFromSource(content);
