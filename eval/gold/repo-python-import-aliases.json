@@ -1,0 +1,38 @@
+{
+  "fixture": "repo-python-import-aliases",
+  "entrypoints": ["src/alias_app/main.py"],
+  "internal_edges": [
+    {
+      "from": "src/alias_app/main.py",
+      "to": "src/alias_app/__init__.py"
+    },
+    {
+      "from": "src/alias_app/main.py",
+      "to": "src/alias_app/config.py"
+    },
+    {
+      "from": "src/alias_app/main.py",
+      "to": "src/alias_app/helpers.py"
+    },
+    {
+      "from": "src/alias_app/main.py",
+      "to": "src/alias_app/models.py"
+    },
+    {
+      "from": "src/alias_app/main.py",
+      "to": "src/alias_app/services.py"
+    },
+    {
+      "from": "src/alias_app/services.py",
+      "to": "src/alias_app/helpers.py"
+    },
+    {
+      "from": "src/alias_app/services.py",
+      "to": "src/alias_app/models.py"
+    }
+  ],
+  "run_commands": ["alias-app"],
+  "onboarding_files": ["README.md", "src/alias_app/main.py"],
+  "high_coupling_files": ["src/alias_app/main.py"],
+  "unresolved_imports": []
+}

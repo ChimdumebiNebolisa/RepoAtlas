@@ -1,0 +1,9 @@
+[project]
+name = "alias-app"
+version = "0.1.0"
+
+[project.scripts]
+alias-app = "alias_app.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
