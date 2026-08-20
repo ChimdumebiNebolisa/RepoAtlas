@@ -61,6 +61,19 @@ describe("Python import extraction boundaries", () => {
     ]);
   });
 
+  it("rejects missing-comma imports while preserving valid nearby forms", () => {
+    const source = [
+      "import gamma delta",
+      "import alpha, beta as renamed",
+      "from . import sibling",
+      "message = 'import string_target'",
+      "# import comment_target",
+      "",
+    ].join("\n");
+
+    expect(extractImportSpecifiers(source)).toEqual(["alpha", "beta", ".sibling"]);
+  });
+
   it("keeps nested parentheses bounded and deduplicates repeated names", () => {
     expect(
       extractImportSpecifiers(
