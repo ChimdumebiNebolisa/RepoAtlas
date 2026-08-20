@@ -11,6 +11,14 @@ import { CODE_EXTENSIONS, JAVA_EXTENSION, PYTHON_EXTENSION } from "./shared";
 
 type LanguagePack = TsJsPackResult | PythonPackResult | JavaPackResult;
 
+const SMALL_REPOSITORY_ABSOLUTE_FLOORS = {
+  size: 1000,
+  coupling: 5,
+  complexity: 10,
+  testProximity: 100,
+  churn: 100,
+} as const;
+
 export function computeDangerZones(
   pipeline: IndexingPipelineResult,
   tsjs?: TsJsPackResult | null,
@@ -75,13 +83,46 @@ export function computeDangerZones(
     const testProximity = pack.testProximity?.get(filePath) ?? 0;
     const churn = commitInsights ? churnScoreForFile(filePath, commitInsights) : 0;
 
-    const sizeP = blendedMetricRank(sizeValues, size, files.length);
-    const fanInP = blendedMetricRank(fanInValues, fanIn, files.length);
-    const fanOutP = blendedMetricRank(fanOutValues, fanOut, files.length);
-    const complexityP = blendedMetricRank(complexityValues, complexity, files.length);
+    const sizeP = blendedMetricRank(
+      sizeValues,
+      size,
+      files.length,
+      SMALL_REPOSITORY_ABSOLUTE_FLOORS.size
+    );
+    const fanInP = blendedMetricRank(
+      fanInValues,
+      fanIn,
+      files.length,
+      SMALL_REPOSITORY_ABSOLUTE_FLOORS.coupling
+    );
+    const fanOutP = blendedMetricRank(
+      fanOutValues,
+      fanOut,
+      files.length,
+      SMALL_REPOSITORY_ABSOLUTE_FLOORS.coupling
+    );
+    const complexityP = blendedMetricRank(
+      complexityValues,
+      complexity,
+      files.length,
+      SMALL_REPOSITORY_ABSOLUTE_FLOORS.complexity
+    );
     const weakTestP =
-      100 - blendedMetricRank(testProximityValues, testProximity, files.length);
-    const churnP = hasChurn ? blendedMetricRank(churnValues, churn, files.length) : 0;
+      100 -
+      blendedMetricRank(
+        testProximityValues,
+        testProximity,
+        files.length,
+        SMALL_REPOSITORY_ABSOLUTE_FLOORS.testProximity
+      );
+    const churnP = hasChurn
+      ? blendedMetricRank(
+          churnValues,
+          churn,
+          files.length,
+          SMALL_REPOSITORY_ABSOLUTE_FLOORS.churn
+        )
+      : 0;
 
     const weightedRisk = hasChurn
       ? 0.18 * sizeP +
