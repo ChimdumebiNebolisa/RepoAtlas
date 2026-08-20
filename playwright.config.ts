@@ -3,6 +3,17 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = process.env.PLAYWRIGHT_PORT ?? process.env.PORT ?? "3000";
 const externalBaseURL = process.env.PLAYWRIGHT_EXTERNAL_URL;
 const baseURL = externalBaseURL ?? `http://127.0.0.1:${PORT}`;
+const controlledCheckStorageState = {
+  cookies: [],
+  origins: [
+    {
+      origin: new URL(baseURL).origin,
+      localStorage: [
+        { name: "repoatlas-controlled-check", value: "true" },
+      ],
+    },
+  ],
+};
 
 const capturePortfolio =
   process.env.CAPTURE_PORTFOLIO === "1" ||
@@ -26,6 +37,7 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL,
+    storageState: controlledCheckStorageState,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },

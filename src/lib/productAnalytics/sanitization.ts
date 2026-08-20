@@ -60,6 +60,12 @@ function sanitizedEntrySource(value: unknown): AnalysisEntrySource | undefined {
   return typeof value === "string" ? analysisEntrySourceValue(value) : undefined;
 }
 
+function controlledCheckProperties(properties: Record<string, unknown>) {
+  return properties.is_controlled_check === true
+    ? { is_controlled_check: true as const }
+    : {};
+}
+
 function sanitizeAnalysisBase(properties: Record<string, unknown>) {
   if (
     !isAllowedString(properties.input_type, ANALYSIS_INPUT_TYPES) ||
@@ -72,6 +78,7 @@ function sanitizeAnalysisBase(properties: Record<string, unknown>) {
     input_type: properties.input_type,
     analysis_intent: properties.analysis_intent,
     ...(entrySource ? { entry_source: entrySource } : {}),
+    ...controlledCheckProperties(properties),
   };
 }
 
@@ -158,7 +165,10 @@ export function sanitizeProductEventProperties(
         : null;
     case "report_viewed":
       return isAllowedString(properties.report_variant, REPORT_VARIANTS)
-        ? { report_variant: properties.report_variant }
+        ? {
+            report_variant: properties.report_variant,
+            ...controlledCheckProperties(properties),
+          }
         : null;
     case "walkthrough_copied":
       return isAllowedString(properties.report_variant, REPORT_VARIANTS) &&
@@ -166,6 +176,7 @@ export function sanitizeProductEventProperties(
         ? {
             report_variant: properties.report_variant,
             format: properties.format,
+            ...controlledCheckProperties(properties),
           }
         : null;
     default:

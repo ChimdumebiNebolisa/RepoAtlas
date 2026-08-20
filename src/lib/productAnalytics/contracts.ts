@@ -8,6 +8,9 @@ export type ReportShareType = "stored_link" | "portable_link";
 export type ReportExportFormat = "pdf" | "png" | "markdown";
 export type ReportVariant = "live" | "preview" | "shared";
 export type WalkthroughFormat = "30_second" | "2_minute";
+export type ControlledCheckProperties = {
+  is_controlled_check?: true;
+};
 export type ReportExportFailureClass =
   | "render_failed"
   | "http_error"
@@ -58,17 +61,17 @@ export type ProductEventProperties = {
     destination: "analysis_start";
     entry_source?: AnalysisEntrySource;
   };
-  analysis_started: {
+  analysis_started: ControlledCheckProperties & {
     input_type: AnalysisInputType;
     analysis_intent: AnalysisIntent;
     entry_source?: AnalysisEntrySource;
   };
-  analysis_completed: {
+  analysis_completed: ControlledCheckProperties & {
     input_type: AnalysisInputType;
     analysis_intent: AnalysisIntent;
     entry_source?: AnalysisEntrySource;
   };
-  analysis_failed: {
+  analysis_failed: ControlledCheckProperties & {
     input_type: AnalysisInputType;
     analysis_intent: AnalysisIntent;
     entry_source?: AnalysisEntrySource;
@@ -90,16 +93,16 @@ export type ProductEventProperties = {
     share_method: ReportShareMethod;
     share_type: ReportShareType;
   };
-  report_viewed: {
+  report_viewed: ControlledCheckProperties & {
     report_variant: ReportVariant;
   };
-  walkthrough_copied: {
+  walkthrough_copied: ControlledCheckProperties & {
     report_variant: ReportVariant;
     format: WalkthroughFormat;
   };
 };
 
-export type AnalysisEventDetails = {
+export type AnalysisEventDetails = ControlledCheckProperties & {
   entry_source?: AnalysisEntrySource;
   stage?: AnalysisFailureStage;
   status_code?: number;
