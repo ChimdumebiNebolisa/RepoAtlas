@@ -27,11 +27,43 @@ describe("analyzer evaluation suite (fixture gold labels)", () => {
       "repo-fastapi",
       "repo-java",
       "repo-java-maven",
+      "repo-java-semantic",
       "repo-monorepo",
       "repo-node-api",
       "repo-python",
       "repo-ts",
     ]);
+  });
+
+  it("measures the import-heavy Java fixture against its human labels", async () => {
+    const gold = goldLabels.find((item) => item.fixture === "repo-java-semantic");
+    expect(gold).toBeDefined();
+
+    const result = await evaluateFixture(gold!);
+
+    expect(result.entrypoints).toMatchObject({
+      true_positives: 1,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
+    expect(result.internal_edges).toMatchObject({
+      true_positives: 10,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
+    expect(result.run_commands).toMatchObject({
+      true_positives: 2,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
+    expect(result.onboarding_hit_rate).toBe(1);
+    expect(result.high_coupling_hit_rate).toBe(1);
   });
 
   it("detects every human-labeled monorepo entrypoint without extras", async () => {

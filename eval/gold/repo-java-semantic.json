@@ -1,0 +1,59 @@
+{
+  "fixture": "repo-java-semantic",
+  "entrypoints": [
+    "src/main/java/com/acme/app/Application.java"
+  ],
+  "internal_edges": [
+    {
+      "from": "src/main/java/com/acme/app/Application.java",
+      "to": "src/main/java/com/acme/app/BootConfig.java"
+    },
+    {
+      "from": "src/main/java/com/acme/app/Application.java",
+      "to": "src/main/java/com/acme/orders/OrderService.java"
+    },
+    {
+      "from": "src/main/java/com/acme/app/Application.java",
+      "to": "src/main/java/com/acme/shared/Clock.java"
+    },
+    {
+      "from": "src/main/java/com/acme/app/Application.java",
+      "to": "src/main/java/com/acme/shared/TextFormatter.java"
+    },
+    {
+      "from": "src/main/java/com/acme/orders/OrderService.java",
+      "to": "src/main/java/com/acme/orders/OrderPolicy.java"
+    },
+    {
+      "from": "src/main/java/com/acme/orders/OrderService.java",
+      "to": "src/main/java/com/acme/repository/OrderRepository.java"
+    },
+    {
+      "from": "src/main/java/com/acme/orders/OrderService.java",
+      "to": "src/main/java/com/acme/shared/Clock.java"
+    },
+    {
+      "from": "src/main/java/com/acme/orders/OrderService.java",
+      "to": "src/main/java/com/acme/shared/TextFormatter.java"
+    },
+    {
+      "from": "src/main/java/com/acme/repository/OrderRepository.java",
+      "to": "src/main/java/com/acme/shared/Clock.java"
+    },
+    {
+      "from": "src/main/java/com/acme/repository/OrderRepository.java",
+      "to": "src/main/java/com/acme/shared/TextFormatter.java"
+    }
+  ],
+  "run_commands": ["./gradlew test", "./gradlew build"],
+  "onboarding_files": [
+    "README.md",
+    "build.gradle.kts",
+    "src/main/java/com/acme/app/Application.java"
+  ],
+  "high_coupling_files": [
+    "src/main/java/com/acme/shared/Clock.java",
+    "src/main/java/com/acme/shared/TextFormatter.java"
+  ],
+  "unresolved_imports": []
+}
