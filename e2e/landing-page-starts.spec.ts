@@ -206,7 +206,7 @@ test.describe("candidate landing-page starts", () => {
           new RegExp(`\\?source=${candidatePage.source}#analyze$`),
         );
         await expect(
-          page.getByRole("radio", { name: /Interview walkthrough/i }),
+          page.getByRole("radio", { name: /Prepare for an interview/i }),
         ).toBeChecked();
 
         if (inputMode === "github") {
@@ -232,7 +232,7 @@ test.describe("candidate landing-page starts", () => {
           const analyzeAction = page.getByRole("button", {
             name:
               inputMode === "sample"
-                ? /Generate sample Candidate Brief/i
+                ? /Generate sample brief/i
                 : /Analyze public GitHub repository/i,
           });
           await focusWithKeyboard(page, analyzeAction);
@@ -242,7 +242,7 @@ test.describe("candidate landing-page starts", () => {
         await expectAnalyzeRequest(await analyzeRequest, inputMode);
         await expectCompletedReportInViewport(page);
         await expect(
-          page.getByRole("radio", { name: /Interview walkthrough/i }),
+          page.getByRole("radio", { name: /Prepare for an interview/i }),
         ).toBeChecked();
         await expectAllReportSectionsWithKeyboard(page);
         await expectReadableEvidenceWithKeyboard(page);

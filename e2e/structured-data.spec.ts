@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { siteIdentity } from "../src/lib/homepageContent";
 
 test("homepage exposes synchronized Product and FAQPage JSON-LD in the head", async ({ page }) => {
   await page.goto("/");
@@ -15,10 +16,9 @@ test("homepage exposes synchronized Product and FAQPage JSON-LD in the head", as
   const product = structuredData["@graph"].find((item) => item["@type"] === "Product");
   expect(product).toEqual({
     "@type": "Product",
-    name: "RepoAtlas",
-    description:
-      "Generate evidence-backed Candidate Briefs and repository analysis from ZIP uploads. No AI required.",
-    url: "https://repo-atlas-phi.vercel.app/",
+    name: siteIdentity.name,
+    description: siteIdentity.description,
+    url: siteIdentity.url,
   });
 
   const faqPage = structuredData["@graph"].find((item) => item["@type"] === "FAQPage") as {

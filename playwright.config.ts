@@ -14,6 +14,10 @@ process.env.REPORTS_DIR ??= ".playwright-reports";
 // The best-effort in-memory analyze rate limit would otherwise trip across the
 // serial e2e suite; disable it for tests (production keeps the default).
 process.env.ANALYZE_RATE_LIMIT_PER_MIN ??= "0";
+// The production server fails cron cleanup closed without a secret. E2E covers
+// the authenticated sweep path by giving the web server and specs the same
+// test-only secret; the fail-closed 503 behavior stays covered by unit tests.
+process.env.CRON_SECRET ??= "e2e-cron-secret";
 
 export default defineConfig({
   testDir: "./e2e",

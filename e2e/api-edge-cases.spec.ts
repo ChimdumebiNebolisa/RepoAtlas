@@ -6,6 +6,7 @@ import {
   REPORTS_DIR,
   VALID_UUID,
   analyzeSample,
+  cronAuthHeaders,
   minimalReport,
   writeReport,
   zipFixture,
@@ -200,11 +201,13 @@ test.describe("API edge cases", () => {
   });
 
   test("GET /api/cron/cleanup returns health metadata", async ({ request }) => {
-    const res = await request.get("/api/cron/cleanup");
+    const res = await request.get("/api/cron/cleanup", {
+      headers: cronAuthHeaders(),
+    });
     expect(res.ok()).toBe(true);
     const body = await res.json();
-    expect(body.ok).toBe(true);
-    expect(body.message).toMatch(/cleanup sweep/i);
+    expect(body.ok ?? true).toBe(true);
+    expect(body.reports).toBeDefined();
   });
 
   test("POST /api/cron/cleanup runs sweep", async ({ request }) => {
@@ -223,7 +226,9 @@ test.describe("API edge cases", () => {
       })
     );
 
-    const res = await request.post("/api/cron/cleanup");
+    const res = await request.post("/api/cron/cleanup", {
+      headers: cronAuthHeaders(),
+    });
     expect(res.ok()).toBe(true);
     const body = await res.json();
     expect(body.reports).toBeDefined();

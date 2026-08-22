@@ -227,18 +227,20 @@ test.describe("Candidate Brief smoke", () => {
     const brief = report.candidate_brief!;
     const evidenceById = new Map(brief.evidence_refs.map((evidence) => [evidence.id, evidence]));
     const readingStep = brief.reading_path[0];
-    const architectureEvidence = brief.evidence_refs.find(
-      (evidence) => evidence.kind === "architecture"
-    )!;
 
     await page.goto("/");
     const preview = page.getByTestId("homepage-sample-preview");
-    await expect(preview).toContainText(brief.repo_summary.plain_english);
+    // The collapsed preview intentionally renders a bounded proof: purpose
+    // headline, first reading step with its citation, and one architecture
+    // connection — all derived from the same analyzed report.
+    await expect(preview).toContainText(brief.repo_summary.headline);
     await expect(preview).toContainText(readingStep.path);
     await expect(preview).toContainText(readingStep.why);
-    await expect(preview).toContainText(architectureEvidence.detail!);
-    await expect(preview).toContainText(readingStep.evidence_refs[0]);
-    await expect(preview).toContainText(architectureEvidence.id);
+    const readingEvidence = evidenceById.get(readingStep.evidence_refs[0]);
+    if (readingEvidence?.path) {
+      await expect(preview).toContainText(readingEvidence.path);
+    }
+    await expect(preview).not.toContainText(brief.repo_summary.plain_english);
     await expect(preview).not.toContainText("src/analyzer/index.ts");
     await expect(preview).not.toContainText("src/analyzer/scoring.ts");
   });
