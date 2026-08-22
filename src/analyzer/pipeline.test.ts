@@ -91,6 +91,15 @@ describe("runIndexingPipeline", () => {
     ].sort((a, b) => a.localeCompare(b)));
   });
 
+  it("does not report non-YAML files under .github/workflows as CI configs (regression)", async () => {
+    write(".github/workflows/README.md", "# not a pipeline\n");
+    write(".github/workflows/ci.yml", "name: ci\n");
+    write(".github/workflows/nested/deep.yml", "name: deep\n");
+
+    const result = await runIndexingPipeline(root);
+    expect(result.ci_configs).toEqual([".github/workflows/ci.yml"]);
+  });
+
   it("keeps usable files when a nested directory cannot be read", async () => {
     write("README.md", "# Root\n");
     write("src/index.ts", "export const ok = true;\n");

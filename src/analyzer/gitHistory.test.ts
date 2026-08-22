@@ -69,6 +69,50 @@ describe("analyzeCommitInsights", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("skips GitHub history entirely when the run signal is already aborted (regression)", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const insights = await analyzeCommitInsights(workspacePath, {
+      githubUrl,
+      sha: "deadbeefcafebabe",
+      signal: controller.signal,
+    });
+
+    expect(insights.mode).toBe("unavailable");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("stops the per-commit detail loop when the run signal aborts mid-flight", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.mocked(fetch);
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse([
+          { sha: "commit-1" },
+          { sha: "commit-2" },
+          { sha: "commit-3" },
+        ])
+      )
+      .mockImplementationOnce(() => {
+        // First detail request completes, then the run is cancelled.
+        controller.abort();
+        return Promise.resolve(
+          jsonResponse({ files: [{ filename: "src/a.ts" }] })
+        );
+      })
+      .mockImplementationOnce(() => Promise.reject(new Error("must not be called")));
+
+    const insights = await analyzeCommitInsights(workspacePath, {
+      githubUrl,
+      sha: "deadbeefcafebabe",
+      signal: controller.signal,
+    });
+
+    expect(insights.mode).toBe("unavailable");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("uses the selected ref for local Git when the SHA is blank", async () => {
     fs.mkdirSync(path.join(workspacePath, ".git"));
     mocks.execFileSync.mockReturnValueOnce("README.md\n");

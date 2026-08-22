@@ -120,6 +120,7 @@ export async function analyzeRepository(
       githubUrl: githubUrlOf(input),
       sha: workspace.cloneHash,
       ref: workspace.branch ?? (input.kind === "github" ? input.ref : undefined),
+      signal: options.signal,
     });
     const startHere = computeStartHere(pipeline, packs.tsjs, packs.python, packs.java);
     const dangerZones = computeDangerZones(

@@ -6,8 +6,11 @@ const TEST_PATTERNS = [
   /_test\.py$/i,
   /(^|\/)tests?\//,
 ];
+// Decision-point definition aligned with the TS/JS AST pack: `else` is not a
+// new decision and `try`/`finally`/`with` introduce no branch of their own
+// (`except` is the branch, mirroring TS catch clauses).
 const COMPLEXITY_RE =
-  /\b(if|elif|else|for|while|try|except|finally|with|and|or|match|case)\b/g;
+  /\b(if|elif|for|while|except|and|or|match|case)\b/g;
 const STRING_PREFIX_RE = /(?:^|[^\w])([rRuUbBfF]{1,3})$/;
 
 function stripExtension(relPath: string): string {

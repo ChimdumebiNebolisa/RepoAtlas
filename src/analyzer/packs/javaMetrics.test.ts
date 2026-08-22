@@ -21,10 +21,42 @@ describe("computeComplexitySignals", () => {
 
     expect(computeComplexitySignals(content)).toEqual({
       loc: 13,
-      branchCount: 4,
+      branchCount: 3,
       maxNesting: 5,
-      score: 22,
+      score: 19,
     });
+  });
+
+  it("does not count else or switch keywords as decision points", () => {
+    const content = [
+      "class Example {",
+      "  int choose(int value) {",
+      "    switch (value) {",
+      "      case 1:",
+      "        return 1;",
+      "      default:",
+      "        return 0;",
+      "    }",
+      "  }",
+      "}",
+    ].join("\n");
+    // Each `case` label counts (matching the TS/JS pack's CaseClause rule);
+    // `switch` and `default` do not.
+    expect(computeComplexitySignals(content).branchCount).toBe(1);
+  });
+
+  it("does not count generic wildcards as decision points", () => {
+    const content = [
+      "class Example {",
+      "  java.util.Map<String, ?> cache;",
+      "  java.util.List<? extends Number> numbers;",
+      "  int pick(boolean ready) {",
+      "    return ready ? 1 : 0;",
+      "  }",
+      "}",
+    ].join("\n");
+    // Only the ternary counts; `<?>` and `<? extends>` are type wildcards.
+    expect(computeComplexitySignals(content).branchCount).toBe(1);
   });
 
   it("excludes line and block comments from every complexity signal", () => {

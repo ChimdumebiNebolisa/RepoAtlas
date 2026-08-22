@@ -48,8 +48,8 @@ export async function ingestFromGithub(
   const branch =
     ref && `${ref}`.trim() !== ""
       ? `${ref}`.trim()
-      : await resolveDefaultBranch(owner, repo);
-  const sha = await resolveCommitSha(owner, repo, branch);
+      : await resolveDefaultBranch(owner, repo, signal);
+  const sha = await resolveCommitSha(owner, repo, branch, signal);
   const tempDir = createTemporaryWorkspace();
   const archivePath = path.join(tempDir, "archive.zip");
 
