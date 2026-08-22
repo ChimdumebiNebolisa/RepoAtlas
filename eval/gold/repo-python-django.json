@@ -1,0 +1,36 @@
+{
+  "fixture": "repo-python-django",
+  "entrypoints": [
+    "manage.py"
+  ],
+  "internal_edges": [
+    {
+      "from": "config/urls.py",
+      "to": "inventory/views.py"
+    },
+    {
+      "from": "inventory/services.py",
+      "to": "inventory/models.py"
+    },
+    {
+      "from": "inventory/views.py",
+      "to": "inventory/services.py"
+    }
+  ],
+  "run_commands": [
+    "pip install -r requirements.txt",
+    "python manage.py runserver"
+  ],
+  "onboarding_files": [
+    "README.md",
+    "manage.py",
+    "config/urls.py"
+  ],
+  "high_coupling_files": [
+    "inventory/views.py",
+    "inventory/services.py"
+  ],
+  "unresolved_imports": [
+    "django.core.management"
+  ]
+}
