@@ -4,8 +4,35 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Fixed
+
+- Analyzer: Python import extraction now handles semicolon-chained statements
+  (`import os; import sys` yields both modules) instead of emitting a malformed
+  specifier and dropping the second import.
+- Analyzer: Python, Java, and TypeScript complexity proxies now count the same
+  decision points for equivalent control flow (`else`, `try`, `finally`, and
+  `with` no longer inflate Python; Java no longer counts `else`, the `switch`
+  keyword, or generic wildcards like `Map<String, ?>`). Mixed-language Danger
+  Zone percentiles are comparable again.
+- Reliability: GitHub commit-history requests and SHA/default-branch resolution
+  now stop with the analysis run's abort signal instead of continuing after
+  cancellation.
+- E2E: sample-flow helpers and specs were realigned with current landing copy,
+  cron-cleanup coverage now authenticates with a test-only secret so the
+  production fail-closed default is exercised rather than bypassed, and the
+  structured-data spec derives expectations from the site-identity module.
+- Tests: API integration tests declare explicit Vitest timeouts (the trailing
+  numeric form was silently ignored), removing suite-order flakiness.
+- Indexing: only YAML files directly under `.github/workflows` count as CI
+  configuration.
+
 ### Changed
 
+- Documentation: spec.md Start Here scoring section now matches the shipped
+  implementation, documents the guide routes, and describes the aligned
+  complexity proxies; roadmap items verified as shipped were removed.
+- Added `docs/audits/2026-08-22-adversarial-audit.md` recording the baseline,
+  findings, and verification evidence for this remediation pass.
 - Reframed the homepage around an outcome-first repository walkthrough, four
   supported workflows, one source-derived sample proof, and explicit analysis
   boundaries.
