@@ -1,0 +1,12 @@
+{
+  "fixture": "repo-python-invalid-aliases",
+  "entrypoints": [],
+  "internal_edges": [],
+  "run_commands": [],
+  "onboarding_files": ["README.md"],
+  "high_coupling_files": [],
+  "unresolved_imports": [],
+  "known_gaps": [
+    "The invalid numeric import alias must not create internal dependency edges"
+  ]
+}
