@@ -30,8 +30,24 @@ describe("analyzer evaluation suite (fixture gold labels)", () => {
       "repo-monorepo",
       "repo-node-api",
       "repo-python",
+      "repo-python-semicolon-imports",
       "repo-ts",
     ]);
+  });
+
+  it("recognizes one valid semicolon-delimited Python import without lookalike edges", async () => {
+    const gold = goldLabels.find((item) => item.fixture === "repo-python-semicolon-imports");
+    expect(gold).toBeDefined();
+
+    const result = await evaluateFixture(gold!);
+
+    expect(result.internal_edges).toMatchObject({
+      true_positives: 1,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
   });
 
   it("detects every human-labeled monorepo entrypoint without extras", async () => {

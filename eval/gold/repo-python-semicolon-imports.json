@@ -1,0 +1,14 @@
+{
+  "fixture": "repo-python-semicolon-imports",
+  "entrypoints": [],
+  "internal_edges": [
+    { "from": "source.py", "to": "pkg/mod.py" }
+  ],
+  "run_commands": [],
+  "onboarding_files": ["README.md"],
+  "high_coupling_files": [],
+  "unresolved_imports": [],
+  "known_gaps": [
+    "Valid imports after a semicolon must create internal dependency edges"
+  ]
+}
