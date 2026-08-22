@@ -1,0 +1,816 @@
+{
+  "repo_metadata": {
+    "name": "pallets/click",
+    "url": "https://github.com/pallets/click",
+    "branch": "2c8cd3ac958a7eb316d67f2d316c27086c4c0369",
+    "clone_hash": "2c8cd3ac958a7eb316d67f2d316c27086c4c0369",
+    "analyzed_at": "2026-08-22T02:56:05.014Z"
+  },
+  "candidate_brief": {
+    "repo_summary": {
+      "headline": "pallets/click appears to be a Python project",
+      "plain_english": "<div align=\"center\"><img src=\"https://raw.githubusercontent.com/pallets/click/refs/heads/stable/docs/_static/click-name.svg\" alt=\"\" height=\"150\"></div> (extracted from README.md). RepoAtlas also found 12 reading candidates, 32 risk-ranked files, and 0 run commands.",
+      "primary_evidence": [
+        "start-1",
+        "risk-1",
+        "arch-1",
+        "doc-1"
+      ],
+      "confidence": "high"
+    },
+    "reading_path": [
+      {
+        "order": 1,
+        "title": "cli.py",
+        "path": "examples/complex/complex/cli.py",
+        "why": "CLI entry file; detected entrypoint",
+        "evidence_refs": [
+          "start-1"
+        ]
+      },
+      {
+        "order": 2,
+        "title": "README",
+        "path": "examples/aliases/README",
+        "why": "root README documentation",
+        "evidence_refs": [
+          "start-2"
+        ]
+      },
+      {
+        "order": 3,
+        "title": "README",
+        "path": "examples/colors/README",
+        "why": "root README documentation",
+        "evidence_refs": [
+          "start-3"
+        ]
+      },
+      {
+        "order": 4,
+        "title": "README",
+        "path": "examples/completion/README",
+        "why": "root README documentation",
+        "evidence_refs": [
+          "start-4"
+        ]
+      },
+      {
+        "order": 5,
+        "title": "README",
+        "path": "examples/complex/README",
+        "why": "root README documentation",
+        "evidence_refs": [
+          "start-5"
+        ]
+      },
+      {
+        "order": 6,
+        "title": "README",
+        "path": "examples/imagepipe/README",
+        "why": "root README documentation",
+        "evidence_refs": [
+          "start-6"
+        ]
+      }
+    ],
+    "interview_talking_points": {
+      "walk_me_through_codebase": {
+        "answer": "Walk through the repository from the ranked reading path, then connect that path to run commands, docs, and the architecture graph. Keep the explanation tied to detected files and commands.",
+        "bullets": [
+          "Start with `examples/complex/complex/cli.py`, `examples/aliases/README`, `examples/colors/README` because those files were ranked by deterministic reading signals.",
+          "Use the detected project files to understand the available run workflow.",
+          "Reference `LICENSE.txt`, `README.md` for onboarding or contribution context.",
+          "Describe the architecture as 16 graph nodes and 15 graph edges from supported import/dependency analysis."
+        ],
+        "evidence_refs": [
+          "start-1",
+          "start-2",
+          "start-3",
+          "doc-1",
+          "doc-2",
+          "arch-1"
+        ],
+        "confidence": "high"
+      },
+      "riskiest_areas": {
+        "answer": "The riskiest areas are the top danger-zone files because they combine measurable signals such as size, fan-in, fan-out, complexity, and test proximity.",
+        "bullets": [
+          "src/click/core.py: risk 87; size p98 (bytes=147845), fan-in p91 (12), fan-out p98 (10), complexity p98 (1771), test proximity 0, no nearby tests",
+          "src/click/termui.py: risk 81; size p92 (bytes=35370), fan-in p58 (3), fan-out p92 (6), complexity p89 (324), test proximity 0, recent churn p95, no nearby tests",
+          "src/click/_termui_impl.py: risk 80; size p89 (bytes=32805), fan-in p66 (4), fan-out p72 (3), complexity p95 (552), test proximity 0, recent churn p98, no nearby tests"
+        ],
+        "evidence_refs": [
+          "risk-1",
+          "risk-2",
+          "risk-3"
+        ],
+        "confidence": "high"
+      },
+      "tradeoffs": {
+        "answer": "This repository does not provide enough direct evidence for a defensible tradeoff answer.",
+        "bullets": [
+          "Each named technical choice must resolve to a manifest or configuration file.",
+          "The brief does not infer maintainer intent, rejected alternatives, or production behavior."
+        ],
+        "evidence_refs": [],
+        "confidence": "low"
+      },
+      "improve_first": {
+        "answer": "Improve the repository through small, evidence-backed changes: clarify how to run it, tighten contribution guidance, or add coverage around risk-ranked files.",
+        "bullets": [
+          "Document the local run workflow: No run commands were detected, so a small contributor-facing improvement is to document how to install, run, or test the project after confirming the workflow locally.",
+          "Add tests near src/click/core.py: This file is risk-ranked and has test proximity 0 (a static signal, not measured coverage), making it a concrete candidate for a small test-focused contribution.",
+          "Align contributor docs with CI validation: CI config is present, so contributor docs can point candidates to the same validation path used by automation."
+        ],
+        "evidence_refs": [
+          "doc-1",
+          "doc-2",
+          "arch-1",
+          "risk-1",
+          "ci-1",
+          "ci-2"
+        ],
+        "confidence": "medium"
+      },
+      "first_week_contribution": {
+        "answer": "In the first week, use the reading path to build context, validate the run workflow, inspect the highest-risk files, and propose one small documentation, test, or validation PR.",
+        "bullets": [
+          "Day 1: read `examples/complex/complex/cli.py` and the next ranked files.",
+          "Identify and document the expected local run or test command.",
+          "Review the top risk-ranked file: `src/click/core.py`.",
+          "Open with a scoped PR idea: Document the local run workflow."
+        ],
+        "evidence_refs": [
+          "start-1",
+          "start-2",
+          "risk-1",
+          "doc-1",
+          "doc-2",
+          "arch-1",
+          "warn-1"
+        ],
+        "confidence": "high"
+      }
+    },
+    "first_pr_plan": [
+      {
+        "title": "Document the local run workflow",
+        "rationale": "No run commands were detected, so a small contributor-facing improvement is to document how to install, run, or test the project after confirming the workflow locally.",
+        "suggested_files": [
+          "LICENSE.txt",
+          "README.md"
+        ],
+        "evidence_refs": [
+          "doc-1",
+          "doc-2",
+          "arch-1"
+        ],
+        "risk": "low"
+      },
+      {
+        "title": "Add tests near src/click/core.py",
+        "rationale": "This file is risk-ranked and has test proximity 0 (a static signal, not measured coverage), making it a concrete candidate for a small test-focused contribution.",
+        "suggested_files": [
+          "src/click/core.py"
+        ],
+        "evidence_refs": [
+          "risk-1"
+        ],
+        "risk": "medium"
+      },
+      {
+        "title": "Align contributor docs with CI validation",
+        "rationale": "CI config is present, so contributor docs can point candidates to the same validation path used by automation.",
+        "suggested_files": [
+          "LICENSE.txt",
+          "README.md",
+          ".github/workflows/lock.yaml"
+        ],
+        "evidence_refs": [
+          "doc-1",
+          "doc-2",
+          "ci-1",
+          "ci-2"
+        ],
+        "risk": "low"
+      }
+    ],
+    "resume_bullets": [
+      {
+        "audience": "resume",
+        "text": "Analyzed pallets/click with RepoAtlas-style static signals, mapping 12 reading candidates, 32 risk-ranked files, 0 run commands, and 16 architecture nodes into an interview-ready technical brief.",
+        "evidence_refs": [
+          "start-1",
+          "start-2",
+          "risk-1",
+          "risk-2",
+          "arch-1"
+        ]
+      },
+      {
+        "audience": "linkedin",
+        "text": "Analyzed pallets/click with RepoAtlas-style static signals, mapping 12 reading candidates, 32 risk-ranked files, 0 run commands, and 16 architecture nodes into an interview-ready technical brief.",
+        "evidence_refs": [
+          "start-1",
+          "start-2",
+          "risk-1",
+          "risk-2",
+          "arch-1"
+        ]
+      }
+    ],
+    "evidence_refs": [
+      {
+        "id": "arch-1",
+        "kind": "architecture",
+        "label": "Architecture graph summary",
+        "detail": "16 nodes and 15 edges detected from supported import/dependency analysis."
+      },
+      {
+        "id": "start-1",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/complex/complex/cli.py",
+        "path": "examples/complex/complex/cli.py",
+        "detail": "Priority 100: CLI entry file; detected entrypoint"
+      },
+      {
+        "id": "start-2",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/aliases/README",
+        "path": "examples/aliases/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-3",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/colors/README",
+        "path": "examples/colors/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-4",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/completion/README",
+        "path": "examples/completion/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-5",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/complex/README",
+        "path": "examples/complex/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-6",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/imagepipe/README",
+        "path": "examples/imagepipe/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-7",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/inout/README",
+        "path": "examples/inout/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-8",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/naval/README",
+        "path": "examples/naval/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-9",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/README",
+        "path": "examples/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-10",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/repo/README",
+        "path": "examples/repo/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-11",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/termui/README",
+        "path": "examples/termui/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "start-12",
+        "kind": "start_here",
+        "label": "Reading candidate: examples/validation/README",
+        "path": "examples/validation/README",
+        "detail": "Priority 0: root README documentation"
+      },
+      {
+        "id": "risk-1",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/core.py",
+        "path": "src/click/core.py",
+        "detail": "Risk 87: size p98 (bytes=147845), fan-in p91 (12), fan-out p98 (10), complexity p98 (1771), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-2",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/termui.py",
+        "path": "src/click/termui.py",
+        "detail": "Risk 81: size p92 (bytes=35370), fan-in p58 (3), fan-out p92 (6), complexity p89 (324), test proximity 0, recent churn p95, no nearby tests"
+      },
+      {
+        "id": "risk-3",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/_termui_impl.py",
+        "path": "src/click/_termui_impl.py",
+        "detail": "Risk 80: size p89 (bytes=32805), fan-in p66 (4), fan-out p72 (3), complexity p95 (552), test proximity 0, recent churn p98, no nearby tests"
+      },
+      {
+        "id": "risk-4",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/types.py",
+        "path": "src/click/types.py",
+        "detail": "Risk 79: size p95 (bytes=46842), fan-in p72 (5), fan-out p88 (5), complexity p92 (549), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-5",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/utils.py",
+        "path": "src/click/utils.py",
+        "detail": "Risk 74: size p77 (bytes=21483), fan-in p91 (12), fan-out p72 (3), complexity p80 (270), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-6",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/testing.py",
+        "path": "src/click/testing.py",
+        "detail": "Risk 73: size p86 (bytes=27584), fan-in p66 (4), fan-out p88 (5), complexity p77 (251), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-7",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/parser.py",
+        "path": "src/click/parser.py",
+        "detail": "Risk 72: size p73 (bytes=19052), fan-in p72 (5), fan-out p81 (4), complexity p83 (294), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-8",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/exceptions.py",
+        "path": "src/click/exceptions.py",
+        "detail": "Risk 71: size p67 (bytes=11862), fan-in p86 (9), fan-out p81 (4), complexity p67 (168), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-9",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/shell_completion.py",
+        "path": "src/click/shell_completion.py",
+        "detail": "Risk 70: size p83 (bytes=26172), fan-in p80 (7), fan-out p63 (2), complexity p73 (229), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-10",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/_compat.py",
+        "path": "src/click/_compat.py",
+        "detail": "Risk 69: size p70 (bytes=17939), fan-in p95 (17), fan-out p36 (1), complexity p86 (319), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-11",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/decorators.py",
+        "path": "src/click/decorators.py",
+        "detail": "Risk 66: size p80 (bytes=21680), fan-in p58 (3), fan-out p72 (3), complexity p70 (191), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-12",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/__init__.py",
+        "path": "src/click/__init__.py",
+        "detail": "Risk 64: size p52 (bytes=5145), fan-in p98 (52), fan-out p95 (9), complexity p47 (61), test proximity 80"
+      },
+      {
+        "id": "risk-13",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/formatting.py",
+        "path": "src/click/formatting.py",
+        "detail": "Risk 61: size p64 (bytes=10444), fan-in p58 (3), fan-out p72 (3), complexity p61 (138), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-14",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/_textwrap.py",
+        "path": "src/click/_textwrap.py",
+        "detail": "Risk 52: size p55 (bytes=6270), fan-in p52 (2), fan-out p36 (1), complexity p64 (154), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-15",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/_winconsole.py",
+        "path": "src/click/_winconsole.py",
+        "detail": "Risk 50: size p61 (bytes=8543), fan-in p48 (1), fan-out p36 (1), complexity p55 (110), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-16",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/globals.py",
+        "path": "src/click/globals.py",
+        "detail": "Risk 47: size p36 (bytes=1923), fan-in p77 (6), fan-out p36 (1), complexity p33 (25), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-17",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/imagepipe/imagepipe.py",
+        "path": "examples/imagepipe/imagepipe.py",
+        "detail": "Risk 45: size p58 (bytes=8257), fan-in p23 (0), fan-out p36 (1), complexity p58 (124), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-18",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/termui/termui.py",
+        "path": "examples/termui/termui.py",
+        "detail": "Risk 41: size p45 (bytes=4150), fan-in p23 (0), fan-out p36 (1), complexity p52 (98), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-19",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/repo/repo.py",
+        "path": "examples/repo/repo.py",
+        "detail": "Risk 40: size p48 (bytes=4714), fan-in p23 (0), fan-out p36 (1), complexity p42 (58), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-20",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/aliases/aliases.py",
+        "path": "examples/aliases/aliases.py",
+        "detail": "Risk 38: size p42 (bytes=4062), fan-in p23 (0), fan-out p36 (1), complexity p39 (43), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-21",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/completion/completion.py",
+        "path": "examples/completion/completion.py",
+        "detail": "Risk 37: size p23 (bytes=1388), fan-in p23 (0), fan-out p63 (2), complexity p30 (22), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-22",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/validation/validation.py",
+        "path": "examples/validation/validation.py",
+        "detail": "Risk 37: size p27 (bytes=1453), fan-in p23 (0), fan-out p36 (1), complexity p47 (61), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-23",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/click/_utils.py",
+        "path": "src/click/_utils.py",
+        "detail": "Risk 36: size p20 (bytes=996), fan-in p83 (8), fan-out p6 (0), complexity p11 (4), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-24",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/complex/complex/cli.py",
+        "path": "examples/complex/complex/cli.py",
+        "detail": "Risk 35: size p30 (bytes=1608), fan-in p23 (0), fan-out p36 (1), complexity p36 (33), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-25",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/colors/colors.py",
+        "path": "examples/colors/colors.py",
+        "detail": "Risk 31: size p17 (bytes=926), fan-in p23 (0), fan-out p36 (1), complexity p27 (20), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-26",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/naval/naval.py",
+        "path": "examples/naval/naval.py",
+        "detail": "Risk 31: size p33 (bytes=1697), fan-in p23 (0), fan-out p36 (1), complexity p16 (7), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-27",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/inout/inout.py",
+        "path": "examples/inout/inout.py",
+        "detail": "Risk 29: size p14 (bytes=722), fan-in p23 (0), fan-out p36 (1), complexity p23 (17), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-28",
+        "kind": "danger_zone",
+        "label": "Risk candidate: docs/conf.py",
+        "path": "docs/conf.py",
+        "detail": "Risk 28: size p39 (bytes=1996), fan-in p23 (0), fan-out p6 (0), complexity p20 (15), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-29",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/complex/complex/commands/cmd_init.py",
+        "path": "examples/complex/complex/commands/cmd_init.py",
+        "detail": "Risk 27: size p11 (bytes=385), fan-in p23 (0), fan-out p36 (1), complexity p16 (7), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-30",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/complex/complex/commands/cmd_status.py",
+        "path": "examples/complex/complex/commands/cmd_status.py",
+        "detail": "Risk 25: size p8 (bytes=286), fan-in p23 (0), fan-out p36 (1), complexity p8 (2), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-31",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/complex/complex/__init__.py",
+        "path": "examples/complex/complex/__init__.py",
+        "detail": "Risk 13: size p3 (bytes=0), fan-in p23 (0), fan-out p6 (0), complexity p3 (0), test proximity 80"
+      },
+      {
+        "id": "risk-32",
+        "kind": "danger_zone",
+        "label": "Risk candidate: examples/complex/complex/commands/__init__.py",
+        "path": "examples/complex/complex/commands/__init__.py",
+        "detail": "Risk 13: size p3 (bytes=0), fan-in p23 (0), fan-out p6 (0), complexity p3 (0), test proximity 80"
+      },
+      {
+        "id": "doc-1",
+        "kind": "doc",
+        "label": "Project document: LICENSE.txt",
+        "path": "LICENSE.txt",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "Copyright 2014 Pallets\n\nRedistribution and use in source and binary forms, with or without\nmodification, are permitted provided that the following conditions are\nmet:"
+      },
+      {
+        "id": "doc-2",
+        "kind": "doc",
+        "label": "Project document: README.md",
+        "path": "README.md",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "<div align=\"center\"><img src=\"https://raw.githubusercontent.com/pallets/click/refs/heads/stable/docs/_static/click-name.svg\" alt=\"\" height=\"150\"></div>\n\n# Click\n\nClick is a Python package for creating beautiful command line interfaces"
+      },
+      {
+        "id": "doc-3",
+        "kind": "doc",
+        "label": "Project document: docs/contributing.md",
+        "path": "docs/contributing.md",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "# Contributing\n\nThis is a quick reference for Click-specific development\ntasks. For setting up the development environment and the\ngeneral contribution workflow, see the Pallets [quick"
+      },
+      {
+        "id": "doc-4",
+        "kind": "doc",
+        "label": "Project document: docs/license.md",
+        "path": "docs/license.md",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "# BSD-3-Clause License\n\n```{literalinclude} ../LICENSE.txt\n---\nlanguage: text"
+      },
+      {
+        "id": "doc-5",
+        "kind": "doc",
+        "label": "Project document: examples/README",
+        "path": "examples/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "Click Examples\n\n  This folder contains various Click examples.  Note that\n  all of these are not runnable by themselves but should be\n  installed into a virtualenv."
+      },
+      {
+        "id": "doc-6",
+        "kind": "doc",
+        "label": "Project document: examples/aliases/README",
+        "path": "examples/aliases/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ aliases_\n\n  aliases is a fairly advanced example that shows how\n  to implement command aliases with Click.  It uses a\n  subclass of the default group to customize how commands"
+      },
+      {
+        "id": "doc-7",
+        "kind": "doc",
+        "label": "Project document: examples/colors/README",
+        "path": "examples/colors/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ colors_\n\n  colors is a simple example that shows how you can\n  colorize text."
+      },
+      {
+        "id": "doc-8",
+        "kind": "doc",
+        "label": "Project document: examples/completion/README",
+        "path": "examples/completion/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ completion\n============\n\nDemonstrates Click's shell completion support."
+      },
+      {
+        "id": "doc-9",
+        "kind": "doc",
+        "label": "Project document: examples/complex/README",
+        "path": "examples/complex/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ complex_\n\n  complex is an example of building very complex cli\n  applications that load subcommands dynamically from\n  a plugin folder and other things."
+      },
+      {
+        "id": "doc-10",
+        "kind": "doc",
+        "label": "Project document: examples/imagepipe/README",
+        "path": "examples/imagepipe/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ imagepipe_\n\n  imagepipe is an example application that implements some\n  commands that chain image processing instructions\n  together."
+      },
+      {
+        "id": "doc-11",
+        "kind": "doc",
+        "label": "Project document: examples/inout/README",
+        "path": "examples/inout/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ inout_\n\n  inout is a simple example of an application that\n  can read from files and write to files but also\n  accept input from stdin or write to stdout."
+      },
+      {
+        "id": "doc-12",
+        "kind": "doc",
+        "label": "Project document: examples/naval/README",
+        "path": "examples/naval/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ naval_\n\n  naval is a simple example of an application that\n  is ported from the docopt example of the same name."
+      },
+      {
+        "id": "doc-13",
+        "kind": "doc",
+        "label": "Project document: examples/repo/README",
+        "path": "examples/repo/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ repo_\n\n  repo is a simple example of an application that looks\n  and works similar to hg or git."
+      },
+      {
+        "id": "doc-14",
+        "kind": "doc",
+        "label": "Project document: examples/termui/README",
+        "path": "examples/termui/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ termui_\n\n  termui showcases the different terminal UI helpers that\n  Click provides."
+      },
+      {
+        "id": "doc-15",
+        "kind": "doc",
+        "label": "Project document: examples/validation/README",
+        "path": "examples/validation/README",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "$ validation_\n\n  validation is a simple example of an application that\n  performs custom validation of parameters in different\n  ways."
+      },
+      {
+        "id": "ci-1",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/lock.yaml",
+        "path": ".github/workflows/lock.yaml"
+      },
+      {
+        "id": "ci-2",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/nightly.yaml",
+        "path": ".github/workflows/nightly.yaml"
+      },
+      {
+        "id": "ci-3",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/pre-commit.yaml",
+        "path": ".github/workflows/pre-commit.yaml"
+      },
+      {
+        "id": "ci-4",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/publish.yaml",
+        "path": ".github/workflows/publish.yaml"
+      },
+      {
+        "id": "ci-5",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/tests.yaml",
+        "path": ".github/workflows/tests.yaml"
+      },
+      {
+        "id": "ci-6",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/zizmor.yaml",
+        "path": ".github/workflows/zizmor.yaml"
+      },
+      {
+        "id": "warn-1",
+        "kind": "warning",
+        "label": "Analysis warning 1",
+        "detail": "No run commands detected from package.json, Makefile, or docs."
+      },
+      {
+        "id": "warn-2",
+        "kind": "warning",
+        "label": "Analysis warning 2",
+        "detail": "Architecture reduced from file-level (79 files) to folder-level (16 folders)."
+      }
+    ],
+    "warnings": [
+      {
+        "message": "No run commands detected from package.json, Makefile, or docs.",
+        "evidence_refs": [
+          "warn-1"
+        ]
+      },
+      {
+        "message": "Architecture reduced from file-level (79 files) to folder-level (16 folders).",
+        "evidence_refs": [
+          "warn-2"
+        ]
+      },
+      {
+        "message": "No run commands were detected; first-PR ideas avoid claiming a runnable workflow.",
+        "evidence_refs": [
+          "arch-1"
+        ]
+      }
+    ],
+    "confidence_assessment": {
+      "level": "high",
+      "reasons": [
+        "README or key docs detected",
+        "Architecture graph has dependency edges",
+        "46 test file(s) detected",
+        "Purpose extracted from readme_intro"
+      ],
+      "gaps": [
+        "No run commands detected"
+      ]
+    },
+    "walkthrough_script": {
+      "thirty_second": "Python project: … Start at examples/complex/complex/cli.py, validate with detected project files.",
+      "two_minute": "Python project: … Start at examples/complex/complex/cli.py, validate with detected project files. Review `examples/complex/complex/cli.py`, `examples/aliases/README`, `examples/colors/README`, then discuss architecture (16 nodes) and top risk file src/click/core.py.",
+      "deep_technical": "Python project: … Start at examples/complex/complex/cli.py, validate with detected project files. Review `examples/complex/complex/cli.py`, `examples/aliases/README`, `examples/colors/README`, then discuss architecture (16 nodes) and top risk file src/click/core.py. Key surfaces include read_config, cli, push, pull, clone.",
+      "tradeoffs_to_mention": [],
+      "improvements_next": [
+        "Review test proximity and complexity around src/click/core.py",
+        "Review test proximity and complexity around src/click/termui.py"
+      ],
+      "evidence_refs": [
+        "start-1",
+        "start-2",
+        "arch-1"
+      ]
+    },
+    "behavioral_hooks": [
+      {
+        "prompt": "Challenge (STAR template)",
+        "answer_starter": "Discuss how complexity in `src/click/core.py` is managed while tests exist nearby.",
+        "evidence_refs": [
+          "risk-1"
+        ],
+        "sufficient_evidence": true
+      },
+      {
+        "prompt": "Tradeoff (STAR template)",
+        "answer_starter": "Not enough evidence. Use a different example or skip this prompt.",
+        "evidence_refs": [],
+        "sufficient_evidence": false
+      },
+      {
+        "prompt": "Learning takeaway (STAR template)",
+        "answer_starter": "Note where static analysis had limited coverage: No run commands detected from package.json, Makefile, or docs.",
+        "evidence_refs": [
+          "warn-1"
+        ],
+        "sufficient_evidence": true
+      }
+    ],
+    "interview_questions": [
+      {
+        "question": "What makes `src/click/core.py` a danger zone in this codebase?",
+        "rationale": "Top risk-ranked file with measurable breakdown.",
+        "evidence_refs": [
+          "risk-1"
+        ]
+      },
+      {
+        "question": "What tests would you add near `src/click/core.py`?",
+        "rationale": "High-risk file with low test proximity (a static signal, not measured coverage).",
+        "evidence_refs": [
+          "risk-1"
+        ]
+      },
+      {
+        "question": "What are the limits of static analysis for this repository?",
+        "rationale": "Warnings and missing git history bound confidence.",
+        "evidence_refs": [],
+        "generic": true
+      }
+    ]
+  }
+}

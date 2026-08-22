@@ -2363,6 +2363,61 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-size: 0.84rem;
   line-height: 1.75;
 }
+.click-example-hero-copy h1 { max-width: 12ch; }
+.click-example-primary {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 2.8rem;
+  margin-top: 1.75rem;
+}
+.click-example-snapshot { overflow: hidden; }
+.click-example-section-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border: 1px solid #d5e0da;
+  border-radius: 0.75rem;
+  list-style: none;
+}
+.click-example-section-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem;
+  color: #40564d;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+.click-example-section-list li:nth-child(even) { border-left: 1px solid #d5e0da; }
+.click-example-section-list li:nth-child(n + 3) { border-top: 1px solid #d5e0da; }
+.click-example-section-list span {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.62rem;
+  font-weight: 750;
+}
+.click-example-report {
+  padding-block: clamp(5rem, 9vw, 8rem);
+  border-top: 1px solid var(--line);
+}
+.click-example-report-heading { max-width: 48rem; }
+.click-example-report-frame {
+  max-width: 70rem;
+  margin: clamp(2.5rem, 6vw, 4.5rem) auto 0;
+  padding: clamp(0.75rem, 2.5vw, 1.5rem);
+  border: 1px solid rgba(8, 122, 85, 0.22);
+  border-radius: calc(var(--radius-card) + 0.35rem);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-soft);
+}
+.click-example-report-frame a:focus-visible,
+.click-example-primary:focus-visible {
+  outline: 3px solid rgba(8, 122, 85, 0.28);
+  outline-offset: 3px;
+}
 .comparison-route-section {
   padding-block: 0 clamp(4.5rem, 8vw, 7rem);
 }
@@ -3746,6 +3801,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .example-snapshot { padding: 1rem; }
   .example-snapshot dl > div { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.65rem; }
   .example-report-section { padding-block: 5.5rem; }
+  .click-example-primary { width: 100%; justify-content: center; }
+  .click-example-section-list { grid-template-columns: 1fr; }
+  .click-example-section-list li:nth-child(even) { border-left: 0; }
+  .click-example-section-list li:nth-child(n + 2) { border-top: 1px solid #d5e0da; }
+  .click-example-report { padding-block: 4.5rem; }
+  .click-example-report-frame { padding: 0.5rem; }
   .comparison-route-section { padding-bottom: 4.5rem; }
   .authored-answer-map { padding: 1.1rem; }
   .comparison-primary-action { width: 100%; }

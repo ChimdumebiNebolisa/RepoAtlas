@@ -10,6 +10,7 @@ interface CandidateBriefSupportSectionsProps {
   usedBy: Map<string, string[]>;
   onNavigate: (id: string) => void;
   demoMode?: boolean;
+  sourceBaseUrl?: string;
 }
 
 export function CandidateBriefSupportSections({
@@ -19,6 +20,7 @@ export function CandidateBriefSupportSections({
   usedBy,
   onNavigate,
   demoMode,
+  sourceBaseUrl,
 }: CandidateBriefSupportSectionsProps) {
   return (
     <>
@@ -41,7 +43,13 @@ export function CandidateBriefSupportSections({
         </CandidateBriefSection>
       )}
 
-      {!demoMode && <CandidateBriefEvidence grouped={grouped} usedBy={usedBy} />}
+      {!demoMode && (
+        <CandidateBriefEvidence
+          grouped={grouped}
+          usedBy={usedBy}
+          sourceBaseUrl={sourceBaseUrl}
+        />
+      )}
 
       <p className="text-xs text-slate-500">
         RepoAtlas does not execute uploaded code. Claims are limited to detected static signals.
