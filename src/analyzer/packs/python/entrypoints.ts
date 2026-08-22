@@ -94,7 +94,11 @@ export function detectEntrypoints(files: string[], workspacePath: string): Set<s
       const scrubbed = content
         .replace(/'''[\s\S]*?'''|"""[\s\S]*?"""/g, '""')
         .replace(/#[^\n]*/g, "");
-      if (/^\s*if\s+__name__\s*==\s*["']__main__["']\s*:/m.test(scrubbed)) {
+      if (
+        /^\s*if\s+(?:__name__\s*==\s*["']__main__["']|["']__main__["']\s*==\s*__name__)\s*:/m.test(
+          scrubbed
+        )
+      ) {
         entrypoints.add(file);
       }
     } catch {
