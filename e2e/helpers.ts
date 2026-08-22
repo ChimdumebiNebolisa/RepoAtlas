@@ -8,6 +8,12 @@ import type { Report } from "../src/types/report";
 export const REPORTS_DIR = path.join(process.cwd(), ".playwright-reports");
 export const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
 
+/** Auth header for /api/cron/cleanup against the e2e web server. */
+export function cronAuthHeaders(): Record<string, string> {
+  const secret = process.env.CRON_SECRET ?? "";
+  return secret ? { Authorization: `Bearer ${secret}` } : {};
+}
+
 export function zipFixture(fixtureName: string): Buffer {
   const zip = new AdmZip();
   zip.addLocalFolder(path.join(process.cwd(), "fixtures", fixtureName));
@@ -87,7 +93,7 @@ export async function expectCompletedReportInViewport(page: Page): Promise<void>
 
 export async function runSampleAnalyzeOnPage(page: Page): Promise<void> {
   await page.goto("/");
-  await page.getByRole("button", { name: /Generate the bundled sample brief/i }).click();
+  await page.getByRole("button", { name: /See the sample Candidate Brief/i }).click();
   await expectCompletedReportInViewport(page);
 }
 

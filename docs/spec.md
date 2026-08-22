@@ -74,6 +74,7 @@ Public product and trust pages:
 |-----|---------|
 | `/` | Analysis input, bundled sample, and completed saved or inline report workspace |
 | `/interview-preparation` | Interview-preparation use case with a direct path to analysis |
+| `/code-review-interview`, `/codebase-interview-preparation`, `/how-to-walk-through-a-project-in-an-interview`, `/repository-walkthrough-interview` | SEO/guide variants of the interview-preparation journey, each with a bounded start panel |
 | `/privacy` | Repository and report handling boundaries |
 | `/terms` | Service and output interpretation boundaries |
 | `/contact` | Managed support contact |
@@ -312,7 +313,7 @@ Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `sr
 | **Import extraction** | Import-statement scanner that skips strings and comments, handles parenthesized and line-continued statements, expands `from pkg import name`, and resolves absolute or relative package paths without claiming a full Python AST. |
 | **Entrypoint heuristics** | `if __name__ == "__main__"`; `setup.py` entry_points; `pyproject.toml` `[project.scripts]`; `-m` targets from docs. |
 | **Test proximity** | `test_*.py`, `*_test.py`, `tests/` dir. |
-| **Complexity proxy** | McCabe complexity via AST or line-based proxy (same as TS). |
+| **Complexity proxy** | Line-based decision points aligned with the TS pack definition (`if`, `elif`, `for`, `while`, `except` branches, `and`/`or`, `match`/`case`) + indentation nesting + LOC. `else`, `try`, `finally`, and `with` are not counted, so equivalent control flow scores comparably across the TS and Python packs (see `complexityParity.test.ts`). Still a structural proxy, not McCabe cyclomatic complexity. |
 | **Graph collapse** | Module = file; package = dir with `__init__.py`. |
 
 **Acceptance criteria**: `main.py` with `from utils import foo` produces edge; `main.py` with `if __name__ == "__main__"` marked as entrypoint.
@@ -324,7 +325,7 @@ Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `sr
 | **Import extraction** | Anchored import scanning for ordinary, wildcard, and static imports, with package/class resolution. Safe same-package type references are also recovered after comments and strings are removed. |
 | **Entrypoint heuristics** | `public static void main`; `@SpringBootApplication`; JAR manifest `Main-Class`. |
 | **Test proximity** | `*Test.java`, `*IT.java`, `src/test/java` layout. |
-| **Complexity proxy** | Cyclomatic via line-based or simple AST. |
+| **Complexity proxy** | Line-based decision points aligned with the TS pack definition (`if`, `case` labels, loops, `catch`, `&&`, `\|\|`, ternary `?`) + brace nesting + LOC. `else`, the `switch` keyword itself, and generic wildcards (`<?>`, `<? extends>`) are not counted. Still a structural proxy, not McCabe cyclomatic complexity. |
 | **Graph collapse** | Class = file; package = folder. |
 
 **Acceptance criteria**: Java file with `public static void main` marked as entrypoint; imports produce edges.
@@ -335,35 +336,17 @@ Tests: `src/analyzer/docs.test.ts`, `src/analyzer/docs.integration.test.ts`, `sr
 
 ### Start Here Ranking
 
-**Candidates**: Key docs (README, CONTRIBUTING, etc.), entrypoint files, root README, config files (package.json, pyproject.toml, etc.).
+**Candidates**: Key docs (README first), entrypoint files, code files near entrypoints, build definitions (`pom.xml`, `build.gradle`), root configs.
 
-**StartHereScore formula**:
+**Raw score composition** (implemented in `src/analyzer/scoring/startHere.ts`; weights evolve with regression tests):
 
-```
-StartHereScore = (
-  (is_root_readme ? 40 : 0) +
-  (is_key_doc ? 30 : 0) +
-  (is_entrypoint ? 50 : 0) +
-  min(20, fan_in) +  // popularity proxy, cap at 20
-  (is_root_config ? 15 : 0)
-)
-```
+- Root README ≈ 95; other READMEs ≈ 80; CONTRIBUTING ≈ 75; other key docs ≈ 45.
+- Next.js route handlers / app-router entries 65–85; runnable Python entry names (`__main__.py`, `manage.py`, `main.py`, …) 70–90.
+- Fan-in bonus capped at 35; import-distance bonus decays from 90 (distance 0) to single digits by distance 3.
+- Test files receive a −40 penalty.
 
-- Normalize to 0–100 by dividing by max observed score in repo, then * 100.
-- Sort candidates by score descending.
-
-**Explanation strings** (derived from signals):
-
-| Condition | Explanation |
-|-----------|-------------|
-| Root README | "Root README" |
-| package.json main | "Main entrypoint (package.json main)" |
-| index.ts/js | "Module entrypoint (index file)" |
-| CONTRIBUTING | "Contribution guide" |
-| High fan-in | "Frequently imported" |
-| Root config | "Root configuration" |
-
-**Acceptance criteria**: Root README and main entrypoint appear in top 3 with appropriate explanations.
+- Raw scores are min–max normalized to 0–100 inside `rankStartHere` (ties normalize to 50); top 12 candidates are kept, ties broken by path.
+- Explanation strings list the contributing signals verbatim.
 
 ### Danger Zones Ranking
 

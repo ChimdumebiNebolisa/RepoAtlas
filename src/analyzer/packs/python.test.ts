@@ -82,6 +82,24 @@ from collections.abc import Mapping
     expect(result.some((s) => s.startsWith("."))).toBe(true);
   });
 
+  it("extracts both modules from semicolon-chained import statements (regression)", () => {
+    // F-001: `import os; import sys` previously produced the malformed
+    // specifier "os;" and dropped `sys` entirely.
+    const result = extractImportSpecifiers("import os; import sys\nprint(os.path, sys.path)\n");
+    expect(result).toContain("os");
+    expect(result).toContain("sys");
+    expect(result).not.toContain("os;");
+    expect(result).not.toContain("import sys");
+
+    const mixed = extractImportSpecifiers(
+      "from . import a; from .mod import b\nimport json ; import csv\n"
+    );
+    expect(mixed).toContain(".a");
+    expect(mixed).toContain(".mod.b");
+    expect(mixed).toContain("json");
+    expect(mixed).toContain("csv");
+  });
+
   it("does not add an extra dot for bare relative imports (regression)", () => {
     // `from . import x` must produce ".x" (current package), not "..x" (parent).
     expect(extractImportSpecifiers("from . import x\n")).toContain(".x");
@@ -302,10 +320,34 @@ def complex_function(x):
     const result = computeComplexitySignals(content);
     expect(result).toEqual({
       loc: 7,
-      branchCount: 4,
+      branchCount: 3,
       maxNesting: 4,
-      score: 20,
+      score: 17,
     });
+  });
+
+  it("does not count else, try, finally, or with as decision points (cross-language parity)", () => {
+    const content = [
+      "def f(items):",
+      "    for item in items:",
+      "        if item:",
+      "            process(item)",
+      "        else:",
+      "            skip(item)",
+      "    try:",
+      "        flush()",
+      "    except ValueError:",
+      "        log()",
+      "    finally:",
+      "        close()",
+      "    with open('x') as handle:",
+      "        handle.read()",
+      "",
+    ].join("\n");
+    // for + if + except = 3 decision points, matching the TS/JS pack's count
+    // for the equivalent control flow.
+    const result = computeComplexitySignals(content);
+    expect(result.branchCount).toBe(3);
   });
 
   it("excludes comment lines from LOC", () => {

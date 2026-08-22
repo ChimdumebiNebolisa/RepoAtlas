@@ -241,6 +241,24 @@ describe("README command extraction", () => {
     ]);
   });
 
+  it("strips shell prompt prefixes from README command lines (regression)", () => {
+    // Real READMEs (e.g. Click) prefix shell commands with "$"; without
+    // stripping, "$ pip install click" matched no known tool prefix.
+    const workspace = createWorkspace({
+      "README.md": [
+        "```bash",
+        "$ pip install click",
+        "> python -m click",
+        "# $ npm run ignored-comment",
+        "```",
+      ].join("\n"),
+    });
+
+    expect(
+      extractReadmeCommands(workspace, ["README.md"]).map((item) => item.command)
+    ).toEqual(["pip install click", "python -m click"]);
+  });
+
   it("uses the root README fallback and ignores comments, blanks, and prose", () => {
     const workspace = createWorkspace({
       "README.md": "```bash\n\n# note\necho prose\nnpm test\n```\n",

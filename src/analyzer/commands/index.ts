@@ -172,7 +172,9 @@ export function extractReadmeCommands(workspacePath: string, keyDocs: string[]):
   let match;
   while ((match = fenceRe.exec(content)) !== null) {
     for (const line of match[1].split("\n")) {
-      const trimmed = line.trim();
+      // Common README convention prefixes shell prompts ("$ npm install",
+      // "> python -m …"); strip them before classifying the command.
+      const trimmed = line.trim().replace(/^[$>]\s+/, "");
       if (!trimmed || trimmed.startsWith("#")) continue;
       if (/^(npm|yarn|pnpm|make|python|pip|pipenv|poetry|docker|mvn|gradle|\.\/gradlew|pytest)/i.test(trimmed)) {
         commands.push({ source: "README", command: trimmed, description: "from readme" });

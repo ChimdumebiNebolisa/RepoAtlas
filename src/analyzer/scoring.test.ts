@@ -63,6 +63,22 @@ describe("computeStartHere", () => {
     expect(readme?.explanation).toContain("root README documentation");
   });
 
+  it("ranks the root README above nested package READMEs (regression)", () => {
+    // Real repositories (e.g. Gson) ship a README in every subfolder. Without
+    // the depth penalty all READMEs tied at 95 and the lexicographic tie-break
+    // put "examples/…" ahead of the root README.
+    const pipeline = mockPipeline({
+      key_docs: ["README.md", "examples/android/README.md", "gson/README.md"],
+    });
+    const result = computeStartHere(pipeline, null);
+    expect(result[0]?.path).toBe("README.md");
+    const rootScore = result.find((r) => r.path === "README.md")?.score ?? 0;
+    for (const nested of ["examples/android/README.md", "gson/README.md"]) {
+      expect(result.findIndex((r) => r.path === nested)).toBeGreaterThan(0);
+      expect(result.find((r) => r.path === nested)?.score ?? 0).toBeLessThan(rootScore);
+    }
+  });
+
   it("returns empty for empty pipeline", () => {
     const pipeline = mockPipeline();
     const result = computeStartHere(pipeline, null);
@@ -138,14 +154,16 @@ describe("computeStartHere", () => {
 
     const result = computeStartHere(pipeline);
 
+    // Depth-aware documentation scoring: root CONTRIBUTING outranks a nested
+    // package README, and equally-nested docs stay tied and path-stable.
     expect(result.map((item) => item.path)).toEqual([
-      "packages/docs/README-guide.md",
       "CONTRIBUTING.md",
+      "packages/docs/README-guide.md",
       "packages/docs/architecture.md",
       "packages/docs/operations.md",
     ]);
-    expect(result[0].explanation).toBe("README documentation; project docs reference");
-    expect(result[1].explanation).toBe("contribution guide");
+    expect(result[0].explanation).toBe("contribution guide");
+    expect(result[1].explanation).toBe("README documentation; project docs reference");
     expect(result[2].explanation).toBe("key project documentation; project docs reference");
     expect(result[2].score).toBe(result[3].score);
     // Tied raw scores must not all inflate to 100.

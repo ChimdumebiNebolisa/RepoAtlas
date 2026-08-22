@@ -26,10 +26,13 @@ analysis.
 
 | Priority | Goal | Key files |
 | --- | --- | --- |
-| **Source-file snippets** | Add bounded excerpts to architecture and structural-hotspot evidence | `src/analyzer/snippets.ts`, `src/types/report.ts` |
-| **Markdown sanitization** | Escape untrusted repository strings according to Markdown context | `src/lib/export.ts` |
-| **Technical-decision evidence** | Populate evidence references on detected decisions | `src/analyzer/decisions.ts` |
-| **Richer commit insights** | Add bounded co-change and message-theme evidence without overstating intent | `src/analyzer/gitHistory.ts` |
+| **Interview-guide e2e realignment** | Rewrite guide/interview-preparation e2e expectations against the current page structure (headings removed during landing redesign) | `e2e/interview-preparation.spec.ts`, `e2e/landing-page-starts.spec.ts` |
+
+Shipped since this list was last curated (verified 2026-08-22, see
+`docs/audits/2026-08-22-adversarial-audit.md`): bounded source-file snippets,
+Markdown export escaping, technical-decision evidence, and cross-language
+complexity decision-point alignment. Small-repository calibration ships via
+`blendedMetricRank` shrinkage in `src/analyzer/scoring/metrics.ts`.
 
 ### Verification and frontend scale
 
@@ -100,4 +103,4 @@ analysis.
 | [SECURITY.md](../SECURITY.md) | Vulnerability reporting and security guarantees |
 | [adr/](./adr/) | Durable architecture decisions and rationale |
 
-*Last updated: 2026-07-29*
+*Last updated: 2026-08-22*

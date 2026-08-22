@@ -26,7 +26,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     vi.resetModules();
   });
 
-  it("creates a report and serves report JSON + markdown export", async () => {
+  it("creates a report and serves report JSON + markdown export", { timeout: 30_000 }, async () => {
     const analyzeRoute = await import("@/app/api/analyze/route");
     const reportRoute = await import("@/app/api/reports/[id]/route");
     const exportRoute = await import("@/app/api/reports/[id]/export/md/route");
@@ -111,9 +111,9 @@ describe("API integration: analyze -> report -> markdown export", () => {
       },
     });
     expect(shared.report.storage_schema_version).toBeUndefined();
-  }, 30000);
+  });
 
-  it("creates a report from multipart zip upload", async () => {
+  it("creates a report from multipart zip upload", { timeout: 30_000 }, async () => {
     const analyzeRoute = await import("@/app/api/analyze/route");
     const reportRoute = await import("@/app/api/reports/[id]/route");
 
@@ -143,7 +143,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(report.repo_metadata.name).toContain("repo-ts");
   });
 
-  it("creates a report from the bundled sample flow", async () => {
+  it("creates a report from the bundled sample flow", { timeout: 30_000 }, async () => {
     const analyzeRoute = await import("@/app/api/analyze/route");
     const request = new Request("http://localhost/api/analyze", {
       method: "POST",
@@ -154,9 +154,9 @@ describe("API integration: analyze -> report -> markdown export", () => {
     expect(response.status).toBe(200);
     const payload = (await response.json()) as { reportId?: string };
     expect(payload.reportId).toBeTruthy();
-  }, 30000);
+  });
 
-  it("returns the completed report inline when Vercel persistence is unavailable", async () => {
+  it("returns the completed report inline when Vercel persistence is unavailable", { timeout: 30_000 }, async () => {
     const previousVercel = process.env.VERCEL;
     const previousBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
     process.env.VERCEL = "1";
@@ -185,9 +185,9 @@ describe("API integration: analyze -> report -> markdown export", () => {
       if (previousBlobToken === undefined) delete process.env.BLOB_READ_WRITE_TOKEN;
       else process.env.BLOB_READ_WRITE_TOKEN = previousBlobToken;
     }
-  }, 30000);
+  });
 
-  it("creates a report from a public GitHub URL (mocked API + archive)", async () => {
+  it("creates a report from a public GitHub URL (mocked API + archive)", { timeout: 30_000 }, async () => {
     const sha = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0";
     const AdmZipMod = (await import("adm-zip")).default;
     const gh = new AdmZipMod();
@@ -236,7 +236,7 @@ describe("API integration: analyze -> report -> markdown export", () => {
     } finally {
       global.fetch = originalFetch;
     }
-  }, 30000);
+  });
 
   it("rejects caller-controlled zipRef JSON with 400 (no arbitrary file access)", async () => {
     const analyzeRoute = await import("@/app/api/analyze/route");

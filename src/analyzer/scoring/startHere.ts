@@ -50,19 +50,26 @@ export function computeStartHere(
     const candidate = getCandidate(doc);
     const baseName = path.basename(doc).toLowerCase();
     const normalizedDoc = normalizePath(doc).toLowerCase();
+    // Nested documentation (package/example READMEs) must not outrank the
+    // repository's root README. Real repositories such as Gson ship READMEs in
+    // every subfolder; without a depth penalty the lexicographic tie-break put
+    // "examples/…" ahead of the root README.
+    const nestedPenalty = Math.min(40, (normalizedDoc.split("/").length - 1) * 20);
+    let baseScore: number;
     if (baseName === "readme.md" || baseName === "readme") {
-      candidate.rawScore += 95;
+      baseScore = 95;
       addReason(candidate, "root README documentation");
     } else if (baseName.startsWith("readme")) {
-      candidate.rawScore += 80;
+      baseScore = 80;
       addReason(candidate, "README documentation");
     } else if (baseName.startsWith("contributing")) {
-      candidate.rawScore += 75;
+      baseScore = 75;
       addReason(candidate, "contribution guide");
     } else {
-      candidate.rawScore += 45;
+      baseScore = 45;
       addReason(candidate, "key project documentation");
     }
+    candidate.rawScore += Math.max(10, baseScore - nestedPenalty);
     if (normalizedDoc.includes("/docs/")) {
       candidate.rawScore += 5;
       addReason(candidate, "project docs reference");

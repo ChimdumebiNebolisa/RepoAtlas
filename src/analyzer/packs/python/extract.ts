@@ -112,6 +112,14 @@ function readImportNameList(source: string, start: number): { names: string[]; n
       index = skipLineContinuation(source, index);
       continue;
     }
+    // A semicolon at depth 0 ends the import statement; anything after it is a
+    // new statement handled by the outer scanner.
+    if (ch === ";" && parenDepth === 0) {
+      if (current.trim()) pushName(current);
+      current = "";
+      index += 1;
+      break;
+    }
     if (ch === "\\" ) {
       index = skipLineContinuation(source, index);
       continue;
@@ -140,6 +148,40 @@ export function extractImportSpecifiers(content: string): string[] {
   let atLineStart = true;
   let stringQuote: string | null = null;
   let triple = false;
+
+  /**
+   * Resume scanning after an import statement. A semicolon ends the statement
+   * and starts a new one, so the next statement must be scanned as if it began
+   * at line start (`import os; import sys` yields both modules).
+   */
+  const resumeAfterImportStatement = (nextIndex: number): void => {
+    let scan = nextIndex;
+    let sawStatementSeparator = false;
+    while (scan < content.length) {
+      const ch = content[scan]!;
+      if (ch === ";") {
+        sawStatementSeparator = true;
+        scan += 1;
+        continue;
+      }
+      if (/[ \t]/.test(ch)) {
+        scan += 1;
+        continue;
+      }
+      const continued = skipLineContinuation(content, scan);
+      if (continued !== scan) {
+        scan = continued;
+        continue;
+      }
+      if (ch === "#") {
+        while (scan < content.length && content[scan] !== "\n") scan += 1;
+        continue;
+      }
+      break;
+    }
+    if (sawStatementSeparator) atLineStart = true;
+    index = scan;
+  };
 
   while (index < content.length) {
     const ch = content[index]!;
@@ -207,8 +249,7 @@ export function extractImportSpecifiers(content: string): string[] {
       index = skipSpaces(content, index + 6);
       const list = readImportNameList(content, index);
       for (const name of list.names) add(name);
-      index = list.next;
-      atLineStart = false;
+      resumeAfterImportStatement(list.next);
       continue;
     }
 
@@ -243,7 +284,7 @@ export function extractImportSpecifiers(content: string): string[] {
         }
         index = list.next;
       }
-      atLineStart = false;
+      resumeAfterImportStatement(index);
       continue;
     }
 
