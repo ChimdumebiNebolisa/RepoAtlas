@@ -1,0 +1,21 @@
+[project]
+name = "python-project-scripts-fixture"
+version = "0.1.0"
+
+[project.scripts]
+pep-tool = "commands:pep_main"
+
+[tool.poetry]
+name = "python-project-scripts-fixture"
+version = "0.1.0"
+description = "PEP 621 and Poetry command evidence"
+authors = []
+
+[tool.poetry.scripts]
+poetry-worker = "commands:poetry_main"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12"
