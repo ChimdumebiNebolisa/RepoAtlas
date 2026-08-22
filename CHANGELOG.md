@@ -6,9 +6,22 @@ All notable changes to RepoAtlas are documented here. Format follows [Keep a Cha
 
 ### Fixed
 
-- Analyzer: Python import extraction now handles semicolon-chained statements
-  (`import os; import sys` yields both modules) instead of emitting a malformed
-  specifier and dropping the second import.
+- Start Here now ranks the root README above nested package/example READMEs
+  via a depth-aware documentation penalty (verified against Gson and Click
+  release archives; previously `examples/…` READMEs could outrank the root).
+- Run-command extraction strips shell prompt prefixes (`$`, `>`) from README
+  fenced blocks so conventions like `$ pip install click` are recognized.
+- Cron-cleanup e2e coverage now exercises the authenticated production posture
+  (401 without the bearer secret; successful sweep with it) against a server
+  that always runs with a test-only secret.
+- E2E sample-flow helper matches the current hero CTA ("See the sample
+  Candidate Brief"), unblocking the browser suite on main.
+- Carried from the 2026-08-22 audit branch: cross-language complexity parity,
+  Python semicolon-chained import extraction, abort-signal propagation into
+  GitHub history/SHA fetches, options-object Vitest timeouts, workflow-YAML CI
+  detection, and spec/roadmap alignment.
+
+### Changed
 - Analyzer: Python, Java, and TypeScript complexity proxies now count the same
   decision points for equivalent control flow (`else`, `try`, `finally`, and
   `with` no longer inflate Python; Java no longer counts `else`, the `switch`
