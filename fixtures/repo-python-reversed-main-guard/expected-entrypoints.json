@@ -1,0 +1,5 @@
+{
+  "human_label": "Only the executable reversed __main__ guard is an application entrypoint.",
+  "entrypoints": ["reversed_guard.py"],
+  "nonEntrypoints": ["near_misses.py", "examples.py"]
+}
