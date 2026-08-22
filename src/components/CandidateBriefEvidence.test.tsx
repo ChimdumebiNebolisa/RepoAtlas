@@ -87,4 +87,28 @@ describe("CandidateBriefEvidence", () => {
     expect(screen.getByText("Some imports could not be resolved.")).toBeInTheDocument();
     expect(screen.queryByText(/^Used by:/)).not.toBeInTheDocument();
   });
+
+  it("links file evidence to the pinned source revision when a source base is provided", () => {
+    const ref = evidence({
+      id: "file-1",
+      kind: "file",
+      label: "Command implementation",
+      path: "src/click/core.py",
+      line_start: 12,
+      line_end: 18,
+    });
+
+    render(
+      <CandidateBriefEvidence
+        grouped={{ file: [ref] }}
+        usedBy={new Map()}
+        sourceBaseUrl="https://github.com/pallets/click/blob/abc123/"
+      />
+    );
+
+    expect(screen.getByRole("link", { name: "src/click/core.py:12" })).toHaveAttribute(
+      "href",
+      "https://github.com/pallets/click/blob/abc123/src/click/core.py#L12-L18"
+    );
+  });
 });

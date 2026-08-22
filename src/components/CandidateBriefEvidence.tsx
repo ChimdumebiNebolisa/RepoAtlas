@@ -3,9 +3,25 @@ import type { EvidenceRef } from "@/types/report";
 interface CandidateBriefEvidenceProps {
   grouped: Record<string, EvidenceRef[]>;
   usedBy: Map<string, string[]>;
+  sourceBaseUrl?: string;
 }
 
-export function CandidateBriefEvidence({ grouped, usedBy }: CandidateBriefEvidenceProps) {
+function sourceHref(sourceBaseUrl: string, ref: EvidenceRef) {
+  if (!ref.path) return undefined;
+
+  const encodedPath = ref.path.split("/").map(encodeURIComponent).join("/");
+  const start = ref.line_start ? `#L${ref.line_start}` : "";
+  const end = ref.line_start && ref.line_end && ref.line_end !== ref.line_start
+    ? `-L${ref.line_end}`
+    : "";
+  return `${sourceBaseUrl}${encodedPath}${start}${end}`;
+}
+
+export function CandidateBriefEvidence({
+  grouped,
+  usedBy,
+  sourceBaseUrl,
+}: CandidateBriefEvidenceProps) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4">
       <h3 className="text-base font-semibold text-slate-900">Evidence</h3>
@@ -34,12 +50,20 @@ export function CandidateBriefEvidence({ grouped, usedBy }: CandidateBriefEviden
                       </code>
                     </div>
                     <p className="mt-2 text-sm font-medium text-slate-900">{ref.label}</p>
-                    {ref.path && (
+                    {ref.path && sourceBaseUrl ? (
+                      <a
+                        className="mt-1 inline-block break-words font-mono text-xs text-emerald-800 underline decoration-emerald-300 underline-offset-2"
+                        href={sourceHref(sourceBaseUrl, ref)}
+                      >
+                        {ref.path}
+                        {ref.line_start ? `:${ref.line_start}` : ""}
+                      </a>
+                    ) : ref.path ? (
                       <p className="mt-1 break-words font-mono text-xs text-slate-600">
                         {ref.path}
                         {ref.line_start ? `:${ref.line_start}` : ""}
                       </p>
-                    )}
+                    ) : null}
                     {ref.detail && (
                       <p className="mt-2 text-xs text-slate-600">{ref.detail}</p>
                     )}

@@ -12,12 +12,14 @@ interface CandidateBriefPanelProps {
   candidateBrief?: CandidateBrief;
   demoMode?: boolean;
   reportVariant?: ReportVariant;
+  sourceBaseUrl?: string;
 }
 
 export function CandidateBriefPanel({
   candidateBrief,
   demoMode,
   reportVariant = "live",
+  sourceBaseUrl,
 }: CandidateBriefPanelProps) {
   const usedBy = useMemo(
     () => (candidateBrief ? buildEvidenceUsedByIndex(candidateBrief) : new Map()),
@@ -69,6 +71,7 @@ export function CandidateBriefPanel({
         usedBy={usedBy}
         onNavigate={scrollToEvidence}
         demoMode={demoMode}
+        sourceBaseUrl={sourceBaseUrl}
       />
     </div>
   );
