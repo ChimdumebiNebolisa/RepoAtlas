@@ -1,0 +1,9 @@
+{
+  "entrypoints": [
+    "src/main/java/example/ImportedController.java",
+    "src/main/java/example/WildcardMappedController.java"
+  ],
+  "nonEntrypoints": [
+    "src/main/java/example/CustomController.java"
+  ]
+}
