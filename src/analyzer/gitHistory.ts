@@ -24,6 +24,8 @@ export interface CommitInsightsOptions {
   sha?: string | null;
   /** Branch or tag that was resolved for ingestion (fallback history tip). */
   ref?: string | null;
+  /** Run-scoped abort signal so history work stops with the analysis. */
+  signal?: AbortSignal;
 }
 
 function buildInsightsFromFileCounts(
@@ -132,9 +134,14 @@ function detailFilePaths(value: unknown): string[] {
   return Array.from(uniquePaths);
 }
 
+function requestSignal(timeoutMs: number, run?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return run ? AbortSignal.any([timeout, run]) : timeout;
+}
+
 async function analyzeGithubApi(
   githubUrl: string,
-  opts?: Pick<CommitInsightsOptions, "sha" | "ref">
+  opts?: Pick<CommitInsightsOptions, "sha" | "ref" | "signal">
 ): Promise<CommitInsights> {
   const parsed = validateGithubUrl(githubUrl);
   if (!parsed) return UNAVAILABLE;
@@ -150,21 +157,22 @@ async function analyzeGithubApi(
   try {
     const res = await fetch(commitsUrl, {
       headers: { ...GITHUB_JSON_HEADERS },
-      signal: AbortSignal.timeout(15_000),
+      signal: requestSignal(15_000, opts?.signal),
     });
-    if (!res.ok) return UNAVAILABLE;
+    if (!res.ok || opts?.signal?.aborted) return UNAVAILABLE;
 
     const commits = commitShas(await res.json());
     if (commits.length === 0) return UNAVAILABLE;
     const fileCounts = new Map<string, number>();
 
     for (const commitSha of commits) {
+      if (opts?.signal?.aborted) return UNAVAILABLE;
       try {
         const detailRes = await fetch(
           `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(commitSha)}`,
           {
             headers: { ...GITHUB_JSON_HEADERS },
-            signal: AbortSignal.timeout(10_000),
+            signal: requestSignal(10_000, opts?.signal),
           }
         );
         if (!detailRes.ok) continue;
@@ -172,6 +180,7 @@ async function analyzeGithubApi(
           fileCounts.set(filePath, (fileCounts.get(filePath) ?? 0) + 1);
         }
       } catch {
+        if (opts?.signal?.aborted) return UNAVAILABLE;
         continue;
       }
     }
@@ -189,10 +198,11 @@ export async function analyzeCommitInsights(
 ): Promise<CommitInsights> {
   const local = analyzeLocalGit(workspacePath, { sha: opts?.sha, ref: opts?.ref });
   if (local.mode !== "unavailable") return local;
+  if (opts?.signal?.aborted) return UNAVAILABLE;
 
   const githubUrl = opts?.githubUrl?.trim();
   if (githubUrl && githubUrl !== "zip" && githubUrl.includes("github.com")) {
-    return analyzeGithubApi(githubUrl, { sha: opts?.sha, ref: opts?.ref });
+    return analyzeGithubApi(githubUrl, { sha: opts?.sha, ref: opts?.ref, signal: opts?.signal });
   }
 
   return UNAVAILABLE;

@@ -50,11 +50,15 @@ const KEY_DOC_PATTERNS = [
 ];
 
 const CI_PATTERNS = [
-  ".github/workflows",
   ".gitlab-ci.yml",
   "Jenkinsfile",
   "azure-pipelines.yml",
 ];
+
+// Workflow files must be YAML directly under .github/workflows so stray
+// non-pipeline files in that directory (READMEs, scripts) are not reported
+// as CI configuration.
+const CI_WORKFLOW_RE = /^\.github\/workflows\/[^/]+\.(?:ya?ml)$/i;
 
 /**
  * Sort key docs so root documents come before nested ones, then lexicographic.
@@ -163,7 +167,10 @@ export async function runIndexingPipeline(
         if (KEY_DOC_PATTERNS.some((p) => p.test(name))) {
           key_docs.push(childRel);
         }
-        if (CI_PATTERNS.some((p) => childRel.includes(p) || childRel.endsWith(p))) {
+        if (
+          CI_WORKFLOW_RE.test(childRel) ||
+          CI_PATTERNS.some((p) => childRel.endsWith(p))
+        ) {
           ci_configs.push(childRel);
         }
       } else {

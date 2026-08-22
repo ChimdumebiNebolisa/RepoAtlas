@@ -39,17 +39,25 @@ export function wrapGithubNetworkError(error: unknown): AppError {
   });
 }
 
-async function githubApiFetch(url: string): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), GITHUB_API_TIMEOUT_MS);
+async function githubApiFetch(url: string, parentSignal?: AbortSignal): Promise<Response> {
+  const timeout = AbortSignal.timeout(GITHUB_API_TIMEOUT_MS);
+  const signal = parentSignal ? AbortSignal.any([timeout, parentSignal]) : timeout;
   try {
     // Public repositories only. Never attach a server GitHub token.
     return await fetch(url, {
-      signal: controller.signal,
+      signal,
       headers: { Accept: "application/vnd.github+json" },
     });
-  } finally {
-    clearTimeout(timeoutId);
+  } catch (error) {
+    if (parentSignal?.aborted && !timeout.aborted) {
+      throw new AppError({
+        code: ERROR_CODES.TIMEOUT,
+        status: 504,
+        message: "Analysis timed out.",
+        cause: error,
+      });
+    }
+    throw error;
   }
 }
 
@@ -102,10 +110,14 @@ export function mapGithubApiError(response: Response, context: "repo" | "ref"): 
   });
 }
 
-export async function resolveDefaultBranch(owner: string, repo: string): Promise<string> {
+export async function resolveDefaultBranch(
+  owner: string,
+  repo: string,
+  parentSignal?: AbortSignal
+): Promise<string> {
   let response: Response;
   try {
-    response = await githubApiFetch(repoApiBase(owner, repo));
+    response = await githubApiFetch(repoApiBase(owner, repo), parentSignal);
   } catch (error) {
     throw wrapGithubNetworkError(error);
   }
@@ -124,12 +136,13 @@ export async function resolveDefaultBranch(owner: string, repo: string): Promise
 export async function resolveCommitSha(
   owner: string,
   repo: string,
-  ref: string
+  ref: string,
+  parentSignal?: AbortSignal
 ): Promise<string> {
   const url = `${repoApiBase(owner, repo)}/commits/${encodeURIComponent(ref)}`;
   let response: Response;
   try {
-    response = await githubApiFetch(url);
+    response = await githubApiFetch(url, parentSignal);
   } catch (error) {
     throw wrapGithubNetworkError(error);
   }

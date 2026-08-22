@@ -6,8 +6,12 @@ import {
   stripJavaCommentsAndLiterals,
 } from "./javaShared";
 
+// Decision-point definition aligned with the TS/JS AST pack: branching
+// keywords and short-circuit/ternary operators. `else` is not a new decision,
+// `switch` is counted through its `case` labels, and generic wildcards
+// (`Map<String, ?>`, `? extends X`) are not ternaries.
 const JAVA_COMPLEXITY_RE =
-  /\b(?:if|else|switch|case|for|while|do|catch)\b|&&|\|\||\?/g;
+  /\b(?:if|case|for|while|do|catch)\b|&&|\|\||(?<![<,]\s*)\?(?!\s*(?:>|extends|super)\b)/g;
 
 export interface JavaMetrics {
   complexity: Map<string, number>;
