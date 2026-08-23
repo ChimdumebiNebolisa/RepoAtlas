@@ -167,9 +167,6 @@ export function HomepageSampleProof({
       <div className="sample-report-heading">
         <div>
           <h2 id="sample-proof-heading">Look inside a sample brief.</h2>
-          <a className="sample-example-link" href="/examples/fastapi-candidate-brief">
-            Read the full FastAPI example brief <Arrow />
-          </a>
         </div>
         {!showSampleReport && (
           <button type="button" className="text-action" onClick={onOpenSample}>

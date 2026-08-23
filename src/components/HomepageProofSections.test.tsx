@@ -125,11 +125,9 @@ describe("HomepageSampleProof", () => {
     expect(proof).toHaveTextContent("File citation");
     expect(proof).not.toHaveTextContent(preview.readingStep.evidence!.id);
     expect(proof).toHaveTextContent(preview.readingStep.evidence!.path!);
-    const publicExample = screen.getByRole("link", {
-      name: /Read the full FastAPI example brief/,
-    });
-    expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
-    expect(publicExample).not.toHaveClass("btn-primary");
+    expect(
+      screen.queryByRole("link", { name: /FastAPI example brief/ })
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Open sample report/ }));
 
@@ -229,6 +227,16 @@ describe("HomepageTrustAndFaq", () => {
       expect(link).toHaveAttribute("href", href);
       expect(link).toHaveTextContent(description);
     });
+    expect(within(guideNav).getByRole("link", {
+      name: "Browse Candidate Brief examples",
+    })).toHaveAttribute("href", "/examples");
+    expect(guideNav.querySelectorAll('a[href="/examples"]')).toHaveLength(1);
+    expect(
+      guideNav.querySelector('a[href="/examples/fastapi-candidate-brief"]')
+    ).not.toBeInTheDocument();
+    expect(
+      guideNav.querySelector('a[href="/examples/click-candidate-brief"]')
+    ).not.toBeInTheDocument();
 
     const faqItems = screen.getAllByTestId("homepage-faq-item");
     expect(faqItems).toHaveLength(homepageFaqItems.length);

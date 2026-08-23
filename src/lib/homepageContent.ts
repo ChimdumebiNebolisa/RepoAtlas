@@ -87,6 +87,11 @@ export const homepageTrustBoundaries = [
 
 export const homepageInterviewGuides = [
   {
+    title: "Browse Candidate Brief examples",
+    description: "Compare complete briefs for Python, Java, and JavaScript repositories.",
+    href: "/examples",
+  },
+  {
     title: "Explain an unfamiliar repository",
     description: "Use an evidence-first reading order for code you did not build.",
     href: "/repository-walkthrough-interview",
