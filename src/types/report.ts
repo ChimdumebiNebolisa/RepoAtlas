@@ -29,7 +29,7 @@ export interface AnalysisFocus {
   discussion_questions: string[];
 }
 
-export interface RepoMetadata {
+interface RepoMetadata {
   name: string;
   url: string;
   branch: string;

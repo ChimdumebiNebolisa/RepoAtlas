@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   formatApiError,
   formatReportFetchError,
-  isValidReportId,
   validateGithubInput,
-} from "./InputForm";
+} from "./inputFormSupport";
+import { isValidReportId } from "@/lib/reportId";
 
 describe("InputForm error messaging", () => {
   it("shows the bounded wait before retrying a rate-limited analysis", () => {

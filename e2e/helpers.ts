@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import type { Report } from "../src/types/report";
@@ -97,7 +96,7 @@ export async function runSampleAnalyzeOnPage(page: Page): Promise<void> {
   await expectCompletedReportInViewport(page);
 }
 
-export function sharesDir(): string {
+function sharesDir(): string {
   return path.join(REPORTS_DIR, "shares");
 }
 

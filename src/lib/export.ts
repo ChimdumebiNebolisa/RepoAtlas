@@ -6,12 +6,12 @@ import type { BriefAnswer, CandidateBrief, EvidenceRef, Report } from "@/types/r
 import { repoSourceLabel } from "./format";
 
 /** Escape characters that have special meaning in Markdown inline text. */
-export function escapeMarkdownInline(value: string): string {
+function escapeMarkdownInline(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/([`*_{}[\]()#])/g, "\\$1");
 }
 
 /** Escape table cell content (pipes, newlines, and inline Markdown). */
-export function escapeTableCell(value: string): string {
+function escapeTableCell(value: string): string {
   return escapeMarkdownInline(value).replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
 
@@ -142,12 +142,7 @@ function candidateBriefToMarkdown(brief?: CandidateBrief): string {
   );
   md += briefAnswerToMarkdown(
     "What tradeoffs does this repository contain?",
-    brief.interview_talking_points.tradeoffs ?? {
-      answer: "This saved report predates direct tradeoff evidence. Re-run the analysis for a defensible answer.",
-      bullets: [],
-      evidence_refs: [],
-      confidence: "low",
-    }
+    brief.interview_talking_points.tradeoffs
   );
   md += briefAnswerToMarkdown(
     "What would you improve first?",

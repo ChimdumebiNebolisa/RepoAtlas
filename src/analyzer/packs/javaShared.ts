@@ -1,7 +1,7 @@
 import fs from "fs";
 
 export const JAVA_EXTENSION = ".java";
-export const PACKAGE_RE = /^\s*package\s+([\w.]+)\s*;/m;
+const PACKAGE_RE = /^\s*package\s+([\w.]+)\s*;/m;
 
 export function stripJavaCommentsAndLiterals(content: string): string {
   const output: string[] = Array.from(content, (character) =>

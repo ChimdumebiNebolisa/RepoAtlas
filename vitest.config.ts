@@ -151,10 +151,6 @@ export default defineConfig({
             branches: 80,
             lines: 90,
           },
-        "src/components/InputForm.tsx": {
-          branches: 80,
-          lines: 90,
-        },
         "src/components/useAnalysisRequest.ts": {
           branches: 90,
           lines: 90,

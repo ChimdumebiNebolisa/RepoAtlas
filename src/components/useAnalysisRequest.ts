@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { AnalysisIntent, Report } from "@/types/report";
 import { clientFailureDiagnostic } from "@/lib/clientFailureDiagnostics";
 import { ERROR_CODES } from "@/lib/errors";
+import { isValidReportId } from "@/lib/reportId";
 import { validateReport } from "@/lib/reportSchema";
 import {
   analysisEntrySource,
@@ -12,7 +13,6 @@ import {
   FALLBACK_ANALYSIS_MESSAGE,
   formatApiError,
   formatReportFetchError,
-  isValidReportId,
 } from "./inputFormSupport";
 
 interface UseAnalysisRequestOptions {
@@ -58,7 +58,7 @@ export function useAnalysisRequest({
         report?: unknown;
         persisted?: boolean;
       };
-      if (!isValidReportId(reportId)) {
+      if (typeof reportId !== "string" || !isValidReportId(reportId.trim())) {
         captureAnalysisEvent("analysis_failed", inputType, analysisIntent, {
           ...entryProperties,
           stage: "analysis_response",

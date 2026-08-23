@@ -6,8 +6,6 @@ const { getSecurityHeaders } = require('./securityHeaders');
 const securityHeaders = getSecurityHeaders();
 
 const nextConfig = {
-  serverExternalPackages: [],
-  productionBrowserSourceMaps: false,
   // The bundled sample is read as a directory at runtime. Include every
   // evidence file explicitly so the deployed API analyzes the same fixture
   // that the statically generated homepage preview uses during the build.

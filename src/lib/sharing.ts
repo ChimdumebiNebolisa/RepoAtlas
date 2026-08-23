@@ -1,4 +1,3 @@
-export type { ShareRecord } from "@/lib/sharing/records";
 export {
   createShareLink,
   deleteSharesForReport,

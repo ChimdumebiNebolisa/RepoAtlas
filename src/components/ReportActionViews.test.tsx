@@ -1,4 +1,3 @@
-import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,7 +9,7 @@ import {
   ReportExportPanel,
   ReportToolbar,
 } from "./ReportActionViews";
-import type { ReportActionsState } from "./useReportActions";
+import type { ReportActionsState } from "./reportActionState";
 
 vi.mock("./ReportDocument", () => ({
   ReportDocument: () => <div>Rendered report document</div>,

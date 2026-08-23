@@ -36,13 +36,13 @@ export type StableRouteName =
   | "shared_report"
   | "other";
 
-export type AnalysisFailureStage =
+type AnalysisFailureStage =
   | "analysis"
   | "analysis_response"
   | "report_load"
   | "network";
 
-export type AnalysisFailureCode =
+type AnalysisFailureCode =
   | ErrorCode
   | "INVALID_REPORT_ID"
   | "NETWORK_ERROR";

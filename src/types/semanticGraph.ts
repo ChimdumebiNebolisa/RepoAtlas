@@ -5,7 +5,7 @@
 
 export const SEMANTIC_GRAPH_VERSION = 1;
 
-export type SemanticNodeKind =
+type SemanticNodeKind =
   | "file"
   | "package"
   | "module"
@@ -19,13 +19,13 @@ export type SemanticEdgeKind =
   | "re_export"
   | "package_dependency";
 
-export type ResolutionStatus =
+type ResolutionStatus =
   | "resolved_internal"
   | "resolved_external"
   | "unresolved"
   | "ignored";
 
-export interface SemanticEvidence {
+interface SemanticEvidence {
   path: string;
   line_start: number;
   line_end: number;

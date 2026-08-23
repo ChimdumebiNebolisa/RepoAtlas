@@ -1,4 +1,3 @@
-import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -240,10 +239,6 @@ describe("CandidateBriefPanel report states", () => {
 
   it("renders a partial brief without inventing optional evidence", () => {
     const brief = buildSampleBrief();
-    const legacyTalkingPoints = {
-      ...brief.interview_talking_points,
-      tradeoffs: undefined,
-    } as unknown as CandidateBrief["interview_talking_points"];
 
     render(
       <CandidateBriefPanel
@@ -251,7 +246,6 @@ describe("CandidateBriefPanel report states", () => {
         candidateBrief={{
           ...brief,
           reading_path: [],
-          interview_talking_points: legacyTalkingPoints,
           evidence_refs: [],
           warnings: [],
           confidence_assessment: {
@@ -268,7 +262,6 @@ describe("CandidateBriefPanel report states", () => {
 
     expect(screen.getByText("No ranked reading path was generated.")).toBeInTheDocument();
     expect(screen.getByText(/does not provide enough evidence for a system flow/i)).toBeInTheDocument();
-    expect(screen.getByText(/saved report predates direct tradeoff evidence/i)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Walkthrough Script" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Behavioral Hooks" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Interview Questions" })).not.toBeInTheDocument();

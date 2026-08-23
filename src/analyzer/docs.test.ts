@@ -16,22 +16,6 @@ function write(rel: string, contents: string): void {
   fs.writeFileSync(full, contents);
 }
 
-function discover() {
-  const files: string[] = [];
-  const walk = (dir: string, base: string) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const abs = path.join(dir, entry.name);
-      const rel = base ? `${base}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) walk(abs, rel);
-      else files.push(rel);
-    }
-  };
-  walk(root, "");
-  // Intentionally shuffle to prove ordering is deterministic regardless of input order.
-  files.reverse();
-  return discoverDocuments(root, files);
-}
-
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-test-"));
 });

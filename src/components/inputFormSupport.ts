@@ -4,8 +4,6 @@ import { isValidGitRef, parseGithubRepoUrl } from "@/lib/github";
 
 export const FALLBACK_ANALYSIS_MESSAGE = "Analysis failed. Check server logs.";
 
-const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export type InputMode = "zip" | "github";
 
 export const PRIMARY_ANALYSIS_INTENT: {
@@ -84,8 +82,4 @@ export function validateGithubInput(url: string, ref: string): string | null {
     return "Enter a valid branch or tag name (letters, numbers, ., _, -, /).";
   }
   return null;
-}
-
-export function isValidReportId(id: unknown): id is string {
-  return typeof id === "string" && UUID_LIKE.test(id.trim());
 }

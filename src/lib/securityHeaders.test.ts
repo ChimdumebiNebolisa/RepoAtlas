@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
 const securityHeaders = require("../../securityHeaders.js") as {
-  CONTENT_SECURITY_POLICY: string;
   getSecurityHeaders: (production?: boolean) => Array<{ key: string; value: string }>;
 };
 
@@ -20,7 +19,6 @@ describe("production security headers", () => {
     const headers = securityHeaders.getSecurityHeaders(true);
     const csp = headers.find((header) => header.key === "Content-Security-Policy")?.value;
 
-    expect(csp).toBe(securityHeaders.CONTENT_SECURITY_POLICY);
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain(
       "script-src 'self' 'unsafe-inline' https://us-assets.i.posthog.com"

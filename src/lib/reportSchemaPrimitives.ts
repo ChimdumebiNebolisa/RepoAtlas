@@ -6,11 +6,11 @@ export function isObject(
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
-export function isFiniteNumber(value: unknown): value is number {
+function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-export function isDisplayedScore(value: unknown): value is number {
+function isDisplayedScore(value: unknown): value is number {
   return isFiniteNumber(value) && value >= 0 && value <= 100;
 }
 

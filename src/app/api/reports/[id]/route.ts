@@ -1,20 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { ERROR_CODES, toApiErrorPayload } from "@/lib/errors";
+import { isValidReportId } from "@/lib/reportId";
 import { getReport } from "@/lib/storage";
-
-const UUID_LIKE_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Report JSON is derived from untrusted, potentially private repositories and
 // is served behind a hard-to-guess capability id. It must never be cached by
 // browsers or shared CDNs.
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
-
-function isValidReportId(id: string): boolean {
-  const normalized = id.trim();
-  return normalized.length > 0 && UUID_LIKE_PATTERN.test(normalized);
-}
 
 export async function GET(
   _request: Request,

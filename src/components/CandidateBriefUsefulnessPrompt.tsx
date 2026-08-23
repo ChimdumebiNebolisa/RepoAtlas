@@ -5,7 +5,7 @@ import { useId, useMemo, useState } from "react";
 const SUPPORT_EMAIL = "repo-atlas-phi@mail.tin.computer";
 const SUBJECT = "RepoAtlas Candidate Brief feedback";
 
-export const candidateBriefUsefulnessSections = [
+const candidateBriefUsefulnessSections = [
   "Repo Summary",
   "Walkthrough Script",
   "Reading Path",

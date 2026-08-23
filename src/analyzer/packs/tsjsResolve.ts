@@ -6,12 +6,10 @@ import { createWorkspacePackageResolver } from "./tsjsResolvePackages";
 import {
   packageNameFromSpecifier,
   type ResolveOutcome,
-  type ResolveReason,
   type WorkspacePackage,
 } from "./tsjsResolveShared";
 import { discoverWorkspacePackages } from "./tsjsResolveWorkspaces";
 
-export type { ResolveOutcome, ResolveReason, WorkspacePackage };
 export { discoverWorkspacePackages };
 
 export interface TsJsResolver {

@@ -18,7 +18,7 @@ import type {
 } from "@/types/report";
 
 export type Confidence = "high" | "medium" | "low";
-export type PrRisk = "low" | "medium" | "high";
+type PrRisk = "low" | "medium" | "high";
 
 export interface BuildCandidateBriefInput {
   repoName: string;

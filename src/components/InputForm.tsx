@@ -12,8 +12,6 @@ import type { AnalysisIntent, Report } from "@/types/report";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
 import { AnalysisIntentSelector } from "./AnalysisIntentSelector";
 import {
-  formatApiError,
-  formatReportFetchError,
   PRIMARY_ANALYSIS_INTENT,
   type InputMode,
   validateGithubInput,
@@ -21,13 +19,6 @@ import {
 import type { AnalysisInputType } from "@/lib/productAnalytics";
 import { RepositoryInputControls } from "./RepositoryInputControls";
 import { useAnalysisRequest } from "./useAnalysisRequest";
-
-export {
-  formatApiError,
-  formatReportFetchError,
-  isValidReportId,
-  validateGithubInput,
-} from "./inputFormSupport";
 
 interface InputFormProps {
   onAnalyzeStart: () => void;

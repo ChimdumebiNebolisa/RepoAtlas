@@ -2,11 +2,10 @@
  * Canonical stored-share record validation.
  */
 
+import { isValidReportId } from "@/lib/reportId";
+
 export const SHARES_BLOB_PREFIX = "shares/";
 export const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-const REPORT_ID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface ShareRecord {
   reportId: string;
@@ -29,12 +28,12 @@ function parseCanonicalTimestamp(value: unknown): number | null {
   return new Date(timestamp).toISOString() === value ? timestamp : null;
 }
 
-export function parseShareRecord(
+function parseShareRecord(
   value: unknown,
   now = Date.now()
 ): ShareRecord | null {
   if (!isPlainObject(value) || typeof value.reportId !== "string") return null;
-  if (!REPORT_ID_RE.test(value.reportId)) return null;
+  if (!isValidReportId(value.reportId)) return null;
 
   const createdAt = parseCanonicalTimestamp(value.createdAt);
   const expiresAt = parseCanonicalTimestamp(value.expiresAt);

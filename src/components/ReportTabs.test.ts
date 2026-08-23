@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { describeMarkdownExportFailure } from "./reportActionState";
 import {
   MAX_PNG_CANVAS_DIMENSION,
-  describeMarkdownExportFailure,
   fitExportCanvasScale,
-} from "./ReportTabs";
+} from "./useReportFormatExports";
 
 describe("ReportTabs markdown export messaging", () => {
   it("formats a failed markdown export with route context and API taxonomy", () => {

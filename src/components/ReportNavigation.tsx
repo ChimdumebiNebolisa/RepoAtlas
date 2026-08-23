@@ -2,7 +2,7 @@
 
 import { useRef, type KeyboardEvent } from "react";
 
-export const REPORT_TABS = [
+const REPORT_TABS = [
   "Candidate Brief",
   "Overview",
   "Folder Map",

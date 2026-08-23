@@ -38,16 +38,10 @@ export const DOWNLOAD_TIMEOUT_MS = 60_000; // 60 s
 /** Timeout for a single GitHub REST API request (metadata / SHA resolution). */
 export const GITHUB_API_TIMEOUT_MS = 15_000; // 15 s
 
-/** Serialized report payload budget (approximate JSON bytes). */
-export const MAX_REPORT_JSON_BYTES = 4 * 1024 * 1024; // 4 MB
-
 /** Danger zones included in stored report. */
 export const MAX_DANGER_ZONE_ITEMS = 200;
 
-/** Document similarity comparisons budget. */
-export const MAX_DOC_COMPARISONS = 500;
-
-export function isVercelDeployment(): boolean {
+function isVercelDeployment(): boolean {
   return process.env.VERCEL === "1";
 }
 
@@ -60,7 +54,3 @@ export function maxCompressedBytesForZipUpload(): number {
 export function maxZipUploadMb(): number {
   return Math.round(maxCompressedBytesForZipUpload() / (1024 * 1024));
 }
-
-export const MAX_COMPRESSED_MB = Math.round(MAX_COMPRESSED_BYTES / (1024 * 1024));
-export const MAX_UNCOMPRESSED_MB = Math.round(MAX_UNCOMPRESSED_BYTES / (1024 * 1024));
-export const MAX_DEPLOYED_ZIP_MB = Math.round(MAX_DEPLOYED_ZIP_BYTES / (1024 * 1024));

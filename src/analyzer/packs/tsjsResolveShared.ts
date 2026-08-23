@@ -27,7 +27,7 @@ export interface WorkspacePackage {
   packageJsonRel: string;
 }
 
-export type ResolveReason =
+type ResolveReason =
   | "module_not_found"
   | "non_literal_specifier"
   | "outside_workspace"

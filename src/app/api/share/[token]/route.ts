@@ -2,15 +2,11 @@ import { NextResponse } from "next/server";
 
 import { ERROR_CODES, toApiErrorPayload } from "@/lib/errors";
 import { resolveShareToken } from "@/lib/sharing";
+import { isValidShareToken } from "@/lib/sharing/records";
 import { getReport } from "@/lib/storage";
 
 // Shared report payloads must not be cached by browsers or shared CDNs.
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
-const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,64}$/;
-
-function isValidShareToken(token: string): boolean {
-  return SHARE_TOKEN_PATTERN.test(token);
-}
 
 export async function GET(
   _request: Request,

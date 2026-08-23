@@ -5,15 +5,8 @@ import { ERROR_CODES, toApiErrorPayload } from "@/lib/errors";
 import { exportReportToMarkdown } from "@/lib/export";
 import { buildExportFilename } from "@/lib/exportNames";
 import { reportExportErrorLogPayload } from "@/lib/failureDiagnostics";
+import { isValidReportId } from "@/lib/reportId";
 import { getReport } from "@/lib/storage";
-
-const UUID_LIKE_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function isValidReportId(id: string): boolean {
-  const normalized = id.trim();
-  return normalized.length > 0 && UUID_LIKE_PATTERN.test(normalized);
-}
 
 export async function GET(
   _request: NextRequest,

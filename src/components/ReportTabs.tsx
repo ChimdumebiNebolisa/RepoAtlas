@@ -22,13 +22,6 @@ import { RunContributeSection } from "./RunContributeSection";
 import { StartHereTable } from "./StartHereTable";
 import { useReportActions } from "./useReportActions";
 
-export {
-  MAX_PNG_CANVAS_DIMENSION,
-  describeMarkdownExportFailure,
-  fitExportCanvasScale,
-  formatApiError,
-} from "./useReportActions";
-
 const ElkArchitectureGraph = dynamic(
   () => import("./ElkArchitectureGraph").then((module) => module.ElkArchitectureGraph),
   {

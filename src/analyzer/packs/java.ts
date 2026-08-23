@@ -13,7 +13,7 @@ import {
 } from "./javaSources";
 
 export { computeComplexitySignals } from "./javaMetrics";
-export { collectSamePackageRefs, extractImportSpecifiers } from "./javaSemantic";
+export { extractImportSpecifiers } from "./javaSemantic";
 
 export interface JavaPackResult {
   architecture: Architecture;

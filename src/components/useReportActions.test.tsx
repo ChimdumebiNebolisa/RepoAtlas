@@ -1,12 +1,9 @@
-import React from "react";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildSampleReport } from "@/lib/buildSampleReport";
-import {
-  INLINE_MARKDOWN_UNAVAILABLE,
-  MAX_PNG_CANVAS_DIMENSION,
-  useReportActions,
-} from "./useReportActions";
+import { INLINE_MARKDOWN_UNAVAILABLE } from "./reportActionState";
+import { MAX_PNG_CANVAS_DIMENSION } from "./useReportFormatExports";
+import { useReportActions } from "./useReportActions";
 import {
   PDF_EXPORT_TIMEOUT_MESSAGE,
   REPORT_EXPORT_DEADLINE_MS,

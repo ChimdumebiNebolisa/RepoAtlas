@@ -8,16 +8,13 @@
 
 import type { Report } from "@/types/report";
 import { validateReport, type ReportLoadResult } from "@/lib/reportSchema";
+import { isObject } from "@/lib/reportSchemaPrimitives";
 
 export const STORED_REPORT_SCHEMA_VERSION = 1;
 
 interface StoredReportV1 {
   storage_schema_version: typeof STORED_REPORT_SCHEMA_VERSION;
   report: Report;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 function isVersionedStoredReport(

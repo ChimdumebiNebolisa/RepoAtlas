@@ -7,6 +7,7 @@ import path from "path";
 import type { Report } from "@/types/report";
 import { put, get, list, del } from "@vercel/blob";
 import { getReportMaxCount, getReportTtlMs } from "@/lib/reportTtl";
+import { isValidReportId } from "@/lib/reportId";
 import { parseStoredReport, serializeStoredReport } from "@/lib/storedReportSchema";
 import { deleteSharesForReport } from "@/lib/sharing";
 import {
@@ -18,13 +19,6 @@ import {
 const REPORTS_BLOB_PREFIX = "reports/";
 const UUID_FILE_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.json$/i;
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-/** Validates a report id shape so callers cannot address arbitrary blob paths. */
-export function isValidReportId(reportId: string): boolean {
-  return UUID_RE.test(reportId);
-}
 
 function getReportsDir(): string {
   return (

@@ -6,7 +6,7 @@ import { hasBlobStorageCredentials } from "@/lib/storageConfig";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function getReportTtlDays(): number {
+function getReportTtlDays(): number {
   const raw = process.env.REPORT_TTL_DAYS;
   if (raw) {
     const n = Number(raw);
@@ -26,8 +26,4 @@ export function getReportMaxCount(): number {
 
 export function getReportTtlMs(): number {
   return getReportTtlDays() * DAY_MS;
-}
-
-export function getCronSecret(): string | undefined {
-  return process.env.CRON_SECRET?.trim() || undefined;
 }

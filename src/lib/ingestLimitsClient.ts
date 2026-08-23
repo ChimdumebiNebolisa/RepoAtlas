@@ -6,8 +6,6 @@
 /** Vercel deployed ZIP cap (4 MB). Local dev may accept larger uploads server-side. */
 export const CLIENT_MAX_ZIP_MB_VERCEL = 4;
 
-export const CLIENT_MAX_UNCOMPRESSED_MB = 50;
-
 const CLIENT_MAX_ZIP_BYTES = CLIENT_MAX_ZIP_MB_VERCEL * 1024 * 1024;
 
 /**

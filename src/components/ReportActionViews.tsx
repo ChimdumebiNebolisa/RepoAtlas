@@ -5,7 +5,7 @@ import type { ReportVariant } from "@/lib/productAnalytics";
 import { repoSourceLabel } from "@/lib/format";
 import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import { ReportDocument } from "./ReportDocument";
-import type { ReportActionsState } from "./useReportActions";
+import type { ReportActionsState } from "./reportActionState";
 
 export function ReportToolbar({
   actions,

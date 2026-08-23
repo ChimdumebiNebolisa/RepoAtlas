@@ -8,7 +8,6 @@ import {
   saveReport,
   listReportIds,
   sweepExpiredReports,
-  deleteReport,
 } from "@/lib/storage";
 
 const minimalReport = (analyzedAt: string): Report => ({

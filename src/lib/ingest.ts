@@ -15,7 +15,7 @@ import type {
   LooseIngestInput,
 } from "@/lib/ingestTypes";
 
-export type { IngestInput, IngestResult, LooseIngestInput } from "@/lib/ingestTypes";
+export type { IngestResult, LooseIngestInput } from "@/lib/ingestTypes";
 export { normalizeIngestInput, validateGithubUrl } from "@/lib/ingestInput";
 
 export async function ingestRepo(

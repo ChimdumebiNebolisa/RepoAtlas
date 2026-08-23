@@ -43,7 +43,7 @@ export function computeComplexitySignals(content: string): {
   return { loc, branchCount, maxNesting, score };
 }
 
-export function computeTestProximityScore(
+function computeTestProximityScore(
   prodFile: string,
   testFiles: Set<string>
 ): number {

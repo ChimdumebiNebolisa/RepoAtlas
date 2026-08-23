@@ -40,4 +40,4 @@ function getSecurityHeaders(production = process.env.NODE_ENV === 'production') 
   return headers;
 }
 
-module.exports = { CONTENT_SECURITY_POLICY, getSecurityHeaders };
+module.exports = { getSecurityHeaders };

@@ -12,11 +12,6 @@ const SCRIPT_PATH_RE =
 const ENTRY_SCRIPT_NAMES = new Set(["dev", "start", "build"]);
 const TEST_PATH_RE = /(?:^|\/)(?:__tests__\/.*|[^/]+\.(?:test|spec))\.(?:ts|tsx|js|jsx|mjs|cjs)$/i;
 
-export interface EntrypointHit {
-  path: string;
-  reason: string;
-}
-
 interface PackageManifest {
   dir: string;
   value: Record<string, unknown>;

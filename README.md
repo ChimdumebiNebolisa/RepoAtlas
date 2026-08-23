@@ -321,7 +321,7 @@ repository access.
 
 ## Libraries and Licenses
 
-Direct runtime dependencies: `next`, `react`, `react-dom`, `elkjs`, `react-zoom-pan-pinch`, `html2canvas`, `jspdf`, `adm-zip`, `@vercel/blob`. Dev tooling: TypeScript, Vitest, Playwright, ESLint, Tailwind/PostCSS, and `marked` for Markdown export safety tests. See `package.json` for versions and each package’s license.
+Direct runtime dependencies: `next`, `react`, `react-dom`, `typescript`, `elkjs`, `react-zoom-pan-pinch`, `html2canvas`, `jspdf`, `posthog-js`, `jiti`, `yauzl`, and `@vercel/blob`. Dev tooling includes Vitest, Playwright, ESLint, Tailwind/PostCSS, `adm-zip` test fixtures, and export-integrity helpers. See `package.json` for versions and each package’s license.
 
 ---
 

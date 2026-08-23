@@ -15,7 +15,6 @@ import { detectEntrypoints } from "./python/entrypoints";
 import { detectTestFiles } from "./python/signals";
 import type { IndexingPipelineResult } from "../pipeline";
 
-const relKey = (...segments: string[]) => path.join(...segments);
 const normalizeKey = (value: string) => value.replace(/\\/g, "/");
 
 function writeWorkspace(files: Record<string, string>): string {

@@ -28,7 +28,7 @@ interface ArchitectureEvidenceListsProps {
   emptyRelationshipCopy: string;
 }
 
-export const MAX_LAYOUT_NODES = 50;
+const MAX_LAYOUT_NODES = 50;
 
 export function getBoundedArchitecture(architecture: Architecture): Architecture {
   const nodes = architecture.nodes.slice(0, MAX_LAYOUT_NODES);

@@ -7,7 +7,7 @@ import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { Report } from "../src/types/report";
 import { buildSampleReport } from "../src/lib/buildSampleReport";
 import { buildExportFilename } from "../src/lib/exportNames";
-import { MAX_PNG_CANVAS_DIMENSION } from "../src/components/ReportTabs";
+import { MAX_PNG_CANVAS_DIMENSION } from "../src/components/useReportFormatExports";
 import { REPORT_EXPORT_DEADLINE_MS } from "../src/components/reportExportRendering";
 import { expectCompletedReportInViewport } from "./helpers";
 

@@ -3,12 +3,12 @@
  * Human-labeled expectations for fixture repositories, not analyzer output dumps.
  */
 
-export interface EvalEdge {
+interface EvalEdge {
   from: string;
   to: string;
 }
 
-export interface EvalUnresolved {
+interface EvalUnresolved {
   from: string;
   specifier: string;
 }

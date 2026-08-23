@@ -16,14 +16,7 @@ const SECTION_HELP: Record<string, string> = {
   Evidence: "Every claim above links back to these detected signals.",
 };
 
-const LEGACY_TRADEOFF_FALLBACK: BriefAnswer = {
-  answer: "This saved report predates direct tradeoff evidence. Re-run the analysis for a defensible answer.",
-  bullets: ["No technical choice is named without a direct manifest or configuration reference."],
-  evidence_refs: [],
-  confidence: "low",
-};
-
-export function confidenceClass(confidence: "high" | "medium" | "low") {
+function confidenceClass(confidence: "high" | "medium" | "low") {
   if (confidence === "high") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (confidence === "medium") return "border-amber-200 bg-amber-50 text-amber-700";
   return "border-slate-200 bg-slate-50 text-slate-600";
@@ -264,7 +257,7 @@ export function CandidateBriefCoreSections({
           />
           <TalkingPoint
             title="What tradeoffs does this repository contain?"
-            answer={talkingPoints.tradeoffs ?? LEGACY_TRADEOFF_FALLBACK}
+            answer={talkingPoints.tradeoffs}
             evidenceById={evidenceById}
             onNavigate={onNavigate}
             demoMode={demoMode}
