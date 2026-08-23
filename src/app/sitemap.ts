@@ -47,6 +47,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
+      url: `${baseUrl}/examples/p-limit-javascript-candidate-brief`,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
       url: `${baseUrl}/code-review-interview`,
       changeFrequency: "monthly",
       priority: 0.8,
