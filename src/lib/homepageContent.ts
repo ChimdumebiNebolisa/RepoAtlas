@@ -80,31 +80,7 @@ export const homepageFaqItems: readonly HomepageFaqItem[] = [
 
 export const homepageTrustBoundaries = [
   "Reads files as text. Never runs code or calls AI.",
-  "Deeper TypeScript/JavaScript analysis; narrower Python and Java analysis.",
-  "Inspection points are signals, not confirmed bugs or vulnerabilities.",
-  "PDF and PNG work without saved report storage.",
-] as const;
-
-export const homepageInterviewGuides = [
-  {
-    title: "Browse Candidate Brief examples",
-    description: "Compare complete briefs for Python, Java, and JavaScript repositories.",
-    href: "/examples",
-  },
-  {
-    title: "Explain an unfamiliar repository",
-    description: "Use an evidence-first reading order for code you did not build.",
-    href: "/repository-walkthrough-interview",
-  },
-  {
-    title: "Explain a project you built",
-    description:
-      "Separate your decisions from the repository evidence that supports them.",
-    href: "/how-to-walk-through-a-project-in-an-interview",
-  },
-  {
-    title: "Review a submitted take-home",
-    description: "Walk through your core path, one tradeoff, and what you would change next.",
-    href: "/take-home-coding-interview",
-  },
+  "TypeScript/JavaScript analysis is deep. Python and Java analysis is narrower.",
+  "Inspection points show where to look. They are not confirmed bugs or vulnerabilities.",
+  "PDF and PNG exports work without saved report storage.",
 ] as const;

@@ -4,7 +4,6 @@ import { randomUUID } from "crypto";
 import type { Report } from "../src/types/report";
 import {
   REPORT_TABS,
-  REPORTS_DIR,
   expectCompletedReportInViewport,
   legacyReportWithoutBrief,
   runSampleAnalyzeOnPage,
@@ -142,29 +141,9 @@ test.describe("Candidate Brief smoke", () => {
     await expect(
       page.getByRole("heading", { name: "Look inside a sample brief." })
     ).toBeVisible();
-    const guideNav = page.getByRole("navigation", {
-      name: "Prepare to explain a repository.",
-    });
-    const galleryLink = guideNav.getByRole("link", {
-      name: "Browse Candidate Brief examples",
-    });
-    await expect(galleryLink).toHaveAttribute("href", "/examples");
-    await expect(galleryLink).not.toHaveClass(/btn-primary/);
-    await expect(guideNav.locator('a[href="/examples"]')).toHaveCount(1);
     await expect(
-      guideNav.locator('a[href="/examples/fastapi-candidate-brief"]')
+      page.getByRole("navigation", { name: "Prepare to explain a repository." })
     ).toHaveCount(0);
-    await expect(
-      guideNav.locator('a[href="/examples/click-candidate-brief"]')
-    ).toHaveCount(0);
-
-    for (let tabCount = 0; tabCount < 30; tabCount += 1) {
-      if (await galleryLink.evaluate((link) => link === document.activeElement)) {
-        break;
-      }
-      await page.keyboard.press("Tab");
-    }
-    await expect(galleryLink).toBeFocused();
     await expect(
       page.getByRole("heading", { name: "Analyze your repository." })
     ).toBeVisible();

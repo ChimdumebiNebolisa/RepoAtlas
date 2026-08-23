@@ -26,10 +26,6 @@ export function SiteFooter() {
 
         <p className="site-footer-meta">
           <span>© {new Date().getUTCFullYear()} RepoAtlas</span>
-          <a className="tin-credit" href="https://tin.computer">
-            <span className="tin-mark" aria-hidden="true" />
-            Growth by Tin
-          </a>
         </p>
       </div>
     </footer>

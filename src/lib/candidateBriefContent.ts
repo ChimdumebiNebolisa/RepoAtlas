@@ -20,4 +20,7 @@ export const candidateBriefWalkthroughOutputs = [
 export const candidateBriefProofPromise =
   "Answer “Where would you start?” with a ranked reading path and talking points backed by source files.";
 
+export const candidateBriefHomepagePromise =
+  "Answer that question with a ranked reading path and talking points backed by source files.";
+
 export const candidateBriefLanguageCoverage = "TypeScript/JavaScript, Python, and Java";

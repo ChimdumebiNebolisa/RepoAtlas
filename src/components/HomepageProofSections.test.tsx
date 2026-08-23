@@ -1,4 +1,4 @@
-import React, { createRef } from "react";
+import { createRef } from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,7 +6,6 @@ import { buildSampleReport } from "@/lib/buildSampleReport";
 import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
 import {
   homepageFaqItems,
-  homepageInterviewGuides,
   homepageTrustBoundaries,
 } from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -206,7 +205,7 @@ describe("HomepageSampleProof", () => {
 });
 
 describe("HomepageTrustAndFaq", () => {
-  it("renders every trust boundary, guide route, and expandable FAQ answer", async () => {
+  it("renders every trust boundary and expandable FAQ answer without a guide nav", async () => {
     const user = userEvent.setup();
 
     render(<HomepageTrustAndFaq />);
@@ -219,24 +218,7 @@ describe("HomepageTrustAndFaq", () => {
       "href",
       "/privacy"
     );
-    const guideNav = screen.getByRole("navigation", {
-      name: "Prepare to explain a repository.",
-    });
-    homepageInterviewGuides.forEach(({ title, description, href }) => {
-      const link = within(guideNav).getByRole("link", { name: title });
-      expect(link).toHaveAttribute("href", href);
-      expect(link).toHaveTextContent(description);
-    });
-    expect(within(guideNav).getByRole("link", {
-      name: "Browse Candidate Brief examples",
-    })).toHaveAttribute("href", "/examples");
-    expect(guideNav.querySelectorAll('a[href="/examples"]')).toHaveLength(1);
-    expect(
-      guideNav.querySelector('a[href="/examples/fastapi-candidate-brief"]')
-    ).not.toBeInTheDocument();
-    expect(
-      guideNav.querySelector('a[href="/examples/click-candidate-brief"]')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
 
     const faqItems = screen.getAllByTestId("homepage-faq-item");
     expect(faqItems).toHaveLength(homepageFaqItems.length);

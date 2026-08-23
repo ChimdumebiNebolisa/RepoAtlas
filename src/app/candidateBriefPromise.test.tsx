@@ -3,7 +3,10 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomepageHero } from "@/components/HomepageProofSections";
 import { buildSampleReport } from "@/lib/buildSampleReport";
-import { candidateBriefProofPromise } from "@/lib/candidateBriefContent";
+import {
+  candidateBriefHomepagePromise,
+  candidateBriefProofPromise,
+} from "@/lib/candidateBriefContent";
 import CodeReviewInterviewPage from "./code-review-interview/page";
 import AuthoredProjectWalkthroughPage from "./how-to-walk-through-a-project-in-an-interview/page";
 import InterviewPreparationPage from "./interview-preparation/page";
@@ -24,12 +27,6 @@ type CandidateSurface = {
 };
 
 const candidateSurfaces: CandidateSurface[] = [
-  {
-    name: "homepage",
-    renderSurface: () => (
-      <HomepageHero onGenerateSample={() => undefined} sampleReport={buildSampleReport()} />
-    ),
-  },
   {
     name: "interview preparation page",
     renderSurface: InterviewPreparationPage,
@@ -59,5 +56,14 @@ describe.each(candidateSurfaces)("$name", ({ renderSurface }) => {
     render(await renderSurface());
 
     expect(document.body).toHaveTextContent(candidateBriefProofPromise);
+  });
+});
+
+describe("homepage", () => {
+  it("answers the hero question with the homepage promise", () => {
+    render(<HomepageHero onGenerateSample={() => undefined} sampleReport={buildSampleReport()} />);
+
+    expect(document.body).toHaveTextContent(candidateBriefHomepagePromise);
+    expect(document.body).toHaveTextContent("Walk me through this repository.");
   });
 });

@@ -1,4 +1,3 @@
-import React from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -29,7 +28,7 @@ describe("public trust surfaces", () => {
     expect(header).not.toHaveTextContent(/pricing/i);
   });
 
-  it("keeps the shared footer navigation, processing boundary, and attribution", () => {
+  it("keeps the shared footer navigation and processing boundary without third-party attribution", () => {
     render(<SiteFooter />);
 
     const footer = screen.getByRole("contentinfo");
@@ -55,10 +54,7 @@ describe("public trust surfaces", () => {
     expect(footer).toHaveTextContent(
       "Deterministic repository analysis. No code execution. No AI calls.",
     );
-    expect(within(footer).getByRole("link", { name: "Growth by Tin" })).toHaveAttribute(
-      "href",
-      "https://tin.computer",
-    );
+    expect(within(footer).queryByRole("link", { name: "Growth by Tin" })).not.toBeInTheDocument();
     expect(footer).not.toHaveTextContent(/pricing/i);
   });
 
