@@ -7,7 +7,6 @@ import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
 import {
   homepageFaqItems,
   homepageInterviewGuides,
-  homepageSupportedWorkflows,
   homepageTrustBoundaries,
 } from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -54,7 +53,7 @@ describe("HomepageHero", () => {
       })
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/ranked reading path and file-backed talking points/i)
+      screen.getByText(/ranked reading path and talking points backed by source files/i)
     ).toBeInTheDocument();
     expect(screen.getByTestId("hero-output-card")).not.toHaveTextContent(
       "prioritized reading path"
@@ -103,21 +102,6 @@ describe("HomepageWalkthroughOutcomes", () => {
   });
 });
 
-describe("HomepageSupportedWorkflows", () => {
-  it("renders the four supported workflows without presenting them as separate products", () => {
-    render(<HomepageSupportedWorkflows />);
-
-    const section = screen.getByTestId("supported-workflows");
-    const articles = within(section).getAllByRole("article");
-
-    expect(articles).toHaveLength(homepageSupportedWorkflows.length);
-    homepageSupportedWorkflows.forEach(({ title, description }, index) => {
-      expect(within(articles[index]).getByRole("heading", { name: title })).toBeInTheDocument();
-      expect(articles[index]).toHaveTextContent(description);
-    });
-  });
-});
-
 describe("HomepageSampleProof", () => {
   it("renders the collapsed report-derived proof and opens the full sample", async () => {
     const user = userEvent.setup();
@@ -143,7 +127,7 @@ describe("HomepageSampleProof", () => {
     expect(proof).not.toHaveTextContent(preview.readingStep.evidence!.id);
     expect(proof).toHaveTextContent(preview.readingStep.evidence!.path!);
     const publicExample = screen.getByRole("link", {
-      name: /Inspect the FastAPI Candidate Brief/,
+      name: /Read the full FastAPI example brief/,
     });
     expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
     expect(publicExample).not.toHaveClass("btn-primary");

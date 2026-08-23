@@ -63,15 +63,6 @@ export const homepageFaqItems: readonly HomepageFaqItem[] = [
       "Purpose, key files, connections, file citations, confidence gaps, and follow-up questions. PDF and PNG previews require no upload.",
   },
   {
-    question: "When should I use RepoAtlas?",
-    answer:
-      "Before an interview, onboarding, a bug investigation, or a code or design discussion. Get a reading order, cited talking points, and follow-up questions. Compare structured and ad hoc preparation.",
-    link: {
-      label: "Compare structured and ad hoc preparation.",
-      href: "/codebase-interview-preparation",
-    },
-  },
-  {
     question: "How is RepoAtlas different from asking an AI to summarize a repository?",
     answer:
       "AI summary capabilities vary. RepoAtlas uses deterministic static analysis, sends no code to an AI service, cites files, and shows confidence gaps. Compare AI summaries and evidence-linked briefs.",
@@ -94,25 +85,6 @@ export const homepageTrustBoundaries = [
   "PDF and PNG work without saved report storage.",
 ] as const;
 
-export const homepageSupportedWorkflows = [
-  {
-    title: "Preparing for an interview",
-    description: "Go from a new repository to key files and cited talking points.",
-  },
-  {
-    title: "Joining an unfamiliar codebase",
-    description: "Go from scattered files to purpose, entry points, and connections.",
-  },
-  {
-    title: "Investigating a bug",
-    description: "Go from a symptom to likely files, dependencies, and inspection points.",
-  },
-  {
-    title: "Preparing for a code or design discussion",
-    description: "Go from a proposal to affected files, boundaries, and dependencies.",
-  },
-] as const;
-
 export const homepageInterviewGuides = [
   {
     title: "Explain an unfamiliar repository",
@@ -127,7 +99,7 @@ export const homepageInterviewGuides = [
   },
   {
     title: "Review a submitted take-home",
-    description: "Defend the core path, one tradeoff, the proof, and the next change.",
+    description: "Walk through your core path, one tradeoff, and what you would change next.",
     href: "/take-home-coding-interview",
   },
 ] as const;

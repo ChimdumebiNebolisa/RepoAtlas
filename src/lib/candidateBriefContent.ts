@@ -18,6 +18,6 @@ export const candidateBriefWalkthroughOutputs = [
 ] as const;
 
 export const candidateBriefProofPromise =
-  "Answer “Where would you start?” with a ranked reading path and file-backed talking points.";
+  "Answer “Where would you start?” with a ranked reading path and talking points backed by source files.";
 
 export const candidateBriefLanguageCoverage = "TypeScript/JavaScript, Python, and Java";

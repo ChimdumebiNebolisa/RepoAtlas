@@ -212,8 +212,8 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
 
       <div className="quick-start">
         <div className="quick-start-copy">
-          <strong>See a complete repository brief first</strong>
-          <span>Use the bundled repository. No upload or URL needed.</span>
+          <strong>No repository handy?</strong>
+          <span>Generate a brief from our bundled sample. No upload or URL needed.</span>
         </div>
         <button
           ref={sampleButtonRef}

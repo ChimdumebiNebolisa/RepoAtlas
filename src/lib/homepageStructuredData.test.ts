@@ -72,7 +72,7 @@ describe("homepage structured data", () => {
     const faqPage = homepageStructuredData["@graph"][1];
 
     expect(faqPage["@type"]).toBe("FAQPage");
-    expect(faqPage.mainEntity).toHaveLength(8);
+    expect(faqPage.mainEntity).toHaveLength(7);
     expect(faqPage.mainEntity).toEqual(
       homepageFaqItems.map(({ question, answer }) => ({
         "@type": "Question",

@@ -19,7 +19,6 @@ vi.mock("@/lib/productAnalytics", async (importOriginal) => {
 vi.mock("@/components/HomepageProofSections", () => ({
   HomepageHero: () => null,
   HomepageSampleProof: () => null,
-  HomepageSupportedWorkflows: () => null,
   HomepageTrustAndFaq: () => null,
   HomepageWalkthroughOutcomes: () => null,
 }));
@@ -106,7 +105,7 @@ describe("HomePage walkthrough analytics journeys", () => {
         await user.click(screen.getByRole("button", { name: /Analyze uploaded ZIP/i }));
       }
 
-      await screen.findByRole("heading", { name: "Your repository brief is ready" });
+      await screen.findByRole("heading", { name: "Your Candidate Brief is ready" });
       await user.click(screen.getByRole("button", { name: "Copy 30s" }));
 
       await waitFor(() => expect(captureReportViewed).toHaveBeenCalledTimes(1));
