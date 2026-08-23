@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   HomepageHero,
   HomepageSampleProof,
-  HomepageSupportedWorkflows,
   HomepageTrustAndFaq,
   HomepageWalkthroughOutcomes,
 } from "@/components/HomepageProofSections";
@@ -157,8 +156,6 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
 
       <HomepageWalkthroughOutcomes />
 
-      <HomepageSupportedWorkflows />
-
       <HomepageSampleProof
         sampleReport={sampleReport}
         showSampleReport={showSampleReport}
@@ -195,8 +192,7 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
           <div className="analyze-limits">
             <span>Public GitHub URL or ZIP upload</span>
             <span>Files are read, never run</span>
-            <span>Public GitHub repositories only</span>
-            <span>{clientMaxZipMbLabel()}MB maximum zip</span>
+            <span>{clientMaxZipMbLabel()} MB max ZIP</span>
             <span>Analysis up to 2 minutes</span>
           </div>
           {error && <div role="alert" className="form-error">{error}</div>}
@@ -217,11 +213,11 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
               tabIndex={-1}
               data-testid="completed-report-heading"
             >
-              Your repository brief is ready
+              Your Candidate Brief is ready
             </h2>
             <p>
               {report.candidate_brief?.analysis_focus
-                ? `Your ${report.candidate_brief.analysis_focus.label.toLowerCase()} repository brief is ready. Review the linked files and confidence notes.`
+                ? `Your ${report.candidate_brief.analysis_focus.label.toLowerCase()} Candidate Brief is ready. Review the linked files and confidence notes.`
                 : reportId
                   ? "Start with the purpose and reading path, then inspect, export, or share the source-linked report."
                   : "Start with the purpose and reading path, then inspect or export the source-linked report as PDF or PNG."}

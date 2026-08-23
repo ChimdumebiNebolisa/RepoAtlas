@@ -16,7 +16,6 @@ vi.mock("@/components/HomepageProofSections", () => ({
     onGenerateSample: () => void;
   }) => <button onClick={onGenerateSample}>Generate from hero</button>,
   HomepageWalkthroughOutcomes: () => <div>Walkthrough outcomes</div>,
-  HomepageSupportedWorkflows: () => <div>Supported workflows</div>,
   HomepageSampleProof: ({
     showSampleReport,
     onOpenSample,
@@ -284,7 +283,7 @@ describe("HomePage completion coordination", () => {
     fireEvent.click(screen.getByRole("button", { name: "Complete focused" }));
     expect(
       screen.getByText(
-        "Your bug investigation repository brief is ready. Review the linked files and confidence notes."
+        "Your bug investigation Candidate Brief is ready. Review the linked files and confidence notes."
       )
     ).toBeInTheDocument();
   });

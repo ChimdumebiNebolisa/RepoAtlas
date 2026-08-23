@@ -52,7 +52,7 @@ test("interview-preparation page leads to the measurable analysis start", async 
     analysisIntent: "interview",
   });
   await expect(
-    page.getByRole("heading", { name: "Your repository brief is ready" })
+    page.getByRole("heading", { name: "Your Candidate Brief is ready" })
   ).toBeVisible();
   await expect(page).toHaveURL(/\?source=interview_preparation#analyze$/);
 });
@@ -115,7 +115,7 @@ for (const comparison of [
       analysisIntent: "interview",
     });
     await expect(
-      page.getByRole("heading", { name: "Your repository brief is ready" }),
+      page.getByRole("heading", { name: "Your Candidate Brief is ready" }),
     ).toBeVisible();
   });
 
@@ -198,7 +198,7 @@ test("repository walkthrough guide teaches the method and opens the bundled samp
     analysisIntent: "interview",
   });
   await expect(
-    page.getByRole("heading", { name: "Your repository brief is ready" })
+    page.getByRole("heading", { name: "Your Candidate Brief is ready" })
   ).toBeVisible();
 });
 
@@ -286,7 +286,7 @@ test("authored project guide separates candidate intent from repository evidence
     name: "Start an authored-project brief",
   });
   await expect(startPanel).toContainText(
-    "Answer “Where would you start?” with a ranked reading path and file-backed talking points.",
+    "Answer “Where would you start?” with a ranked reading path and talking points backed by source files.",
   );
   await expect(startPanel).toContainText(
     "You supply the rationale, constraints, and outcomes.",
@@ -328,7 +328,7 @@ test("authored project guide separates candidate intent from repository evidence
     analysisIntent: "interview",
   });
   await expect(
-    page.getByRole("heading", { name: "Your repository brief is ready" })
+    page.getByRole("heading", { name: "Your Candidate Brief is ready" })
   ).toBeVisible();
 });
 
@@ -474,7 +474,7 @@ test("every public proof cluster route connects proof, guidance, and a Candidate
   const proofRoutes = [
     {
       path: "/",
-      linkName: "Inspect the FastAPI Candidate Brief",
+      linkName: "Read the full FastAPI example brief",
     },
     {
       path: "/interview-preparation",

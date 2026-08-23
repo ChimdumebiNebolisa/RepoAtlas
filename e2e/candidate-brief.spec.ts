@@ -49,7 +49,7 @@ test.describe("Candidate Brief smoke", () => {
         })
       ).toBeVisible();
       await expect(
-        hero.getByText(/ranked reading path and file-backed talking points/)
+        hero.getByText(/ranked reading path and talking points backed by source files/)
       ).toBeVisible();
       await expect(hero.locator(".btn-primary")).toHaveCount(1);
       await expect(hero.getByRole("link")).toHaveCount(0);
@@ -128,16 +128,6 @@ test.describe("Candidate Brief smoke", () => {
     await expect(outcomes.getByRole("heading", { name: "Evidence and next questions" })).toBeVisible();
     await expect(outcomes).not.toContainText("PDF");
 
-    const workflows = page.getByTestId("supported-workflows");
-    for (const workflow of [
-      "Preparing for an interview",
-      "Joining an unfamiliar codebase",
-      "Investigating a bug",
-      "Preparing for a code or design discussion",
-    ]) {
-      await expect(workflows.getByRole("heading", { name: workflow })).toBeVisible();
-    }
-
     const isBeforeAnalysis = await outcomes.evaluate((section) => {
       const analysis = document.querySelector("#analyze");
 
@@ -148,12 +138,12 @@ test.describe("Candidate Brief smoke", () => {
     });
     expect(isBeforeAnalysis).toBe(true);
 
-    await expect(page.locator("main > section")).toHaveCount(6);
+    await expect(page.locator("main > section")).toHaveCount(5);
     await expect(
-      page.getByRole("heading", { name: "See a complete sample brief." })
+      page.getByRole("heading", { name: "Look inside a sample brief." })
     ).toBeVisible();
     const publicExample = page.getByRole("link", {
-      name: "Inspect the FastAPI Candidate Brief",
+      name: "Read the full FastAPI example brief",
     });
     await expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
     await expect(publicExample).not.toHaveClass(/btn-primary/);
@@ -161,7 +151,7 @@ test.describe("Candidate Brief smoke", () => {
       page.getByRole("heading", { name: "Analyze your repository." })
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "What RepoAtlas reads and what it cannot know." })
+      page.getByRole("heading", { name: "How RepoAtlas treats your code." })
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Works across project types." })
@@ -204,7 +194,7 @@ test.describe("Candidate Brief smoke", () => {
     expect(
       dimensions.primaryActions[1].top - dimensions.primaryActions[0].bottom
     ).toBeGreaterThanOrEqual(844);
-    await expect(page.locator("main > section")).toHaveCount(6);
+    await expect(page.locator("main > section")).toHaveCount(5);
   });
 
   test("sample analyze renders Candidate Brief tab", async ({ page }) => {

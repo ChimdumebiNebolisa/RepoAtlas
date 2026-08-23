@@ -6,7 +6,6 @@ import {
 import {
   homepageFaqItems,
   homepageInterviewGuides,
-  homepageSupportedWorkflows,
   homepageTrustBoundaries,
 } from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -125,39 +124,11 @@ export function HomepageWalkthroughOutcomes() {
     >
       <header className="walkthrough-outcomes-header">
         <div>
-          <h2 id="walkthrough-outcomes-heading">What your repository brief includes.</h2>
+          <h2 id="walkthrough-outcomes-heading">What your Candidate Brief includes.</h2>
         </div>
       </header>
       <div className="walkthrough-outcome-list">
         {candidateBriefWalkthroughOutputs.map(({ title, description }, index) => (
-          <article key={title}>
-            <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-            <div>
-              <h3>{title}</h3>
-              <p>{description}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function HomepageSupportedWorkflows() {
-  return (
-    <section
-      className="walkthrough-outcomes homepage-workflows page-container"
-      aria-labelledby="supported-workflows-heading"
-      data-testid="supported-workflows"
-    >
-      <header className="walkthrough-outcomes-header">
-        <div>
-          <p className="section-kicker">Use RepoAtlas when…</p>
-          <h2 id="supported-workflows-heading">Before you explain or change unfamiliar code.</h2>
-        </div>
-      </header>
-      <div className="walkthrough-outcome-list">
-        {homepageSupportedWorkflows.map(({ title, description }, index) => (
           <article key={title}>
             <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <div>
@@ -195,9 +166,9 @@ export function HomepageSampleProof({
     >
       <div className="sample-report-heading">
         <div>
-          <h2 id="sample-proof-heading">See a complete sample brief.</h2>
+          <h2 id="sample-proof-heading">Look inside a sample brief.</h2>
           <a className="sample-example-link" href="/examples/fastapi-candidate-brief">
-            Inspect the FastAPI Candidate Brief <Arrow />
+            Read the full FastAPI example brief <Arrow />
           </a>
         </div>
         {!showSampleReport && (
@@ -264,7 +235,7 @@ export function HomepageTrustAndFaq() {
       <div className="page-container faq-layout">
         <header className="faq-intro">
           <p className="section-kicker">Trust and privacy</p>
-          <h2 id="homepage-trust-heading">What RepoAtlas reads and what it cannot know.</h2>
+          <h2 id="homepage-trust-heading">How RepoAtlas treats your code.</h2>
           <p>{reportCapabilityCopy.homepageStorageNote}</p>
           <ul className="trust-boundary-list">
             {homepageTrustBoundaries.map((item) => <li key={item}>{item}</li>)}

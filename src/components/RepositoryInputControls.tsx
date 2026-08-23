@@ -138,8 +138,7 @@ export function RepositoryInputControls({
             aria-invalid={hasFieldError}
           />
           <p id="githubUrl-help" className="input-help">
-            Canonical HTTPS github.com URLs only. Public repositories only. Private
-            repositories are never accessed.
+            Public github.com URLs only. Private repositories are never accessed.
           </p>
           <label htmlFor="githubRef" className="input-label">
             Branch or tag (optional)
