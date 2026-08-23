@@ -84,22 +84,3 @@ export const homepageTrustBoundaries = [
   "Inspection points are signals, not confirmed bugs or vulnerabilities.",
   "PDF and PNG work without saved report storage.",
 ] as const;
-
-export const homepageInterviewGuides = [
-  {
-    title: "Explain an unfamiliar repository",
-    description: "Use an evidence-first reading order for code you did not build.",
-    href: "/repository-walkthrough-interview",
-  },
-  {
-    title: "Explain a project you built",
-    description:
-      "Separate your decisions from the repository evidence that supports them.",
-    href: "/how-to-walk-through-a-project-in-an-interview",
-  },
-  {
-    title: "Review a submitted take-home",
-    description: "Walk through your core path, one tradeoff, and what you would change next.",
-    href: "/take-home-coding-interview",
-  },
-] as const;

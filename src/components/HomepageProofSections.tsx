@@ -5,7 +5,6 @@ import {
 } from "@/lib/candidateBriefContent";
 import {
   homepageFaqItems,
-  homepageInterviewGuides,
   homepageTrustBoundaries,
 } from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -255,24 +254,6 @@ export function HomepageTrustAndFaq() {
           ))}
         </div>
       </div>
-      <nav
-        className="page-container homepage-guide-nav"
-        aria-labelledby="homepage-guide-nav-heading"
-      >
-        <div className="homepage-guide-intro">
-          <h3 id="homepage-guide-nav-heading">Prepare to explain a repository.</h3>
-          <p>Choose the guide that matches the codebase and conversation.</p>
-        </div>
-        {homepageInterviewGuides.map(({ title, description, href }) => (
-          <a key={href} href={href} className="homepage-guide-link" aria-label={title}>
-            <span>
-              <strong>{title}</strong>
-              <small>{description}</small>
-            </span>
-            <Arrow />
-          </a>
-        ))}
-      </nav>
     </section>
   );
 }

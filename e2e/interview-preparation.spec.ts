@@ -442,29 +442,15 @@ test("take-home coding interview guide is indexed and connects its public proof"
   await expect(page.locator(".guide-page .btn-primary")).toHaveCount(1);
 });
 
-test("homepage connects all three interview guides without replacing the sample action", async ({
-  page,
-}) => {
+test("homepage keeps the sample action after the guide nav removal", async ({ page }) => {
   await page.goto("/");
 
   await expect(
     page.getByRole("button", { name: /See the sample Candidate Brief/ })
   ).toBeVisible();
-  const guideNav = page.getByRole("navigation", {
-    name: "Prepare to explain a repository.",
-  });
-  await expect(
-    guideNav.getByRole("link", { name: /Explain an unfamiliar repository/ })
-  ).toHaveAttribute("href", "/repository-walkthrough-interview");
-  await expect(
-    guideNav.getByRole("link", { name: /Explain a project you built/ })
-  ).toHaveAttribute(
-    "href",
-    "/how-to-walk-through-a-project-in-an-interview"
+  await expect(page.getByRole("navigation", { name: "Prepare to explain a repository." })).toHaveCount(
+    0
   );
-  await expect(
-    guideNav.getByRole("link", { name: /Review a submitted take-home/ })
-  ).toHaveAttribute("href", "/take-home-coding-interview");
 });
 
 test("every public proof cluster route connects proof, guidance, and a Candidate Brief start", async ({

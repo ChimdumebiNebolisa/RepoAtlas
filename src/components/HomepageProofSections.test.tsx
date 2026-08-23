@@ -6,7 +6,6 @@ import { buildSampleReport } from "@/lib/buildSampleReport";
 import { candidateBriefWalkthroughOutputs } from "@/lib/candidateBriefContent";
 import {
   homepageFaqItems,
-  homepageInterviewGuides,
   homepageTrustBoundaries,
 } from "@/lib/homepageContent";
 import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
@@ -209,7 +208,7 @@ describe("HomepageSampleProof", () => {
 });
 
 describe("HomepageTrustAndFaq", () => {
-  it("renders every trust boundary, guide route, and expandable FAQ answer", async () => {
+  it("renders every trust boundary and expandable FAQ answer without a guide nav", async () => {
     const user = userEvent.setup();
 
     render(<HomepageTrustAndFaq />);
@@ -222,14 +221,7 @@ describe("HomepageTrustAndFaq", () => {
       "href",
       "/privacy"
     );
-    const guideNav = screen.getByRole("navigation", {
-      name: "Prepare to explain a repository.",
-    });
-    homepageInterviewGuides.forEach(({ title, description, href }) => {
-      const link = within(guideNav).getByRole("link", { name: title });
-      expect(link).toHaveAttribute("href", href);
-      expect(link).toHaveTextContent(description);
-    });
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
 
     const faqItems = screen.getAllByTestId("homepage-faq-item");
     expect(faqItems).toHaveLength(homepageFaqItems.length);
