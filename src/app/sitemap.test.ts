@@ -15,6 +15,7 @@ const canonicalUrls = [
   `${baseUrl}/ai-codebase-summary`,
   `${baseUrl}/examples/fastapi-candidate-brief`,
   `${baseUrl}/examples/click-candidate-brief`,
+  `${baseUrl}/examples/spring-petclinic-candidate-brief`,
   `${baseUrl}/code-review-interview`,
   `${baseUrl}/privacy`,
   `${baseUrl}/terms`,
@@ -27,7 +28,7 @@ describe("search discovery files", () => {
 
     expect(actualUrls).toEqual(canonicalUrls);
     expect(new Set(actualUrls)).toHaveLength(canonicalUrls.length);
-    expect(actualUrls).toHaveLength(13);
+    expect(actualUrls).toHaveLength(14);
   });
 
   it("publishes the IndexNow ownership key at the host root", async () => {
