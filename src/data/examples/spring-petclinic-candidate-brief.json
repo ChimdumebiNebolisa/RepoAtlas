@@ -1,0 +1,758 @@
+{
+  "repo_metadata": {
+    "name": "spring-projects/spring-petclinic",
+    "url": "https://github.com/spring-projects/spring-petclinic",
+    "branch": "88e37c15cf6fc8490b01bc3e8e2c800cec1ac272",
+    "clone_hash": "88e37c15cf6fc8490b01bc3e8e2c800cec1ac272",
+    "analyzed_at": "2026-08-23T07:58:34.287Z"
+  },
+  "candidate_brief": {
+    "repo_summary": {
+      "headline": "spring-projects/spring-petclinic appears to be a Spring Boot application",
+      "plain_english": "Spring PetClinic Sample Application [![Build Status](https://github.com/spring-projects/spring-petclinic/actions/workflows/maven-build.yml/badge.svg)](https://github.com/spring-projects/spring-petclinic/actions/workflows/maven-build.yml)[![Build Status](https://github.com/spring-projects/spring-petclinic/actions/workflows/gradle-build.yml/badge.svg)](https://github.com/spring-projects/spring-petclinic/actions/workflows/gradle-build.yml) (extracted from README.md). RepoAtlas also found 12 reading candidates, 30 risk-ranked files, and 13 run commands.",
+      "primary_evidence": [
+        "start-1",
+        "risk-1",
+        "arch-1",
+        "cmd-1",
+        "doc-1"
+      ],
+      "confidence": "high"
+    },
+    "reading_path": [
+      {
+        "order": 1,
+        "title": "PetClinicApplication.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java",
+        "why": "imported by 3 classes; detected entrypoint",
+        "evidence_refs": [
+          "start-1"
+        ]
+      },
+      {
+        "order": 2,
+        "title": "README.md",
+        "path": "README.md",
+        "why": "root README documentation",
+        "evidence_refs": [
+          "start-2"
+        ]
+      },
+      {
+        "order": 3,
+        "title": "OwnerController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java",
+        "why": "imported by 1 classes; detected entrypoint",
+        "evidence_refs": [
+          "start-3"
+        ]
+      },
+      {
+        "order": 4,
+        "title": "PetController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/PetController.java",
+        "why": "imported by 1 classes; detected entrypoint",
+        "evidence_refs": [
+          "start-4"
+        ]
+      },
+      {
+        "order": 5,
+        "title": "VisitController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/VisitController.java",
+        "why": "imported by 1 classes; detected entrypoint",
+        "evidence_refs": [
+          "start-5"
+        ]
+      },
+      {
+        "order": 6,
+        "title": "CrashController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/system/CrashController.java",
+        "why": "imported by 1 classes; detected entrypoint",
+        "evidence_refs": [
+          "start-6"
+        ]
+      }
+    ],
+    "interview_talking_points": {
+      "walk_me_through_codebase": {
+        "answer": "Walk through the repository from the ranked reading path, then connect that path to run commands, docs, and the architecture graph. Keep the explanation tied to detected files and commands.",
+        "bullets": [
+          "Start with `src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java`, `README.md`, `src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java` because those files were ranked by deterministic reading signals.",
+          "Use `mvn test`, `mvn package` to understand the available run workflow.",
+          "Reference `LICENSE.txt`, `README.md` for onboarding or contribution context.",
+          "Describe the architecture as 6 graph nodes and 14 graph edges from supported import/dependency analysis."
+        ],
+        "evidence_refs": [
+          "start-1",
+          "start-2",
+          "start-3",
+          "cmd-1",
+          "cmd-2",
+          "doc-1",
+          "doc-2",
+          "arch-1"
+        ],
+        "confidence": "high"
+      },
+      "riskiest_areas": {
+        "answer": "The riskiest areas are the top danger-zone files because they combine measurable signals such as size, fan-in, fan-out, complexity, and test proximity.",
+        "bullets": [
+          "src/main/java/org/springframework/samples/petclinic/owner/Owner.java: risk 85; size p92 (bytes=4533), fan-in p95 (9), fan-out p85 (3), complexity p95 (40), test proximity 0, no nearby tests",
+          "src/main/java/org/springframework/samples/petclinic/owner/PetController.java: risk 76; size p98 (bytes=6584), fan-in p37 (1), fan-out p98 (6), complexity p98 (69), test proximity 100, recent churn p95",
+          "src/main/java/org/springframework/samples/petclinic/owner/Pet.java: risk 74; size p75 (bytes=2186), fan-in p95 (9), fan-out p85 (3), complexity p60 (5), test proximity 0, no nearby tests"
+        ],
+        "evidence_refs": [
+          "risk-1",
+          "risk-2",
+          "risk-3"
+        ],
+        "confidence": "high"
+      },
+      "tradeoffs": {
+        "answer": "This repository does not provide enough direct evidence for a defensible tradeoff answer.",
+        "bullets": [
+          "Each named technical choice must resolve to a manifest or configuration file.",
+          "The brief does not infer maintainer intent, rejected alternatives, or production behavior."
+        ],
+        "evidence_refs": [],
+        "confidence": "low"
+      },
+      "improve_first": {
+        "answer": "Improve the repository through small, evidence-backed changes: clarify how to run it, tighten contribution guidance, or add coverage around risk-ranked files.",
+        "bullets": [
+          "Verify and document the detected run commands: The report found run commands; a realistic first PR is to confirm they work and improve nearby setup notes if the current docs are thin.",
+          "Add or expand contributor guidance: No CONTRIBUTING guide was detected. A focused first PR can clarify setup, test commands, and how contributors should validate changes.",
+          "Add tests near src/main/java/org/springframework/samples/petclinic/owner/Owner.java: This file is risk-ranked and has test proximity 0 (a static signal, not measured coverage), making it a concrete candidate for a small test-focused contribution."
+        ],
+        "evidence_refs": [
+          "cmd-1",
+          "cmd-2",
+          "cmd-3",
+          "doc-1",
+          "doc-2",
+          "risk-1"
+        ],
+        "confidence": "medium"
+      },
+      "first_week_contribution": {
+        "answer": "In the first week, use the reading path to build context, validate the run workflow, inspect the highest-risk files, and propose one small documentation, test, or validation PR.",
+        "bullets": [
+          "Day 1: read `src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java` and the next ranked files.",
+          "Validate the detected command path: `mvn test`, `mvn package`.",
+          "Review the top risk-ranked file: `src/main/java/org/springframework/samples/petclinic/owner/Owner.java`.",
+          "Open with a scoped PR idea: Verify and document the detected run commands."
+        ],
+        "evidence_refs": [
+          "start-1",
+          "start-2",
+          "cmd-1",
+          "cmd-2",
+          "risk-1",
+          "cmd-1",
+          "cmd-2",
+          "cmd-3",
+          "doc-1",
+          "doc-2",
+          "warn-1"
+        ],
+        "confidence": "high"
+      }
+    },
+    "first_pr_plan": [
+      {
+        "title": "Verify and document the detected run commands",
+        "rationale": "The report found run commands; a realistic first PR is to confirm they work and improve nearby setup notes if the current docs are thin.",
+        "suggested_files": [
+          "LICENSE.txt",
+          "README.md"
+        ],
+        "evidence_refs": [
+          "cmd-1",
+          "cmd-2",
+          "cmd-3",
+          "doc-1",
+          "doc-2"
+        ],
+        "risk": "low"
+      },
+      {
+        "title": "Add or expand contributor guidance",
+        "rationale": "No CONTRIBUTING guide was detected. A focused first PR can clarify setup, test commands, and how contributors should validate changes.",
+        "suggested_files": [
+          "LICENSE.txt",
+          "README.md"
+        ],
+        "evidence_refs": [
+          "doc-1",
+          "doc-2",
+          "cmd-1",
+          "cmd-2"
+        ],
+        "risk": "low"
+      },
+      {
+        "title": "Add tests near src/main/java/org/springframework/samples/petclinic/owner/Owner.java",
+        "rationale": "This file is risk-ranked and has test proximity 0 (a static signal, not measured coverage), making it a concrete candidate for a small test-focused contribution.",
+        "suggested_files": [
+          "src/main/java/org/springframework/samples/petclinic/owner/Owner.java"
+        ],
+        "evidence_refs": [
+          "risk-1"
+        ],
+        "risk": "medium"
+      }
+    ],
+    "resume_bullets": [
+      {
+        "audience": "resume",
+        "text": "Analyzed spring-projects/spring-petclinic with RepoAtlas-style static signals, mapping 12 reading candidates, 30 risk-ranked files, 13 run commands, and 6 architecture nodes into an interview-ready technical brief.",
+        "evidence_refs": [
+          "start-1",
+          "start-2",
+          "risk-1",
+          "risk-2",
+          "cmd-1",
+          "arch-1"
+        ]
+      },
+      {
+        "audience": "linkedin",
+        "text": "Analyzed spring-projects/spring-petclinic with RepoAtlas-style static signals, mapping 12 reading candidates, 30 risk-ranked files, 13 run commands, and 6 architecture nodes into an interview-ready technical brief.",
+        "evidence_refs": [
+          "start-1",
+          "start-2",
+          "risk-1",
+          "risk-2",
+          "cmd-1",
+          "arch-1"
+        ]
+      }
+    ],
+    "evidence_refs": [
+      {
+        "id": "arch-1",
+        "kind": "architecture",
+        "label": "Architecture graph summary",
+        "detail": "6 nodes and 14 edges detected from supported import/dependency analysis."
+      },
+      {
+        "id": "start-1",
+        "kind": "start_here",
+        "label": "Reading candidate: src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java",
+        "detail": "Priority 100: imported by 3 classes; detected entrypoint"
+      },
+      {
+        "id": "start-2",
+        "kind": "start_here",
+        "label": "Reading candidate: README.md",
+        "path": "README.md",
+        "detail": "Priority 89: root README documentation"
+      },
+      {
+        "id": "start-3",
+        "kind": "start_here",
+        "label": "Reading candidate: src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java",
+        "detail": "Priority 84: imported by 1 classes; detected entrypoint"
+      },
+      {
+        "id": "start-4",
+        "kind": "start_here",
+        "label": "Reading candidate: src/main/java/org/springframework/samples/petclinic/owner/PetController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/PetController.java",
+        "detail": "Priority 84: imported by 1 classes; detected entrypoint"
+      },
+      {
+        "id": "start-5",
+        "kind": "start_here",
+        "label": "Reading candidate: src/main/java/org/springframework/samples/petclinic/owner/VisitController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/VisitController.java",
+        "detail": "Priority 84: imported by 1 classes; detected entrypoint"
+      },
+      {
+        "id": "start-6",
+        "kind": "start_here",
+        "label": "Reading candidate: src/main/java/org/springframework/samples/petclinic/system/CrashController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/system/CrashController.java",
+        "detail": "Priority 84: imported by 1 classes; detected entrypoint"
+      },
+      {
+        "id": "start-7",
+        "kind": "start_here",
+        "label": "Reading candidate: src/main/java/org/springframework/samples/petclinic/system/WelcomeController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/system/WelcomeController.java",
+        "detail": "Priority 84: imported by 1 classes; detected entrypoint"
+      },
+      {
+        "id": "start-8",
+        "kind": "start_here",
+        "label": "Reading candidate: src/main/java/org/springframework/samples/petclinic/vet/VetController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/vet/VetController.java",
+        "detail": "Priority 84: imported by 1 classes; detected entrypoint"
+      },
+      {
+        "id": "start-9",
+        "kind": "start_here",
+        "label": "Reading candidate: build.gradle",
+        "path": "build.gradle",
+        "detail": "Priority 62: Gradle build definition"
+      },
+      {
+        "id": "start-10",
+        "kind": "start_here",
+        "label": "Reading candidate: pom.xml",
+        "path": "pom.xml",
+        "detail": "Priority 62: Maven build definition"
+      },
+      {
+        "id": "start-11",
+        "kind": "start_here",
+        "label": "Reading candidate: settings.gradle",
+        "path": "settings.gradle",
+        "detail": "Priority 22: Gradle settings"
+      },
+      {
+        "id": "start-12",
+        "kind": "start_here",
+        "label": "Reading candidate: src/main/java/org/springframework/samples/petclinic/owner/Owner.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/Owner.java",
+        "detail": "Priority 0: imported by 9 classes; directly imported by an entrypoint"
+      },
+      {
+        "id": "risk-1",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/Owner.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/Owner.java",
+        "detail": "Risk 85: size p92 (bytes=4533), fan-in p95 (9), fan-out p85 (3), complexity p95 (40), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-2",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/PetController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/PetController.java",
+        "detail": "Risk 76: size p98 (bytes=6584), fan-in p37 (1), fan-out p98 (6), complexity p98 (69), test proximity 100, recent churn p95"
+      },
+      {
+        "id": "risk-3",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/Pet.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/Pet.java",
+        "detail": "Risk 74: size p75 (bytes=2186), fan-in p95 (9), fan-out p85 (3), complexity p60 (5), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-4",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/vet/Vet.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/vet/Vet.java",
+        "detail": "Risk 72: size p78 (bytes=2190), fan-in p85 (7), fan-out p85 (3), complexity p78 (10), test proximity 100"
+      },
+      {
+        "id": "risk-5",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java",
+        "detail": "Risk 70: size p95 (bytes=6264), fan-in p37 (1), fan-out p73 (2), complexity p92 (30), test proximity 100, recent churn p98"
+      },
+      {
+        "id": "risk-6",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/VisitController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/VisitController.java",
+        "detail": "Risk 67: size p88 (bytes=3789), fan-in p37 (1), fan-out p95 (4), complexity p88 (20), test proximity 100"
+      },
+      {
+        "id": "risk-7",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/PetTypeFormatter.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/PetTypeFormatter.java",
+        "detail": "Risk 61: size p65 (bytes=1987), fan-in p55 (2), fan-out p73 (2), complexity p82 (18), test proximity 100"
+      },
+      {
+        "id": "risk-8",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/OwnerRepository.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/OwnerRepository.java",
+        "detail": "Risk 60: size p82 (bytes=2298), fan-in p88 (8), fan-out p52 (1), complexity p25 (2), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-9",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java",
+        "detail": "Risk 59: size p45 (bytes=1367), fan-in p67 (4), fan-out p52 (1), complexity p72 (8), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-10",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/Visit.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/Visit.java",
+        "detail": "Risk 59: size p52 (bytes=1698), fan-in p75 (5), fan-out p52 (1), complexity p60 (5), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-11",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/vet/VetController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/vet/VetController.java",
+        "detail": "Risk 58: size p85 (bytes=2470), fan-in p37 (1), fan-out p85 (3), complexity p60 (5), test proximity 100"
+      },
+      {
+        "id": "risk-12",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/model/Person.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Person.java",
+        "detail": "Risk 57: size p48 (bytes=1431), fan-in p67 (4), fan-out p52 (1), complexity p60 (5), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-13",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/PetValidator.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/PetValidator.java",
+        "detail": "Risk 57: size p58 (bytes=1807), fan-in p55 (2), fan-out p52 (1), complexity p85 (19), test proximity 100"
+      },
+      {
+        "id": "risk-14",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/vet/VetRepository.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/vet/VetRepository.java",
+        "detail": "Risk 56: size p68 (bytes=1994), fan-in p82 (6), fan-out p52 (1), complexity p25 (2), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-15",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/PetClinicRuntimeHints.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/PetClinicRuntimeHints.java",
+        "detail": "Risk 54: size p55 (bytes=1715), fan-in p37 (1), fan-out p85 (3), complexity p42 (4), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-16",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/vet/Vets.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/vet/Vets.java",
+        "detail": "Risk 52: size p38 (bytes=1215), fan-in p37 (1), fan-out p52 (1), complexity p75 (9), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-17",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java",
+        "detail": "Risk 51: size p42 (bytes=1344), fan-in p75 (5), fan-out p17 (0), complexity p60 (5), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-18",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/PetType.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/PetType.java",
+        "detail": "Risk 51: size p22 (bytes=951), fan-in p95 (9), fan-out p52 (1), complexity p25 (2), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-19",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/PetTypeRepository.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/PetTypeRepository.java",
+        "detail": "Risk 49: size p35 (bytes=1208), fan-in p75 (5), fan-out p52 (1), complexity p25 (2), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-20",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java",
+        "detail": "Risk 48: size p28 (bytes=1144), fan-in p62 (3), fan-out p52 (1), complexity p42 (4), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-21",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/vet/Specialty.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/vet/Specialty.java",
+        "detail": "Risk 43: size p25 (bytes=998), fan-in p55 (2), fan-out p52 (1), complexity p25 (2), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-22",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/system/WebConfiguration.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/system/WebConfiguration.java",
+        "detail": "Risk 41: size p62 (bytes=1947), fan-in p12 (0), fan-out p17 (0), complexity p60 (5), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-23",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/system/CacheConfiguration.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/system/CacheConfiguration.java",
+        "detail": "Risk 39: size p72 (bytes=2014), fan-in p12 (0), fan-out p17 (0), complexity p42 (4), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-24",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/system/CrashController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/system/CrashController.java",
+        "detail": "Risk 32: size p32 (bytes=1204), fan-in p37 (1), fan-out p17 (0), complexity p42 (4), test proximity 100"
+      },
+      {
+        "id": "risk-25",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/system/WelcomeController.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/system/WelcomeController.java",
+        "detail": "Risk 30: size p18 (bytes=898), fan-in p37 (1), fan-out p17 (0), complexity p42 (4), test proximity 100"
+      },
+      {
+        "id": "risk-26",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/model/package-info.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/package-info.java",
+        "detail": "Risk 21: size p15 (bytes=755), fan-in p12 (0), fan-out p17 (0), complexity p8 (0), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-27",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/system/package-info.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/system/package-info.java",
+        "detail": "Risk 21: size p12 (bytes=676), fan-in p12 (0), fan-out p17 (0), complexity p8 (0), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-28",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/owner/package-info.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/owner/package-info.java",
+        "detail": "Risk 20: size p8 (bytes=675), fan-in p12 (0), fan-out p17 (0), complexity p8 (0), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-29",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/package-info.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/package-info.java",
+        "detail": "Risk 19: size p2 (bytes=669), fan-in p12 (0), fan-out p17 (0), complexity p8 (0), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "risk-30",
+        "kind": "danger_zone",
+        "label": "Risk candidate: src/main/java/org/springframework/samples/petclinic/vet/package-info.java",
+        "path": "src/main/java/org/springframework/samples/petclinic/vet/package-info.java",
+        "detail": "Risk 19: size p5 (bytes=673), fan-in p12 (0), fan-out p17 (0), complexity p8 (0), test proximity 0, no nearby tests"
+      },
+      {
+        "id": "cmd-1",
+        "kind": "command",
+        "label": "Run command: mvn test",
+        "command": "mvn test",
+        "detail": "Source: pom.xml; test"
+      },
+      {
+        "id": "cmd-2",
+        "kind": "command",
+        "label": "Run command: mvn package",
+        "command": "mvn package",
+        "detail": "Source: pom.xml; package"
+      },
+      {
+        "id": "cmd-3",
+        "kind": "command",
+        "label": "Run command: ./gradlew test",
+        "command": "./gradlew test",
+        "detail": "Source: build.gradle; test"
+      },
+      {
+        "id": "cmd-4",
+        "kind": "command",
+        "label": "Run command: ./gradlew build",
+        "command": "./gradlew build",
+        "detail": "Source: build.gradle; build"
+      },
+      {
+        "id": "cmd-5",
+        "kind": "command",
+        "label": "Run command: docker compose up",
+        "command": "docker compose up",
+        "detail": "Source: docker-compose; up"
+      },
+      {
+        "id": "cmd-6",
+        "kind": "command",
+        "label": "Run command: docker compose up --build",
+        "command": "docker compose up --build",
+        "detail": "Source: docker-compose; build and up"
+      },
+      {
+        "id": "cmd-7",
+        "kind": "command",
+        "label": "Run command: ./gradlew bootRun",
+        "command": "./gradlew bootRun",
+        "detail": "Source: README; from readme"
+      },
+      {
+        "id": "cmd-8",
+        "kind": "command",
+        "label": "Run command: docker images | grep petclinic",
+        "command": "docker images | grep petclinic",
+        "detail": "Source: README; from readme"
+      },
+      {
+        "id": "cmd-9",
+        "kind": "command",
+        "label": "Run command: docker run -p 8080:8080 docker.io/library/spring-petclinic:latest",
+        "command": "docker run -p 8080:8080 docker.io/library/spring-petclinic:latest",
+        "detail": "Source: README; from readme"
+      },
+      {
+        "id": "cmd-10",
+        "kind": "command",
+        "label": "Run command: docker run -e MYSQL_USER=petclinic -e MYSQL_PASSWORD=petclinic -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=petclinic -p 3306:3306 mysql:9.7",
+        "command": "docker run -e MYSQL_USER=petclinic -e MYSQL_PASSWORD=petclinic -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=petclinic -p 3306:3306 mysql:9.7",
+        "detail": "Source: README; from readme"
+      },
+      {
+        "id": "cmd-11",
+        "kind": "command",
+        "label": "Run command: docker run -e POSTGRES_USER=petclinic -e POSTGRES_PASSWORD=petclinic -e POSTGRES_DB=petclinic -p 5432:5432 postgres:18.4",
+        "command": "docker run -e POSTGRES_USER=petclinic -e POSTGRES_PASSWORD=petclinic -e POSTGRES_DB=petclinic -p 5432:5432 postgres:18.4",
+        "detail": "Source: README; from readme"
+      },
+      {
+        "id": "cmd-12",
+        "kind": "command",
+        "label": "Run command: docker compose up mysql",
+        "command": "docker compose up mysql",
+        "detail": "Source: README; from readme"
+      },
+      {
+        "id": "cmd-13",
+        "kind": "command",
+        "label": "Run command: docker compose up postgres",
+        "command": "docker compose up postgres",
+        "detail": "Source: README; from readme"
+      },
+      {
+        "id": "doc-1",
+        "kind": "doc",
+        "label": "Project document: LICENSE.txt",
+        "path": "LICENSE.txt",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "Apache License\n                           Version 2.0, January 2004\n                        https://www.apache.org/licenses/"
+      },
+      {
+        "id": "doc-2",
+        "kind": "doc",
+        "label": "Project document: README.md",
+        "path": "README.md",
+        "line_start": 1,
+        "line_end": 5,
+        "snippet": "# Spring PetClinic Sample Application [![Build Status](https://github.com/spring-projects/spring-petclinic/actions/workflows/maven-build.yml/badge.svg)](https://github.com/spring-projects/spring-petclinic/actions/workflows/maven-build.yml)[![Build Status](https://github.com/spring-projects/spring-pe…"
+      },
+      {
+        "id": "ci-1",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/deploy-and-test-cluster.yml",
+        "path": ".github/workflows/deploy-and-test-cluster.yml"
+      },
+      {
+        "id": "ci-2",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/gradle-build.yml",
+        "path": ".github/workflows/gradle-build.yml"
+      },
+      {
+        "id": "ci-3",
+        "kind": "ci",
+        "label": "CI config: .github/workflows/maven-build.yml",
+        "path": ".github/workflows/maven-build.yml"
+      },
+      {
+        "id": "warn-1",
+        "kind": "warning",
+        "label": "Analysis warning 1",
+        "detail": "Architecture reduced from file-level (49 files) to package-level (6 packages)."
+      }
+    ],
+    "warnings": [
+      {
+        "message": "Architecture reduced from file-level (49 files) to package-level (6 packages).",
+        "evidence_refs": [
+          "warn-1"
+        ]
+      }
+    ],
+    "confidence_assessment": {
+      "level": "high",
+      "reasons": [
+        "README or key docs detected",
+        "13 run command(s) extracted",
+        "Architecture graph has dependency edges",
+        "19 test file(s) detected",
+        "Purpose extracted from readme_heading"
+      ],
+      "gaps": []
+    },
+    "walkthrough_script": {
+      "thirty_second": "Spring Boot application: Spring PetClinic Sample Application… Start at src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java, validate with mvn test.",
+      "two_minute": "Spring Boot application: Spring PetClinic Sample Application… Start at src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java, validate with mvn test. Review `src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java`, `README.md`, `src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java`, then discuss architecture (6 nodes) and top risk file src/main/java/org/springframework/samples/petclinic/owner/Owner.java.",
+      "deep_technical": "Spring Boot application: Spring PetClinic Sample Application… Start at src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java, validate with mvn test. Review `src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java`, `README.md`, `src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java`, then discuss architecture (6 nodes) and top risk file src/main/java/org/springframework/samples/petclinic/owner/Owner.java. Key surfaces include BaseEntity, NamedEntity, Person, Owner, Pet.",
+      "tradeoffs_to_mention": [],
+      "improvements_next": [
+        "Review test proximity and complexity around src/main/java/org/springframework/samples/petclinic/owner/Owner.java",
+        "Review test proximity and complexity around src/main/java/org/springframework/samples/petclinic/owner/PetController.java"
+      ],
+      "evidence_refs": [
+        "start-1",
+        "start-2",
+        "arch-1",
+        "cmd-1"
+      ]
+    },
+    "behavioral_hooks": [
+      {
+        "prompt": "Challenge (STAR template)",
+        "answer_starter": "Discuss how complexity in `src/main/java/org/springframework/samples/petclinic/owner/Owner.java` is managed while tests exist nearby.",
+        "evidence_refs": [
+          "risk-1"
+        ],
+        "sufficient_evidence": true
+      },
+      {
+        "prompt": "Tradeoff (STAR template)",
+        "answer_starter": "Not enough evidence. Use a different example or skip this prompt.",
+        "evidence_refs": [],
+        "sufficient_evidence": false
+      },
+      {
+        "prompt": "Learning takeaway (STAR template)",
+        "answer_starter": "Note where static analysis had limited coverage: Architecture reduced from file-level (49 files) to package-level (6 packages).",
+        "evidence_refs": [
+          "warn-1"
+        ],
+        "sufficient_evidence": true
+      },
+      {
+        "prompt": "Validation approach (STAR template)",
+        "answer_starter": "Describe validating changes with `mvn test` and cross-checking nearby docs.",
+        "evidence_refs": [
+          "cmd-1"
+        ],
+        "sufficient_evidence": true
+      }
+    ],
+    "interview_questions": [
+      {
+        "question": "What makes `src/main/java/org/springframework/samples/petclinic/owner/Owner.java` a danger zone in this codebase?",
+        "rationale": "Top risk-ranked file with measurable breakdown.",
+        "evidence_refs": [
+          "risk-1"
+        ]
+      },
+      {
+        "question": "What tests would you add near `src/main/java/org/springframework/samples/petclinic/owner/Owner.java`?",
+        "rationale": "High-risk file with low test proximity (a static signal, not measured coverage).",
+        "evidence_refs": [
+          "risk-1"
+        ]
+      },
+      {
+        "question": "What are the limits of static analysis for this repository?",
+        "rationale": "Warnings and missing git history bound confidence.",
+        "evidence_refs": [],
+        "generic": true
+      }
+    ]
+  }
+}

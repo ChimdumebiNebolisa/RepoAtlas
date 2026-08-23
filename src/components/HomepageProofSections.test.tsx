@@ -14,7 +14,6 @@ import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import {
   HomepageHero,
   HomepageSampleProof,
-  HomepageSupportedWorkflows,
   HomepageTrustAndFaq,
   HomepageWalkthroughOutcomes,
 } from "./HomepageProofSections";
