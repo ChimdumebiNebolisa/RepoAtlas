@@ -473,10 +473,6 @@ test("every public proof cluster route connects proof, guidance, and a Candidate
 }) => {
   const proofRoutes = [
     {
-      path: "/",
-      linkName: "Read the full FastAPI example brief",
-    },
-    {
       path: "/interview-preparation",
       linkName: "Inspect the exact-commit FastAPI Candidate Brief",
     },
@@ -514,6 +510,12 @@ test("every public proof cluster route connects proof, guidance, and a Candidate
       "/examples/fastapi-candidate-brief",
     );
   }
+
+  expect((await request.get("/examples")).status()).toBe(200);
+  await page.goto("/");
+  await expect(
+    page.getByRole("link", { name: "Browse Candidate Brief examples" }),
+  ).toHaveAttribute("href", "/examples");
 
   expect((await request.get("/examples/fastapi-candidate-brief")).status()).toBe(200);
   await page.goto("/examples/fastapi-candidate-brief");

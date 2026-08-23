@@ -142,11 +142,29 @@ test.describe("Candidate Brief smoke", () => {
     await expect(
       page.getByRole("heading", { name: "Look inside a sample brief." })
     ).toBeVisible();
-    const publicExample = page.getByRole("link", {
-      name: "Read the full FastAPI example brief",
+    const guideNav = page.getByRole("navigation", {
+      name: "Prepare to explain a repository.",
     });
-    await expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
-    await expect(publicExample).not.toHaveClass(/btn-primary/);
+    const galleryLink = guideNav.getByRole("link", {
+      name: "Browse Candidate Brief examples",
+    });
+    await expect(galleryLink).toHaveAttribute("href", "/examples");
+    await expect(galleryLink).not.toHaveClass(/btn-primary/);
+    await expect(guideNav.locator('a[href="/examples"]')).toHaveCount(1);
+    await expect(
+      guideNav.locator('a[href="/examples/fastapi-candidate-brief"]')
+    ).toHaveCount(0);
+    await expect(
+      guideNav.locator('a[href="/examples/click-candidate-brief"]')
+    ).toHaveCount(0);
+
+    for (let tabCount = 0; tabCount < 30; tabCount += 1) {
+      if (await galleryLink.evaluate((link) => link === document.activeElement)) {
+        break;
+      }
+      await page.keyboard.press("Tab");
+    }
+    await expect(galleryLink).toBeFocused();
     await expect(
       page.getByRole("heading", { name: "Analyze your repository." })
     ).toBeVisible();
