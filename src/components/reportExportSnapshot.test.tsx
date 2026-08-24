@@ -51,7 +51,7 @@ describe("renderReportCanvasBeforeDeadline", () => {
       backgroundColor: "#ffffff",
       scale: 1.5,
       useCORS: true,
-      windowWidth: 1_200,
+      windowWidth: window.innerWidth,
     });
   });
 
@@ -88,6 +88,11 @@ describe("renderReportCanvasBeforeDeadline", () => {
     expect(html2canvas.mock.calls.map(([, options]) => options.height)).toEqual([
       2_048, 2_048, 904,
     ]);
+    expect(
+      html2canvas.mock.calls.every(
+        ([, options]) => options.windowWidth === window.innerWidth
+      )
+    ).toBe(true);
     expect(
       html2canvas.mock.calls.every(([, options]) =>
         !Object.prototype.hasOwnProperty.call(options, "ignoreElements")

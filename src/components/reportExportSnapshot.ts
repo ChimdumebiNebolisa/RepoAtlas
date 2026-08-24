@@ -33,11 +33,18 @@ export async function renderReportCanvasBeforeDeadline({
 }) {
   const width = Math.max(1, exportNode.scrollWidth);
   const height = Math.max(1, exportNode.scrollHeight);
+  // The clone must use the viewport that produced `height`; otherwise mobile
+  // layout is measured tall but rendered at desktop breakpoints, blanking the
+  // trailing slices.
+  const windowWidth = Math.max(
+    1,
+    exportNode.ownerDocument.defaultView?.innerWidth ?? 1_200
+  );
   const sharedOptions = {
     backgroundColor: "#ffffff",
     scale,
     useCORS: true,
-    windowWidth: 1_200,
+    windowWidth,
   } as const;
 
   if (height <= REPORT_EXPORT_SNAPSHOT_SLICE_HEIGHT) {
