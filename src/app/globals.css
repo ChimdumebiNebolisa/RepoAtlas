@@ -3820,7 +3820,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .page-container { width: min(calc(100% - 2rem), var(--container)); }
   .site-header { min-height: 4.25rem; }
   .header-badges { display: none; }
-  .hero { min-height: calc(100dvh - 4.25rem); padding-block: 3rem 4.5rem; }
+  .hero { min-height: calc(100dvh - 4.25rem + 1px); padding-block: 3rem 4.5rem; }
   .hero h1 { font-size: clamp(2.15rem, 9vw, 2.5rem); }
   .hero-description { font-size: 0.95rem; }
   .hero-actions, .form-actions { align-items: stretch; flex-direction: column; }
