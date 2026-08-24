@@ -51,28 +51,12 @@ describe("renderReportCanvasBeforeDeadline", () => {
       backgroundColor: "#ffffff",
       scale: 1.5,
       useCORS: true,
-      windowWidth: 1_200,
+      windowWidth: window.innerWidth,
     });
   });
 
-  it("renders a long report in bounded slices and excludes off-slice descendants", async () => {
+  it("renders a long report in bounded slices without collapsing off-slice layout", async () => {
     const node = exportNode(1_000, 5_000);
-    const laterChild = document.createElement("section");
-    node.appendChild(laterChild);
-    vi.spyOn(laterChild, "getBoundingClientRect").mockReturnValue({
-      top: 2_500,
-      bottom: 2_600,
-      left: 0,
-      right: 100,
-      width: 100,
-      height: 100,
-      x: 0,
-      y: 2_500,
-      toJSON: () => ({}),
-    });
-    const zeroSizeChild = document.createElement("span");
-    node.appendChild(zeroSizeChild);
-    const unrelated = document.createElement("aside");
     const drawImage = vi.fn();
     const fillRect = vi.fn();
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
@@ -83,7 +67,7 @@ describe("renderReportCanvasBeforeDeadline", () => {
     const html2canvas = vi.fn().mockImplementation(
       async (
         _node: HTMLElement,
-        options: { height: number; ignoreElements: (element: Element) => boolean }
+        options: { height: number }
       ) => canvas(1_000, options.height)
     );
 
@@ -104,12 +88,16 @@ describe("renderReportCanvasBeforeDeadline", () => {
     expect(html2canvas.mock.calls.map(([, options]) => options.height)).toEqual([
       2_048, 2_048, 904,
     ]);
-    const firstOptions = html2canvas.mock.calls[0]![1];
-    const secondOptions = html2canvas.mock.calls[1]![1];
-    expect(firstOptions.ignoreElements(laterChild)).toBe(true);
-    expect(secondOptions.ignoreElements(laterChild)).toBe(false);
-    expect(firstOptions.ignoreElements(zeroSizeChild)).toBe(false);
-    expect(firstOptions.ignoreElements(unrelated)).toBe(false);
+    expect(
+      html2canvas.mock.calls.every(
+        ([, options]) => options.windowWidth === window.innerWidth
+      )
+    ).toBe(true);
+    expect(
+      html2canvas.mock.calls.every(([, options]) =>
+        !Object.prototype.hasOwnProperty.call(options, "ignoreElements")
+      )
+    ).toBe(true);
     expect(fillRect).toHaveBeenCalledTimes(1);
     expect(drawImage).toHaveBeenCalledTimes(3);
   });
