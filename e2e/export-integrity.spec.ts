@@ -2,6 +2,7 @@ import { expect, test, type Download, type Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import { createCanvas } from "@napi-rs/canvas";
 import { PNG } from "pngjs";
 import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { Report } from "../src/types/report";
@@ -140,6 +141,34 @@ test("inline Candidate Brief exports valid, readable PDF and PNG files", async (
         operator === OPS.paintImageMaskXObject
     )
   ).toBeTruthy();
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const pdfPage = await pdf.getPage(pageNumber);
+    const renderViewport = pdfPage.getViewport({ scale: 0.5 });
+    const renderCanvas = createCanvas(
+      Math.ceil(renderViewport.width),
+      Math.ceil(renderViewport.height)
+    );
+    const renderContext = renderCanvas.getContext("2d");
+    await pdfPage.render({
+      canvas: null,
+      canvasContext: renderContext as unknown as CanvasRenderingContext2D,
+      viewport: renderViewport,
+    }).promise;
+    const rendered = renderContext.getImageData(
+      0,
+      0,
+      renderCanvas.width,
+      renderCanvas.height
+    );
+    expect(
+      nonWhitePixelRatio({
+        width: renderCanvas.width,
+        height: renderCanvas.height,
+        data: rendered.data,
+      } as PNG),
+      `PDF page ${pageNumber} should contain visible report content`
+    ).toBeGreaterThan(0.002);
+  }
   await pdf.destroy();
 
   const pngDownload = await downloadFromButton(page, "Export PNG");

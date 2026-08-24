@@ -16,21 +16,6 @@ function throwIfExportExpired(
   if (Date.now() >= deadline) throw new Error(timeoutMessage);
 }
 
-function isOutsideSnapshotSlice(
-  element: Element,
-  exportNode: HTMLElement,
-  exportTop: number,
-  sourceY: number,
-  sliceHeight: number
-) {
-  if (!exportNode.contains(element)) return false;
-  const bounds = element.getBoundingClientRect();
-  if (bounds.width === 0 && bounds.height === 0) return false;
-  const elementTop = bounds.top - exportTop;
-  const elementBottom = elementTop + bounds.height;
-  return elementBottom <= sourceY || elementTop >= sourceY + sliceHeight;
-}
-
 export async function renderReportCanvasBeforeDeadline({
   exportNode,
   html2canvas,
@@ -74,8 +59,6 @@ export async function renderReportCanvasBeforeDeadline({
   }
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, canvas.width, canvas.height);
-  const exportTop = exportNode.getBoundingClientRect().top;
-
   try {
     for (
       let sourceY = 0;
@@ -98,14 +81,6 @@ export async function renderReportCanvasBeforeDeadline({
           y: sourceY,
           width,
           height: sliceHeight,
-          ignoreElements: (element) =>
-            isOutsideSnapshotSlice(
-              element,
-              exportNode,
-              exportTop,
-              sourceY,
-              sliceHeight
-            ),
         }),
         deadline,
         timeoutMessage
