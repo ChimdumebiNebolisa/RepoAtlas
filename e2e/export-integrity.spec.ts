@@ -88,7 +88,11 @@ async function openControlledInlineReport(
   return report!;
 }
 
-function nonWhitePixelRatio(png: PNG): number {
+function nonWhitePixelRatio(png: {
+  width: number;
+  height: number;
+  data: Uint8Array | Uint8ClampedArray;
+}): number {
   let sampled = 0;
   let nonWhite = 0;
   const stride = 97;
@@ -165,7 +169,7 @@ test("inline Candidate Brief exports valid, readable PDF and PNG files", async (
         width: renderCanvas.width,
         height: renderCanvas.height,
         data: rendered.data,
-      } as PNG),
+      }),
       `PDF page ${pageNumber} should contain visible report content`
     ).toBeGreaterThan(0.002);
   }
