@@ -190,18 +190,6 @@ export default async function RepositoryWalkthroughInterviewPage() {
             </p>
           )}
 
-          <div className="guide-sample-action">
-            <div>
-              <h3>Practice on the bundled repository.</h3>
-              <p>
-                Generate the complete Candidate Brief, then compare its reading path and file-backed
-                talking points with the method above. No upload is needed.
-              </p>
-            </div>
-            <Link className="btn btn-secondary guide-primary-action" href="/?source=interview_preparation&sample=1#analyze">
-              Run the bundled sample <span aria-hidden="true">→</span>
-            </Link>
-          </div>
           <p className="guide-product-boundary">
             <Link href="/examples/fastapi-candidate-brief">
               Compare the method with the exact-commit FastAPI Candidate Brief

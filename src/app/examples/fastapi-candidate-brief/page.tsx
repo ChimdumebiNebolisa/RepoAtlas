@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
+import { candidateBriefSampleAction } from "@/lib/candidateBriefContent";
 
 const canonicalUrl = "https://repo-atlas-phi.vercel.app/examples/fastapi-candidate-brief";
 const repositoryUrl = "https://github.com/fastapi/full-stack-fastapi-template";
@@ -190,7 +191,7 @@ export default function FastApiCandidateBriefExamplePage() {
               {" "}with a defensible reading order and clear evidence limits.
             </p>
             <p>
-              <Link href="/?source=fastapi_example&sample=1#analyze">Open the bundled Candidate Brief</Link>
+              <Link href="/?source=fastapi_example&sample=1#analyze">{candidateBriefSampleAction}</Link>
               {" "}or inspect the{" "}
               <a href={`${repositoryUrl}/tree/${commit}`}>exact source revision</a>.
             </p>

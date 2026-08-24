@@ -17,7 +17,7 @@ describe("GuideStartPanel", () => {
       name: "Start a repository walkthrough",
     });
     const sampleAction = within(panel).getByRole("link", {
-      name: "Run the bundled sample",
+      name: "Open the sample Candidate Brief",
     });
     const githubAction = within(panel).getByRole("link", {
       name: "Use a public GitHub repository",
@@ -55,7 +55,7 @@ describe("GuideStartPanel", () => {
       "You supply the rationale, constraints, and outcomes.",
     );
     expect(
-      within(panel).getByRole("link", { name: "Run the bundled sample" }),
+      within(panel).getByRole("link", { name: "Open the sample Candidate Brief" }),
     ).toHaveClass("btn-primary");
     expect(
       within(panel).getByRole("link", {

@@ -24,3 +24,5 @@ export const candidateBriefHomepagePromise =
   "Answer that question with a ranked reading path and talking points backed by source files.";
 
 export const candidateBriefLanguageCoverage = "TypeScript/JavaScript, Python, and Java";
+
+export const candidateBriefSampleAction = "Open the sample Candidate Brief";

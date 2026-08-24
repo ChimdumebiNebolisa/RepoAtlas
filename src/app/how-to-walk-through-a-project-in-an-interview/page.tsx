@@ -249,18 +249,6 @@ export default async function AuthoredProjectWalkthroughPage() {
             </p>
           )}
 
-          <div className="guide-sample-action">
-            <div>
-              <h3>Practice with the bundled repository.</h3>
-              <p>
-                Open the complete Candidate Brief and identify which technical claims the files can
-                support. No upload is needed.
-              </p>
-            </div>
-            <Link className="btn btn-secondary guide-primary-action" href="/?source=interview_preparation&sample=1#analyze">
-              Run the bundled sample <span aria-hidden="true">→</span>
-            </Link>
-          </div>
           <p className="guide-product-boundary">
             <Link href="/examples/fastapi-candidate-brief">
               See the file-backed half in the public FastAPI Candidate Brief
