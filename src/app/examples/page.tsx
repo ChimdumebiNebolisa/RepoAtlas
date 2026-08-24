@@ -64,7 +64,6 @@ export default function ExamplesGalleryPage() {
       <article data-testid="examples-body">
         <header className="examples-gallery-hero page-container">
           <div className="examples-gallery-hero-copy">
-            <p className="eyebrow">Exact-commit Candidate Briefs</p>
             <h1>See how RepoAtlas explains real repositories.</h1>
             <p>
               Choose a public brief to inspect its reading path, architecture context, risk signals,

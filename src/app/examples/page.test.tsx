@@ -76,11 +76,15 @@ describe("Candidate Brief examples gallery", () => {
   it("keeps one primary browse action and stays inside the tool-page word cap", () => {
     const { container } = render(<ExamplesGalleryPage />);
     const primaryActions = container.querySelectorAll(".report-action-primary");
+    const heroTextBlocks = container.querySelectorAll(
+      ".examples-gallery-hero-copy > h1, .examples-gallery-hero-copy > p",
+    );
     const bodyText = screen.getByTestId("examples-body").textContent ?? "";
     const bodyWordCount = bodyText.trim().split(/\s+/u).filter(Boolean).length;
 
     expect(primaryActions).toHaveLength(1);
     expect(primaryActions[0]).toHaveAttribute("href", "#briefs");
+    expect(heroTextBlocks).toHaveLength(2);
     expect(bodyWordCount).toBeLessThanOrEqual(TOOL_PAGE_WORD_CAP);
   });
 });
