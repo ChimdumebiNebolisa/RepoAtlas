@@ -111,13 +111,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .hero {
-  display: grid;
+  display: flex;
   min-height: calc(100dvh - 4.75rem);
-  grid-template-columns: minmax(0, 1.05fr) minmax(25rem, 0.95fr);
   align-items: center;
-  gap: clamp(3rem, 7vw, 7rem);
   padding-block: 5rem 6.5rem;
 }
+
+.hero-copy { width: min(100%, 52rem); }
 
 .eyebrow, .section-kicker {
   margin: 0;
@@ -129,7 +129,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .hero h1 {
-  max-width: 15ch;
+  max-width: 13ch;
   margin: 0;
   font-size: clamp(3.2rem, 4.25vw, 4.6rem);
   font-weight: 680;
@@ -765,6 +765,24 @@ button, a { -webkit-tap-highlight-color: transparent; }
   min-height: 4.75rem;
   align-items: center;
   padding: 0.95rem 1rem;
+}
+.analysis-intent-examples {
+  margin: 0.6rem 0 0;
+  color: #61736a;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+.analysis-intent-examples a {
+  color: var(--accent-dark);
+  font-weight: 700;
+  text-decoration-color: rgba(8, 122, 85, 0.32);
+  text-underline-offset: 0.2em;
+}
+.analysis-intent-examples a:hover { text-decoration-color: currentColor; }
+.analysis-intent-examples a:focus-visible {
+  border-radius: 0.2rem;
+  outline: 3px solid rgba(8, 122, 85, 0.2);
+  outline-offset: 3px;
 }
 .analysis-intent-grid {
   display: grid;
@@ -3802,7 +3820,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .page-container { width: min(calc(100% - 2rem), var(--container)); }
   .site-header { min-height: 4.25rem; }
   .header-badges { display: none; }
-  .hero { min-height: auto; padding-block: 2rem 2.75rem; }
+  .hero { min-height: calc(100dvh - 4.25rem + 1px); padding-block: 3rem 4.5rem; }
   .hero h1 { font-size: clamp(2.15rem, 9vw, 2.5rem); }
   .hero-description { font-size: 0.95rem; }
   .hero-actions, .form-actions { align-items: stretch; flex-direction: column; }

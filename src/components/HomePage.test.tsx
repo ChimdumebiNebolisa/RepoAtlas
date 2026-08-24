@@ -15,21 +15,6 @@ vi.mock("@/components/HomepageProofSections", () => ({
   }: {
     onGenerateSample: () => void;
   }) => <button onClick={onGenerateSample}>Generate from hero</button>,
-  HomepageWalkthroughOutcomes: () => <div>Walkthrough outcomes</div>,
-  HomepageSampleProof: ({
-    showSampleReport,
-    onOpenSample,
-    sectionRef,
-  }: {
-    showSampleReport: boolean;
-    onOpenSample: () => void;
-    sectionRef: React.RefObject<HTMLElement | null>;
-  }) => (
-    <section ref={sectionRef} data-testid="sample-proof">
-      <button onClick={onOpenSample}>Open sample proof</button>
-      {showSampleReport ? <div>Complete sample report</div> : null}
-    </section>
-  ),
   HomepageTrustAndFaq: () => <div>Trust and FAQ</div>,
 }));
 
@@ -42,7 +27,6 @@ vi.mock("@/components/InputForm", async () => {
         onAnalyzeComplete,
         onAnalyzeError,
         loading,
-        sampleButtonRef,
       }: {
         onAnalyzeStart: () => void;
         onAnalyzeComplete: (
@@ -52,7 +36,6 @@ vi.mock("@/components/InputForm", async () => {
         ) => void;
         onAnalyzeError: (message: string) => void;
         loading: boolean;
-        sampleButtonRef?: React.RefObject<HTMLButtonElement | null>;
       },
       forwardedRef: React.ForwardedRef<{
         generateSample: () => void;
@@ -79,7 +62,6 @@ vi.mock("@/components/InputForm", async () => {
       return (
         <div>
           <span>{loading ? "Loading analysis" : "Analysis idle"}</span>
-          <button ref={sampleButtonRef} type="button">Sample action</button>
           <button type="button" onClick={onAnalyzeStart}>Start analysis</button>
           <button
             type="button"
@@ -180,14 +162,13 @@ describe("HomePage completion coordination", () => {
 
   it("starts the bundled sample from the hero without leaving a smooth scroll that can race completion", async () => {
     const user = userEvent.setup();
-    render(<HomePage sampleReport={buildSampleReport()} />);
+    render(<HomePage />);
 
     await user.click(screen.getByRole("button", { name: "Generate from hero" }));
 
     expect(generateSample).toHaveBeenCalledTimes(1);
-    expect(animationFrames).toHaveLength(1);
-    runNextFrame();
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
+    expect(animationFrames).toHaveLength(0);
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
   it("consumes a direct sample request once and keeps its bounded attribution", () => {
@@ -197,7 +178,7 @@ describe("HomePage completion coordination", () => {
       "/?source=comparison_ai_summary&sample=1#analyze",
     );
 
-    render(<HomePage sampleReport={buildSampleReport()} />);
+    render(<HomePage />);
 
     expect(generateSample).toHaveBeenCalledTimes(1);
     expect(window.location.href.endsWith("/?source=comparison_ai_summary#analyze")).toBe(
@@ -212,7 +193,7 @@ describe("HomePage completion coordination", () => {
       "/?source=comparison_structured_preparation&sample=1#analyze",
     );
 
-    render(<HomePage sampleReport={buildSampleReport()} />);
+    render(<HomePage />);
     expect(generateSample).toHaveBeenCalledTimes(1);
 
     // Simulate the framework restoring its hydrated search string after the
@@ -232,22 +213,8 @@ describe("HomePage completion coordination", () => {
     expect(generateSample).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the complete sample proof and schedules it into view", async () => {
-    const user = userEvent.setup();
-    render(<HomePage sampleReport={buildSampleReport()} />);
-
-    await user.click(screen.getByRole("button", { name: "Open sample proof" }));
-
-    expect(screen.getByText("Complete sample report")).toBeInTheDocument();
-    runNextFrame();
-    expect(scrollIntoView).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "start",
-    });
-  });
-
   it("removes an earlier brief when a new analysis starts and keeps it removed on failure", () => {
-    render(<HomePage sampleReport={buildSampleReport()} />);
+    render(<HomePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Complete saved" }));
     expect(screen.getByTestId("generated-report")).toBeInTheDocument();
@@ -266,7 +233,7 @@ describe("HomePage completion coordination", () => {
   });
 
   it("renders truthful inline, saved, and focused completion guidance", () => {
-    render(<HomePage sampleReport={buildSampleReport()} />);
+    render(<HomePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
     expect(
@@ -289,7 +256,7 @@ describe("HomePage completion coordination", () => {
   });
 
   it("offers the repository handoff only after a bundled sample", () => {
-    render(<HomePage sampleReport={buildSampleReport()} />);
+    render(<HomePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
     fireEvent.click(
@@ -310,7 +277,7 @@ describe("HomePage completion coordination", () => {
 
   it("positions and focuses a completed brief without inheriting smooth scrolling", () => {
     document.documentElement.style.scrollBehavior = "smooth";
-    render(<HomePage sampleReport={buildSampleReport()} />);
+    render(<HomePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
     const heading = screen.getByTestId("completed-report-heading");
@@ -336,7 +303,7 @@ describe("HomePage completion coordination", () => {
     });
 
     try {
-      render(<HomePage sampleReport={buildSampleReport()} />);
+      render(<HomePage />);
       fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
       const heading = screen.getByTestId("completed-report-heading");
 
@@ -363,7 +330,7 @@ describe("HomePage completion coordination", () => {
   });
 
   it("cancels a pending completion focus when the report is cleared or the page unmounts", () => {
-    const { unmount } = render(<HomePage sampleReport={buildSampleReport()} />);
+    const { unmount } = render(<HomePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
     expect(animationFrames).toHaveLength(1);
@@ -381,7 +348,7 @@ describe("HomePage completion coordination", () => {
 
   it("keeps the page scroll setting when a completed brief is cleared", () => {
     document.documentElement.style.scrollBehavior = "smooth";
-    render(<HomePage sampleReport={buildSampleReport()} />);
+    render(<HomePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Complete inline" }));
     runNextFrame();

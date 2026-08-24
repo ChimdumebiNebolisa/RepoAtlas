@@ -21,7 +21,7 @@ test("production pages expose the tested security policy", async ({ request }) =
 
 test("production CSP permits the client report PDF export", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: /^Open sample report/i }).first().click();
+  await page.getByRole("button", { name: /Open the sample Candidate Brief/i }).click();
   await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible({
     timeout: 30_000,
   });

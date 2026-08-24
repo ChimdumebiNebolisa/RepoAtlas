@@ -1,29 +1,12 @@
-import type { RefObject } from "react";
-import {
-  candidateBriefHomepagePromise,
-  candidateBriefWalkthroughOutputs,
-} from "@/lib/candidateBriefContent";
 import {
   homepageFaqItems,
   homepageTrustBoundaries,
 } from "@/lib/homepageContent";
-import { buildHomepageSamplePreview } from "@/lib/homepageSamplePreview";
 import { reportCapabilityCopy } from "@/lib/reportCapabilities";
-import type { Report } from "@/types/report";
-import { ReportTabs } from "@/components/ReportTabs";
 import type { HomepageFaqItem } from "@/lib/homepageContent";
 
 function Arrow() {
   return <span aria-hidden="true">→</span>;
-}
-
-function EvidenceTag({ path }: { path: string }) {
-  return (
-    <span className="sample-evidence-tag">
-      <span>File citation</span>
-      <code>{path}</code>
-    </span>
-  );
 }
 
 function HomepageFaqAnswer({ answer, link }: Pick<HomepageFaqItem, "answer" | "link">) {
@@ -47,180 +30,27 @@ function HomepageFaqAnswer({ answer, link }: Pick<HomepageFaqItem, "answer" | "l
 }
 
 export function HomepageHero({
+  loading,
   onGenerateSample,
-  sampleReport,
 }: {
+  loading: boolean;
   onGenerateSample: () => void;
-  sampleReport: Report;
 }) {
-  const sample = buildHomepageSamplePreview(sampleReport);
-
   return (
     <section id="top" className="hero page-container">
       <div className="hero-copy">
-        <h1>Walk me through this repository.</h1>
-        <p className="hero-description">
-          <span>{candidateBriefHomepagePromise}</span>
-        </p>
+        <h1>Turn a repository into an interview-ready brief.</h1>
         <div className="hero-actions">
-          <button className="btn btn-primary" type="button" onClick={onGenerateSample}>
-            See the sample Candidate Brief <Arrow />
+          <button
+            className="btn btn-primary"
+            type="button"
+            disabled={loading}
+            onClick={onGenerateSample}
+          >
+            {loading ? "Opening sample…" : "Open the sample Candidate Brief"} <Arrow />
           </button>
         </div>
       </div>
-
-      <div className="hero-visual" aria-label="Example file-cited repository brief">
-        <div className="sample-hero-card" data-testid="hero-output-card">
-          <div className="sample-hero-header">
-            <div>
-              <span>Bundled sample</span>
-              <strong>{sample?.repositoryName ?? "Repository brief"}</strong>
-            </div>
-            <span className="brief-status">files cited</span>
-          </div>
-          {sample ? (
-            <>
-              <div className="sample-hero-summary">
-                <div>
-                  <span>Repository purpose</span>
-                  <span className="brief-status">{sample.confidence} confidence</span>
-                </div>
-                <p>{sample.purpose}</p>
-              </div>
-              <div className="sample-hero-details">
-                <article>
-                  <span>Start here</span>
-                  <code>{sample.readingStep.path}</code>
-                  <small>{sample.readingStep.why}</small>
-                </article>
-                <article>
-                  <span>Detected connection</span>
-                  <p>{sample.architecture.connection}</p>
-                </article>
-              </div>
-              <div className="sample-hero-evidence">
-                <span>Evidence</span>
-                <p>Conclusions cite repository files.</p>
-              </div>
-            </>
-          ) : (
-            <p className="sample-hero-fallback">
-              Purpose, key files, connections, and citations.
-            </p>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export function HomepageWalkthroughOutcomes() {
-  return (
-    <section
-      className="walkthrough-outcomes page-container"
-      aria-labelledby="walkthrough-outcomes-heading"
-      data-testid="walkthrough-outcomes"
-    >
-      <header className="walkthrough-outcomes-header">
-        <div>
-          <h2 id="walkthrough-outcomes-heading">What your Candidate Brief includes.</h2>
-        </div>
-      </header>
-      <div className="walkthrough-outcome-list">
-        {candidateBriefWalkthroughOutputs.map(({ title, description }, index) => (
-          <article key={title}>
-            <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-            <div>
-              <h3>{title}</h3>
-              <p>{description}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-type HomepageSampleProofProps = {
-  sampleReport: Report;
-  showSampleReport: boolean;
-  onOpenSample: () => void;
-  sectionRef: RefObject<HTMLElement | null>;
-};
-
-export function HomepageSampleProof({
-  sampleReport,
-  showSampleReport,
-  onOpenSample,
-  sectionRef,
-}: HomepageSampleProofProps) {
-  const sample = buildHomepageSamplePreview(sampleReport);
-
-  return (
-    <section
-      id="sample-report"
-      ref={sectionRef}
-      className="sample-report-section page-container"
-      aria-labelledby="sample-proof-heading"
-    >
-      <div className="sample-report-heading">
-        <div>
-          <h2 id="sample-proof-heading">Look inside a sample brief.</h2>
-        </div>
-        {!showSampleReport && (
-          <button type="button" className="text-action" onClick={onOpenSample}>
-            Open sample report <Arrow />
-          </button>
-        )}
-      </div>
-      {!showSampleReport ? (
-        sample ? (
-          <div className="sample-proof-preview" data-testid="homepage-sample-preview">
-            <header className="sample-proof-summary">
-              <div>
-                <span className="sample-proof-label">Repository purpose</span>
-                <span className="brief-status">{sample.confidence} confidence</span>
-              </div>
-              <p>{sample.purpose}</p>
-            </header>
-
-            <div className="sample-proof-details">
-              <article>
-                <span className="sample-proof-label">Start here</span>
-                <code className="sample-proof-path">{sample.readingStep.path}</code>
-                <p>{sample.readingStep.why}</p>
-                {sample.readingStep.evidence?.path && (
-                  <EvidenceTag path={sample.readingStep.evidence.path} />
-                )}
-              </article>
-
-              <article>
-                <span className="sample-proof-label">Connection to inspect</span>
-                <p>{sample.architecture.connection}</p>
-                {sample.architecture.evidence?.path && (
-                  <EvidenceTag path={sample.architecture.evidence.path} />
-                )}
-              </article>
-
-            </div>
-          </div>
-        ) : (
-          <p className="sample-report-copy">
-            This sample lacks enough evidence for a preview. Open the report to see its confidence
-            gaps.
-          </p>
-        )
-      ) : (
-        <>
-          <p className="sample-report-copy">
-            Explore the read-only sample. PDF and PNG previews work here; Markdown requires a saved
-            analysis.
-          </p>
-          <div className="sample-report-shell">
-            <ReportTabs report={sampleReport} variant="preview" />
-          </div>
-        </>
-      )}
     </section>
   );
 }

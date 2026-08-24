@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 import fs from "fs";
 import { randomUUID } from "crypto";
-import type { Report } from "../src/types/report";
 import {
   REPORT_TABS,
   expectCompletedReportInViewport,
@@ -44,17 +43,15 @@ test.describe("Candidate Brief smoke", () => {
 
       await expect(
         hero.getByRole("heading", {
-          name: "Walk me through this repository.",
+          name: "Turn a repository into an interview-ready brief.",
         })
       ).toBeVisible();
-      await expect(
-        hero.getByText(/ranked reading path and talking points backed by source files/)
-      ).toBeVisible();
+      await expect(hero.locator("p")).toHaveCount(0);
       await expect(hero.locator(".btn-primary")).toHaveCount(1);
       await expect(hero.getByRole("link")).toHaveCount(0);
 
       const sampleAction = hero.getByRole("button", {
-        name: /See the sample Candidate Brief/i,
+        name: /Open the sample Candidate Brief/i,
       });
       await page
         .locator("#analyze summary")
@@ -116,31 +113,21 @@ test.describe("Candidate Brief smoke", () => {
     });
   }
 
-  test("homepage shows the four Candidate Brief outputs before analysis", async ({ page }) => {
+  test("homepage keeps the sample as its one dominant starting action", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
 
-    const outcomes = page.getByTestId("walkthrough-outcomes");
-    await expect(outcomes.getByRole("heading", { name: "Repository purpose" })).toBeVisible();
-    await expect(outcomes.getByRole("heading", { name: "Important folders and files" })).toBeVisible();
-    await expect(outcomes.getByRole("heading", { name: "Architecture and dependencies" })).toBeVisible();
-    await expect(outcomes.getByRole("heading", { name: "Evidence and next questions" })).toBeVisible();
-    await expect(outcomes).not.toContainText("PDF");
-
-    const isBeforeAnalysis = await outcomes.evaluate((section) => {
-      const analysis = document.querySelector("#analyze");
-
-      return Boolean(
-        analysis &&
-          section.compareDocumentPosition(analysis) & Node.DOCUMENT_POSITION_FOLLOWING
-      );
-    });
-    expect(isBeforeAnalysis).toBe(true);
-
-    await expect(page.locator("main > section")).toHaveCount(5);
+    const hero = page.locator(".hero");
     await expect(
-      page.getByRole("heading", { name: "Look inside a sample brief." })
+      hero.getByRole("heading", {
+        name: "Turn a repository into an interview-ready brief.",
+      })
     ).toBeVisible();
+    await expect(hero.locator(".btn-primary")).toHaveCount(1);
+    await expect(hero.getByRole("link")).toHaveCount(0);
+    await expect(page.locator("main .btn-primary")).toHaveCount(1);
+    await expect(page.getByTestId("walkthrough-outcomes")).toHaveCount(0);
+    await expect(page.getByTestId("homepage-sample-preview")).toHaveCount(0);
     await expect(
       page.getByRole("navigation", { name: "Prepare to explain a repository." })
     ).toHaveCount(0);
@@ -150,35 +137,33 @@ test.describe("Candidate Brief smoke", () => {
     await expect(
       page.getByRole("heading", { name: "How RepoAtlas treats your code." })
     ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Works across project types." })
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: "Built for the questions interviewers ask." })
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: "A simple pipeline. A defensible output." })
-    ).toHaveCount(0);
+    const galleryLink = page
+      .locator(".analysis-intent-fieldset")
+      .getByRole("link", { name: "Compare four exact-commit Candidate Briefs" });
+    await expect(galleryLink).toHaveAttribute("href", "/examples");
+    await expect(galleryLink).not.toHaveClass(/btn-primary/);
+    await expect(page.locator("main > section")).toHaveCount(3);
 
     const pageShape = await page.evaluate(() => ({
-      height: document.documentElement.scrollHeight,
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     }));
     expect(pageShape.overflow).toBeLessThanOrEqual(0);
   });
 
-  test("brief output summary stays compact at 390px", async ({ page }) => {
+  test("the sample remains the only first-screen action at exactly 390 by 844", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
 
-    const outcomes = page.getByTestId("walkthrough-outcomes");
-    await expect(outcomes).toBeVisible();
-    await expect(outcomes.getByRole("article")).toHaveCount(4);
+    await expect(
+      page.getByRole("heading", {
+        name: "Turn a repository into an interview-ready brief.",
+      })
+    ).toBeVisible();
 
     const dimensions = await page.evaluate(() => ({
-      height: document.documentElement.scrollHeight,
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
+      analysisTop: document.querySelector("#analyze")?.getBoundingClientRect().top ?? 0,
       primaryActions: Array.from(document.querySelectorAll<HTMLElement>("main .btn-primary")).map(
         (element) => ({
           top: element.getBoundingClientRect().top,
@@ -187,11 +172,10 @@ test.describe("Candidate Brief smoke", () => {
       ),
     }));
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
-    expect(dimensions.primaryActions).toHaveLength(2);
-    expect(
-      dimensions.primaryActions[1].top - dimensions.primaryActions[0].bottom
-    ).toBeGreaterThanOrEqual(844);
-    await expect(page.locator("main > section")).toHaveCount(5);
+    expect(dimensions.primaryActions).toHaveLength(1);
+    expect(dimensions.primaryActions[0].bottom).toBeLessThanOrEqual(844);
+    expect(dimensions.analysisTop).toBeGreaterThanOrEqual(844);
+    await expect(page.locator("main > section")).toHaveCount(3);
   });
 
   test("sample analyze renders Candidate Brief tab", async ({ page }) => {
@@ -277,49 +261,6 @@ test.describe("Candidate Brief smoke", () => {
   test("invalid share token shows error", async ({ page }) => {
     await page.goto("/share/not-a-valid-share-token");
     await expect(page.getByText(/expired|not found/i)).toBeVisible();
-  });
-
-  test("homepage preview sample shows Candidate Brief sections", async ({ page }) => {
-    await page.setViewportSize({ width: 1400, height: 1000 });
-    await page.goto("/");
-    await page.getByRole("button", { name: /^Open sample report/i }).first().click();
-    await expect(page.getByRole("heading", { name: "Repo Summary" }).first()).toBeVisible({
-      timeout: 30_000,
-    });
-  });
-
-  test("homepage sample proof matches the report produced by the bundled analysis", async ({ page }) => {
-    const response = await page.request.post("/api/analyze", { data: { sample: true } });
-    expect(response.ok()).toBe(true);
-    const payload = (await response.json()) as {
-      reportId: string;
-      report?: Report;
-      persisted: boolean;
-    };
-    const reportResponse = payload.report
-      ? null
-      : await page.request.get(`/api/reports/${payload.reportId}`);
-    const report = payload.report ?? ((await reportResponse!.json()) as Report);
-    const brief = report.candidate_brief!;
-    const evidenceById = new Map(brief.evidence_refs.map((evidence) => [evidence.id, evidence]));
-    const readingStep = brief.reading_path[0];
-    const architectureEdge = report.architecture.edges[0];
-    const architectureLabels = new Map(
-      report.architecture.nodes.map((node) => [node.id, node.label])
-    );
-    const architectureConnection = `${
-      architectureLabels.get(architectureEdge.from) ?? architectureEdge.from
-    } connects to ${architectureLabels.get(architectureEdge.to) ?? architectureEdge.to}.`;
-
-    await page.goto("/");
-    const preview = page.getByTestId("homepage-sample-preview");
-    await expect(preview).toContainText(brief.repo_summary.headline);
-    await expect(preview).toContainText(readingStep.path);
-    await expect(preview).toContainText(readingStep.why);
-    await expect(preview).toContainText(evidenceById.get(readingStep.evidence_refs[0])!.path!);
-    await expect(preview).toContainText(architectureConnection);
-    await expect(preview).not.toContainText("src/analyzer/index.ts");
-    await expect(preview).not.toContainText("src/analyzer/scoring.ts");
   });
 
   test("sample analyze exports Markdown from Export tab", async ({ page }) => {

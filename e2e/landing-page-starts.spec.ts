@@ -251,7 +251,7 @@ test.describe("candidate landing-page starts", () => {
           const analyzeAction = page.getByRole("button", {
             name:
               inputMode === "sample"
-                ? /Generate the bundled sample brief/i
+                ? /Open the sample Candidate Brief/i
                 : /Analyze public GitHub repository/i,
           });
           await focusWithKeyboard(page, analyzeAction);

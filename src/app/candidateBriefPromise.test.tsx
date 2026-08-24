@@ -2,9 +2,7 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomepageHero } from "@/components/HomepageProofSections";
-import { buildSampleReport } from "@/lib/buildSampleReport";
 import {
-  candidateBriefHomepagePromise,
   candidateBriefProofPromise,
 } from "@/lib/candidateBriefContent";
 import CodeReviewInterviewPage from "./code-review-interview/page";
@@ -60,10 +58,12 @@ describe.each(candidateSurfaces)("$name", ({ renderSurface }) => {
 });
 
 describe("homepage", () => {
-  it("answers the hero question with the homepage promise", () => {
-    render(<HomepageHero onGenerateSample={() => undefined} sampleReport={buildSampleReport()} />);
+  it("uses one concise interview outcome instead of the guide-page promise", () => {
+    render(<HomepageHero loading={false} onGenerateSample={() => undefined} />);
 
-    expect(document.body).toHaveTextContent(candidateBriefHomepagePromise);
-    expect(document.body).toHaveTextContent("Walk me through this repository.");
+    expect(document.body).toHaveTextContent(
+      "Turn a repository into an interview-ready brief."
+    );
+    expect(document.body).not.toHaveTextContent(candidateBriefProofPromise);
   });
 });

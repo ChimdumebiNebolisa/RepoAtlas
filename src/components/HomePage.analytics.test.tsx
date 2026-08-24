@@ -16,10 +16,10 @@ vi.mock("@/lib/productAnalytics", async (importOriginal) => {
 });
 
 vi.mock("@/components/HomepageProofSections", () => ({
-  HomepageHero: () => null,
-  HomepageSampleProof: () => null,
+  HomepageHero: ({ onGenerateSample }: { onGenerateSample: () => void }) => (
+    <button type="button" onClick={onGenerateSample}>Open the sample Candidate Brief</button>
+  ),
   HomepageTrustAndFaq: () => null,
-  HomepageWalkthroughOutcomes: () => null,
 }));
 
 import { HomePage } from "./HomePage";
@@ -81,11 +81,11 @@ describe("HomePage walkthrough analytics journeys", () => {
         )
       );
       const user = userEvent.setup();
-      render(<HomePage sampleReport={report} />);
+      render(<HomePage />);
 
       if (source === "sample") {
         await user.click(
-          screen.getByRole("button", { name: /Generate the bundled sample brief/i })
+          screen.getByRole("button", { name: /Open the sample Candidate Brief/i })
         );
       } else if (source === "github") {
         await user.type(

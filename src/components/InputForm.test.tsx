@@ -15,19 +15,31 @@ vi.mock("@/lib/productAnalytics", async (importOriginal) => {
 import { InputForm } from "./InputForm";
 
 const noop = () => undefined;
+let inputFormRef = React.createRef<React.ElementRef<typeof InputForm>>();
 
-function renderForm() {
+function renderForm(
+  overrides: Partial<React.ComponentPropsWithoutRef<typeof InputForm>> = {}
+) {
+  inputFormRef = React.createRef<React.ElementRef<typeof InputForm>>();
   const view = render(
     <InputForm
+      ref={inputFormRef}
       onAnalyzeStart={noop}
       onAnalyzeComplete={noop}
       onAnalyzeError={noop}
       loading={false}
+      {...overrides}
     />
   );
   const form = view.container.querySelector("form.input-form");
   if (!form) throw new Error("form not found");
   return { ...view, form: form as HTMLFormElement };
+}
+
+async function generateBundledSample() {
+  await act(async () => {
+    inputFormRef.current?.generateSample();
+  });
 }
 
 describe("InputForm", () => {
@@ -151,11 +163,11 @@ describe("InputForm", () => {
     expect(await within(form).findByRole("alert")).toHaveTextContent(/github/i);
   });
 
-  it("names the repository brief created by the bundled sample", () => {
+  it("keeps the bundled sample out of the detailed repository form", () => {
     const { form } = renderForm();
     expect(
-      within(form).getByRole("button", { name: /generate the bundled sample brief/i })
-    ).toBeInTheDocument();
+      within(form).queryByRole("button", { name: /generate the bundled sample brief/i })
+    ).not.toBeInTheDocument();
   });
 
   it("supports the existing imperative sample trigger", async () => {
@@ -291,7 +303,7 @@ describe("InputForm", () => {
     const { form } = renderForm();
     await user.click(within(form).getByText(/Use a different conversation focus/i));
     await user.click(screen.getByRole("radio", { name: /investigate a bug/i }));
-    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
+    await generateBundledSample();
 
     const request = fetchMock.mock.calls[0]?.[1];
     expect(JSON.parse(String(request?.body))).toEqual({
@@ -480,7 +492,7 @@ describe("InputForm", () => {
     );
 
     renderForm();
-    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
+    await generateBundledSample();
 
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -514,7 +526,7 @@ describe("InputForm", () => {
     );
 
     renderForm();
-    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
+    await generateBundledSample();
 
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -543,7 +555,7 @@ describe("InputForm", () => {
     );
 
     renderForm();
-    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
+    await generateBundledSample();
 
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -582,7 +594,7 @@ describe("InputForm", () => {
     );
 
     renderForm();
-    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
+    await generateBundledSample();
 
     expect(captureAnalysisEvent).toHaveBeenNthCalledWith(
       1,
@@ -615,15 +627,8 @@ describe("InputForm", () => {
       )
     );
 
-    render(
-      <InputForm
-        onAnalyzeStart={noop}
-        onAnalyzeComplete={onAnalyzeComplete}
-        onAnalyzeError={noop}
-        loading={false}
-      />
-    );
-    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
+    renderForm({ onAnalyzeComplete });
+    await generateBundledSample();
 
     expect(onAnalyzeComplete).toHaveBeenCalledWith(inlineReport, null, "sample");
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -654,15 +659,8 @@ describe("InputForm", () => {
         )
       );
 
-    render(
-      <InputForm
-        onAnalyzeStart={noop}
-        onAnalyzeComplete={noop}
-        onAnalyzeError={onAnalyzeError}
-        loading={false}
-      />
-    );
-    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
+    renderForm({ onAnalyzeError });
+    await generateBundledSample();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(consoleError).toHaveBeenCalledOnce();
@@ -700,15 +698,8 @@ describe("InputForm", () => {
     );
     vi.spyOn(global, "fetch").mockRejectedValueOnce(rawError);
 
-    render(
-      <InputForm
-        onAnalyzeStart={noop}
-        onAnalyzeComplete={noop}
-        onAnalyzeError={onAnalyzeError}
-        loading={false}
-      />
-    );
-    await user.click(screen.getByRole("button", { name: /generate the bundled sample brief/i }));
+    renderForm({ onAnalyzeError });
+    await generateBundledSample();
 
     expect(consoleError).toHaveBeenCalledOnce();
     expect(consoleError).toHaveBeenCalledWith(

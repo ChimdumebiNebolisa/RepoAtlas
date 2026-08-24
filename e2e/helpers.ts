@@ -92,7 +92,7 @@ export async function expectCompletedReportInViewport(page: Page): Promise<void>
 
 export async function runSampleAnalyzeOnPage(page: Page): Promise<void> {
   await page.goto("/");
-  await page.getByRole("button", { name: /See the sample Candidate Brief/i }).click();
+  await page.getByRole("button", { name: /Open the sample Candidate Brief/i }).click();
   await expectCompletedReportInViewport(page);
 }
 

@@ -13,7 +13,7 @@ test.describe("Portfolio capture", () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.screenshot({ path: path.join(IMAGES_DIR, "landing.png"), fullPage: true });
 
-    await page.getByRole("button", { name: /See the sample Candidate Brief/i }).click();
+    await page.getByRole("button", { name: /Open the sample Candidate Brief/i }).click();
     await expectCompletedReportInViewport(page);
     await expect(page.getByRole("heading", { name: "Repo Summary" }).last()).toBeVisible();
 

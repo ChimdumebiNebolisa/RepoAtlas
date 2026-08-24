@@ -50,6 +50,9 @@ export function AnalysisIntentSelector({
           </span>
         </label>
       </div>
+      <p className="analysis-intent-examples">
+        <a href="/examples">Compare four exact-commit Candidate Briefs</a>
+      </p>
 
       <details
         className="secondary-intents"
