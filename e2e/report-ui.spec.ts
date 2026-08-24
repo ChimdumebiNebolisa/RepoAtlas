@@ -34,7 +34,7 @@ async function openControlledInlineReport(
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: /Generate the bundled sample brief/i }).click();
+  await page.getByRole("button", { name: /Open the sample Candidate Brief/i }).click();
   await expectCompletedReportInViewport(page);
   if (expectShare) {
     await expect(page.getByRole("button", { name: "Share Candidate Brief" })).toBeVisible();
@@ -392,7 +392,7 @@ test.describe("Report UI flows", () => {
 
     await page.goto("/");
     await expect(page.getByRole("button", { name: /Share Candidate Brief/i })).toHaveCount(0);
-    await page.getByRole("button", { name: /Generate the bundled sample brief/i }).click();
+    await page.getByRole("button", { name: /Open the sample Candidate Brief/i }).click();
     await expectCompletedReportInViewport(page);
 
     const exportSummary = page.getByText(
@@ -707,14 +707,6 @@ test.describe("Report UI flows", () => {
     }));
     expect(pageOverflow.document).toBeLessThanOrEqual(1);
     expect(pageOverflow.body).toBeLessThanOrEqual(1);
-  });
-
-  test("homepage preview disables Markdown export (no reportId)", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: /^Open sample report/i }).first().click();
-    await page.getByRole("tab", { name: "Export", exact: true }).first().click();
-    const mdButton = page.getByRole("button", { name: /Export Markdown/i }).first();
-    await expect(mdButton).toBeDisabled();
   });
 
   test("zip upload via file input produces Candidate Brief", async ({ page }) => {

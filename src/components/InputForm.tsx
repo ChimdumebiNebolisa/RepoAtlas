@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type RefObject,
 } from "react";
 import type { AnalysisIntent, Report } from "@/types/report";
 import { clientMaxZipBytes, clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
@@ -29,7 +28,6 @@ interface InputFormProps {
   ) => void;
   onAnalyzeError: (message: string) => void;
   loading: boolean;
-  sampleButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
 export interface InputFormHandle {
@@ -45,7 +43,6 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
     onAnalyzeComplete,
     onAnalyzeError,
     loading,
-    sampleButtonRef,
   },
   forwardedRef
 ) {
@@ -200,26 +197,6 @@ export const InputForm = forwardRef<InputFormHandle, InputFormProps>(function In
         onAnalysisIntentChange={setAnalysisIntent}
         onSecondaryIntentsOpenChange={setSecondaryIntentsOpen}
       />
-
-      <div className="quick-start">
-        <div className="quick-start-copy">
-          <strong>No repository handy?</strong>
-          <span>Generate a brief from our bundled sample. No upload or URL needed.</span>
-        </div>
-        <button
-          ref={sampleButtonRef}
-          type="button"
-          disabled={interactionsDisabled}
-          onClick={handleSample}
-          className="btn btn-primary"
-        >
-          <span aria-live="polite">
-            {loading ? "Generating…" : "Generate the bundled sample brief"}
-          </span>
-        </button>
-      </div>
-
-      <div className="input-divider"><span>or use your repository</span></div>
 
       <RepositoryInputControls
         mode={mode}

@@ -93,7 +93,7 @@ async function captureUsageJourney(
   const page: Page = await context.newPage();
   await page.goto("/");
   await page
-    .getByRole("button", { name: /Generate the bundled sample brief/i })
+    .getByRole("button", { name: /Open the sample Candidate Brief/i })
     .click();
   await expect(page.getByTestId("completed-report-heading")).toBeVisible();
   await page.getByRole("button", { name: "Copy 30s" }).click();

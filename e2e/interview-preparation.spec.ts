@@ -446,7 +446,7 @@ test("homepage keeps the sample action after the guide nav removal", async ({ pa
   await page.goto("/");
 
   await expect(
-    page.getByRole("button", { name: /See the sample Candidate Brief/ })
+    page.getByRole("button", { name: /Open the sample Candidate Brief/ })
   ).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Prepare to explain a repository." })

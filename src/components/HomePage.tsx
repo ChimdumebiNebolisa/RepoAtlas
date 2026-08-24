@@ -3,20 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   HomepageHero,
-  HomepageSampleProof,
   HomepageTrustAndFaq,
-  HomepageWalkthroughOutcomes,
 } from "@/components/HomepageProofSections";
 import { InputForm, type InputFormHandle } from "@/components/InputForm";
 import { ReportTabs } from "@/components/ReportTabs";
 import { clientMaxZipMbLabel } from "@/lib/ingestLimitsClient";
-import { reportCapabilityCopy } from "@/lib/reportCapabilities";
 import type { AnalysisInputType } from "@/lib/productAnalytics";
 import type { Report } from "@/types/report";
-
-function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="badge">{children}</span>;
-}
 
 function consumeDirectSampleQuery() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -31,19 +24,16 @@ function consumeDirectSampleQuery() {
   );
 }
 
-export function HomePage({ sampleReport }: { sampleReport: Report }) {
+export function HomePage() {
   const [report, setReport] = useState<Report | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSampleReport, setShowSampleReport] = useState(false);
   const [completedInputType, setCompletedInputType] =
     useState<AnalysisInputType | null>(null);
   const reportSectionRef = useRef<HTMLElement | null>(null);
   const reportHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const inputFormRef = useRef<InputFormHandle | null>(null);
-  const sampleButtonRef = useRef<HTMLButtonElement | null>(null);
-  const sampleSectionRef = useRef<HTMLElement | null>(null);
   const directSampleStartedRef = useRef(false);
 
   useEffect(() => {
@@ -99,18 +89,8 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
     };
   }, [report]);
 
-  const openSampleReport = () => {
-    setShowSampleReport(true);
-    requestAnimationFrame(() => {
-      sampleSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  };
-
   const generateSampleBrief = () => {
     inputFormRef.current?.generateSample();
-    requestAnimationFrame(() => {
-      sampleButtonRef.current?.scrollIntoView({ block: "center" });
-    });
   };
 
   const handleAnalyzeComplete = (
@@ -145,22 +125,11 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
             <small>Source-linked Repository Briefs</small>
           </span>
         </a>
-        <div className="header-badges" aria-label="Product capabilities">
-          <Badge>Reads files, never runs code</Badge>
-          <Badge>TypeScript/JS + Python + Java</Badge>
-          <Badge>{reportCapabilityCopy.headerBadge}</Badge>
-        </div>
       </header>
 
-      <HomepageHero onGenerateSample={generateSampleBrief} sampleReport={sampleReport} />
-
-      <HomepageWalkthroughOutcomes />
-
-      <HomepageSampleProof
-        sampleReport={sampleReport}
-        showSampleReport={showSampleReport}
-        onOpenSample={openSampleReport}
-        sectionRef={sampleSectionRef}
+      <HomepageHero
+        loading={loading}
+        onGenerateSample={generateSampleBrief}
       />
 
       <section
@@ -187,7 +156,6 @@ export function HomePage({ sampleReport }: { sampleReport: Report }) {
               setLoading(false);
             }}
             loading={loading}
-            sampleButtonRef={sampleButtonRef}
           />
           <div className="analyze-limits">
             <span>Public GitHub URL or ZIP upload</span>
