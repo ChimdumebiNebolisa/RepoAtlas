@@ -131,6 +131,31 @@ test.describe("Report UI flows", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 
+  test("report navigation stays available while reading a long brief on mobile", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openControlledInlineReport(page);
+
+    const tablist = page.getByRole("tablist", { name: "Report sections" }).last();
+    const tabRail = tablist.locator("..");
+    const tabRailDocumentTop = await tabRail.evaluate(
+      (element) => element.getBoundingClientRect().top + window.scrollY
+    );
+
+    await page.evaluate((top) => window.scrollTo(0, top + 1_200), tabRailDocumentTop);
+
+    await expect(tablist).toBeInViewport();
+    await expect
+      .poll(() => tabRail.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
+      .toBe(0);
+    await tablist.getByRole("tab", { name: "Overview", exact: true }).click();
+    await expect(tablist.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+  });
+
   test("all report tabs render after sample analyze", async ({ page }) => {
     await runSampleAnalyzeOnPage(page);
 
