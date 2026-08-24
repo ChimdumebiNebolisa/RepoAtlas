@@ -44,7 +44,7 @@ describe("AI codebase summary comparison page", () => {
       "href",
       "/?source=comparison_ai_summary&sample=1#analyze",
     );
-    expect(primaryActions[0]).toHaveAccessibleName("Try the evidence-linked sample");
+    expect(primaryActions[0]).toHaveAccessibleName("Open the sample Candidate Brief");
     expect(screen.getByRole("link", { name: /Use a public GitHub repository/i })).toHaveAttribute(
       "href",
       "/?source=comparison_ai_summary#analyze",

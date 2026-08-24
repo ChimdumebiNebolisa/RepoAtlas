@@ -56,7 +56,7 @@ describe("ComparisonEntrance", () => {
     expect(screen.getByRole("complementary")).toHaveAccessibleName(
       "Start an evidence-linked Candidate Brief",
     );
-    expect(screen.getByRole("link", { name: "Try the sample interview route" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open the sample Candidate Brief" })).toHaveAttribute(
       "href",
       "/?source=comparison_structured_preparation&sample=1#analyze",
     );
@@ -78,7 +78,7 @@ describe("ComparisonEntrance", () => {
       <ComparisonEntrance sample={sample} variant="ai-summary" />,
     );
 
-    expect(screen.getByRole("link", { name: "Try the evidence-linked sample" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open the sample Candidate Brief" })).toHaveAttribute(
       "href",
       "/?source=comparison_ai_summary&sample=1#analyze",
     );

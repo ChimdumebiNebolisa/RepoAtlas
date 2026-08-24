@@ -40,7 +40,7 @@ describe("FastAPI Candidate Brief example", () => {
       screen.getByRole("link", { name: "Turn this report into an interview walkthrough" }),
     ).toHaveAttribute("href", "/repository-walkthrough-interview");
     expect(
-      screen.getByRole("link", { name: "Open the bundled Candidate Brief" }),
+      screen.getByRole("link", { name: "Open the sample Candidate Brief" }),
     ).toHaveAttribute("href", "/?source=fastapi_example&sample=1#analyze");
   });
 });

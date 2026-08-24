@@ -83,11 +83,8 @@ describe("code review interview guide", () => {
       "/?source=interview_preparation#analyze",
     );
     expect(
-      screen.getByRole("link", { name: "Open the bundled Candidate Brief" }),
-    ).toHaveAttribute(
-      "href",
-      "/?source=interview_preparation&sample=1#analyze",
-    );
+      screen.getAllByRole("link", { name: "Open the sample Candidate Brief" }),
+    ).toHaveLength(1);
     expect(links.some((link) => link.getAttribute("href") === "/repository-walkthrough-interview")).toBe(
       true,
     );

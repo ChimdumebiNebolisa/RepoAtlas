@@ -6,6 +6,7 @@ import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
 import {
   candidateBriefProofPromise,
   candidateBriefLanguageCoverage,
+  candidateBriefSampleAction,
   candidateBriefWalkthroughOutputs,
 } from "@/lib/candidateBriefContent";
 import { interviewPreparationMetadata } from "@/lib/interviewPreparationContent";
@@ -42,11 +43,11 @@ export default function InterviewPreparationPage() {
                 className="btn btn-primary interview-primary-action"
                 href="/?source=interview_preparation&sample=1#analyze"
               >
-                See the sample Candidate Brief <span aria-hidden="true">→</span>
+                {candidateBriefSampleAction} <span aria-hidden="true">→</span>
               </Link>
             }
           >
-            <TrackedAnalysisLink startSample>See the sample Candidate Brief</TrackedAnalysisLink>
+            <TrackedAnalysisLink startSample>{candidateBriefSampleAction}</TrackedAnalysisLink>
           </Suspense>
           <p className="interview-hero-note">
             Start with the bundled sample, a public GitHub URL, or a ZIP. RepoAtlas reads files

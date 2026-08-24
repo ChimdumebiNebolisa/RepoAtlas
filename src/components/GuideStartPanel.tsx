@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
-import { candidateBriefProofPromise } from "@/lib/candidateBriefContent";
+import {
+  candidateBriefProofPromise,
+  candidateBriefSampleAction,
+} from "@/lib/candidateBriefContent";
 
 const analysisHref = "/?source=interview_preparation#analyze";
 
@@ -29,7 +32,7 @@ export function GuideStartPanel({
           entrySource="interview_preparation"
           startSample={startSample}
         >
-          Run the bundled sample
+          {candidateBriefSampleAction}
         </TrackedAnalysisLink>
         <Link className="guide-start-github" href={analysisHref}>
           Use a public GitHub repository <span aria-hidden="true">→</span>

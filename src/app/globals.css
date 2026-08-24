@@ -1723,6 +1723,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
   border-radius: var(--radius-card);
   background: rgba(238, 248, 243, 0.76);
 }
+@media (min-width: 961px) and (max-height: 800px) {
+  .repository-walkthrough-hero .guide-start-panel {
+    margin-top: 1.25rem;
+  }
+}
 .guide-start-heading {
   display: grid;
   gap: 0.25rem;

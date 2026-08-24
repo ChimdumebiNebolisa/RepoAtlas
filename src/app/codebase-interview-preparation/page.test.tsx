@@ -45,7 +45,7 @@ describe("codebase interview preparation page", () => {
       "href",
       "/?source=comparison_structured_preparation&sample=1#analyze",
     );
-    expect(primaryActions[0]).toHaveAccessibleName("Try the sample interview route");
+    expect(primaryActions[0]).toHaveAccessibleName("Open the sample Candidate Brief");
     expect(screen.getByRole("link", { name: /Use a public GitHub repository/i })).toHaveAttribute(
       "href",
       "/?source=comparison_structured_preparation#analyze",

@@ -20,7 +20,7 @@ const candidatePages = [
     path: "/repository-walkthrough-interview",
     source: "interview_preparation",
     entranceLabel: "Start a repository walkthrough",
-    sampleAction: "Run the bundled sample",
+    sampleAction: "Open the sample Candidate Brief",
     directSample: true,
   },
   {
@@ -28,7 +28,7 @@ const candidatePages = [
     path: "/how-to-walk-through-a-project-in-an-interview",
     source: "interview_preparation",
     entranceLabel: "Start an authored-project brief",
-    sampleAction: "Run the bundled sample",
+    sampleAction: "Open the sample Candidate Brief",
     directSample: true,
   },
   {
@@ -36,7 +36,7 @@ const candidatePages = [
     path: "/take-home-coding-interview",
     source: "interview_preparation",
     entranceLabel: "Start a take-home coding interview review",
-    sampleAction: "Run the bundled sample",
+    sampleAction: "Open the sample Candidate Brief",
     directSample: true,
   },
   {
@@ -44,7 +44,7 @@ const candidatePages = [
     path: "/codebase-interview-preparation",
     source: "comparison_structured_preparation",
     entranceLabel: "Start an evidence-linked Candidate Brief",
-    sampleAction: "Try the sample interview route",
+    sampleAction: "Open the sample Candidate Brief",
     directSample: true,
   },
   {
@@ -52,7 +52,7 @@ const candidatePages = [
     path: "/ai-codebase-summary",
     source: "comparison_ai_summary",
     entranceLabel: "Start an evidence-linked Candidate Brief",
-    sampleAction: "Try the evidence-linked sample",
+    sampleAction: "Open the sample Candidate Brief",
     directSample: true,
   },
   {
@@ -60,7 +60,7 @@ const candidatePages = [
     path: "/code-review-interview",
     source: "interview_preparation",
     entranceLabel: "Prepare a repository for a code review interview",
-    sampleAction: "Run the bundled sample",
+    sampleAction: "Open the sample Candidate Brief",
     directSample: true,
   },
 ] as const;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TrackedAnalysisLink } from "@/components/TrackedAnalysisLink";
+import { candidateBriefSampleAction } from "@/lib/candidateBriefContent";
 import type { HomepageSamplePreview } from "@/lib/homepageSamplePreview";
 import type { ComparisonSourceToken } from "@/lib/analysisAttribution";
 
@@ -11,16 +12,13 @@ const evidenceBackedBriefPromise =
 const entranceCopy: Record<
   ComparisonEntranceVariant,
   {
-    action: string;
     entrySource: ComparisonSourceToken;
   }
 > = {
   "structured-preparation": {
-    action: "Try the sample interview route",
     entrySource: "comparison_structured_preparation",
   },
   "ai-summary": {
-    action: "Try the evidence-linked sample",
     entrySource: "comparison_ai_summary",
   },
 };
@@ -92,7 +90,7 @@ export function ComparisonEntrance({
           entrySource={copy.entrySource}
           startSample
         >
-          {copy.action}
+          {candidateBriefSampleAction}
         </TrackedAnalysisLink>
         <Link className="comparison-github-action" href={analysisHref}>
           Use a public GitHub repository <span aria-hidden="true">→</span>

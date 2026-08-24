@@ -34,7 +34,7 @@ test("interview-preparation page leads to the measurable analysis start", async 
   await expect(publicExample).toHaveAttribute("href", "/examples/fastapi-candidate-brief");
   expect((await page.request.get("/examples/fastapi-candidate-brief")).status()).toBe(200);
 
-  const primaryAction = page.getByRole("link", { name: "See the sample Candidate Brief" });
+  const primaryAction = page.getByRole("link", { name: "Open the sample Candidate Brief" });
   await expect(page.locator("a.btn-primary")).toHaveCount(1);
   await expect(primaryAction).toHaveAttribute(
     "href",
@@ -64,12 +64,12 @@ for (const comparison of [
   {
     path: "/codebase-interview-preparation",
     source: "comparison_structured_preparation",
-    action: "Try the sample interview route",
+    action: "Open the sample Candidate Brief",
   },
   {
     path: "/ai-codebase-summary",
     source: "comparison_ai_summary",
-    action: "Try the evidence-linked sample",
+    action: "Open the sample Candidate Brief",
   },
 ] as const) {
   test(`${comparison.path} preserves the bounded interview start`, async ({ page }) => {
@@ -171,7 +171,7 @@ test("repository walkthrough guide teaches the method and opens the bundled samp
   const startPanel = page.getByRole("complementary", {
     name: "Start a repository walkthrough",
   });
-  const primaryAction = startPanel.getByRole("link", { name: "Run the bundled sample" });
+  const primaryAction = startPanel.getByRole("link", { name: "Open the sample Candidate Brief" });
   const githubAction = startPanel.getByRole("link", {
     name: "Use a public GitHub repository",
   });
@@ -216,7 +216,7 @@ for (const viewport of [
       name: "Start a repository walkthrough",
     });
     const sampleAction = startPanel.getByRole("link", {
-      name: "Run the bundled sample",
+      name: "Open the sample Candidate Brief",
     });
     const githubAction = startPanel.getByRole("link", {
       name: "Use a public GitHub repository",
@@ -292,7 +292,7 @@ test("authored project guide separates candidate intent from repository evidence
     "You supply the rationale, constraints, and outcomes.",
   );
   const primaryAction = startPanel.getByRole("link", {
-    name: "Run the bundled sample",
+    name: "Open the sample Candidate Brief",
   });
   const githubAction = startPanel.getByRole("link", {
     name: "Use a public GitHub repository",
@@ -308,13 +308,8 @@ test("authored project guide separates candidate intent from repository evidence
   );
   await expect(page.locator(".guide-page .btn-primary")).toHaveCount(1);
   await expect(
-    page
-      .getByRole("region", { name: "See what repository evidence looks like." })
-      .getByRole("link", { name: "Run the bundled sample" }),
-  ).toHaveAttribute(
-    "href",
-    "/?source=interview_preparation&sample=1#analyze",
-  );
+    page.getByRole("link", { name: "Open the sample Candidate Brief" }),
+  ).toHaveCount(1);
   const analyzeRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
@@ -346,7 +341,7 @@ for (const viewport of [
       name: "Start an authored-project brief",
     });
     const sampleAction = startPanel.getByRole("link", {
-      name: "Run the bundled sample",
+      name: "Open the sample Candidate Brief",
     });
     const githubAction = startPanel.getByRole("link", {
       name: "Use a public GitHub repository",
@@ -509,6 +504,6 @@ test("every public proof cluster route connects proof, guidance, and a Candidate
     page.getByRole("link", { name: "Turn this report into an interview walkthrough" }),
   ).toHaveAttribute("href", "/repository-walkthrough-interview");
   await expect(
-    page.getByRole("link", { name: "Open the bundled Candidate Brief" }),
+    page.getByRole("link", { name: "Open the sample Candidate Brief" }),
   ).toHaveAttribute("href", "/?source=fastapi_example&sample=1#analyze");
 });
