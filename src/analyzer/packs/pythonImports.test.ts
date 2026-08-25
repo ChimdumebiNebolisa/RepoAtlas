@@ -40,6 +40,22 @@ describe("Python import extraction boundaries", () => {
     ]);
   });
 
+  it("recognizes imports after code semicolons without reading string or comment lookalikes", () => {
+    const source = [
+      "value = 1; import real_module",
+      "other = 2; from actual import useful",
+      "message = '; import string_target'",
+      "ignored = True # ; import comment_target",
+      "",
+    ].join("\n");
+
+    expect(extractImportSpecifiers(source)).toEqual([
+      "real_module",
+      "actual",
+      "actual.useful",
+    ]);
+  });
+
   it("handles CRLF, escaped continuations, aliases, and parenthesized names", () => {
     const source = [
       "import alpha, \\",

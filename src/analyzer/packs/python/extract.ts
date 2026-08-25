@@ -97,6 +97,10 @@ function readImportNameList(source: string, start: number): { names: string[]; n
       continue;
     }
     if ((ch === "\n" || ch === "\r") && parenDepth === 0) break;
+    if (ch === ";" && parenDepth === 0) {
+      if (current.trim()) pushName(current);
+      break;
+    }
     if (ch === "#") {
       // Comments may appear inside parenthesized import lists.
       while (index < source.length && source[index] !== "\n" && source[index] !== "\r") {
@@ -214,7 +218,7 @@ export function extractImportSpecifiers(content: string): string[] {
       continue;
     }
 
-    if (ch === "#" && atLineStart) {
+    if (ch === "#") {
       while (index < content.length && content[index] !== "\n") index += 1;
       continue;
     }
@@ -235,6 +239,12 @@ export function extractImportSpecifiers(content: string): string[] {
     }
 
     if (ch === "\n") {
+      atLineStart = true;
+      index += 1;
+      continue;
+    }
+
+    if (ch === ";") {
       atLineStart = true;
       index += 1;
       continue;

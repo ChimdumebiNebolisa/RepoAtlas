@@ -1,0 +1,1 @@
+VALUE = "string lookalike"
