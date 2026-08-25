@@ -35,7 +35,7 @@ Start Here and Danger Zones must be deterministic, explainable, and honest. User
 
 - Breakdown strings show percentile and raw values (e.g. `fan-in p85 (12)`), plus plain-language notes when test proximity is low.
 - **Equal raw Start Here scores** normalize to **50** (not 100) so ties do not look like a perfect score.
-- Danger Zone percentiles use **shrinkage** toward absolute scale when fewer than 5 files are scored.
+- Danger Zone percentiles use **shrinkage** toward absolute scale when fewer than 5 files are scored. The absolute scale uses soft floors of 1,000 bytes, 5 incoming or outgoing relationships, complexity 10, and the established 0–100 test-proximity and churn domains, so a tiny tested leaf does not become a hotspot merely because it is the only production file.
 
 ## Consequences
 

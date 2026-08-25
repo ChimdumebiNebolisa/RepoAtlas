@@ -27,20 +27,25 @@ function percentileRank(values: number[], value: number): number {
  * Absolute 0–100 scaling against the observed max (or a soft floor) so tiny
  * repositories do not turn one large-among-four file into an extreme spike.
  */
-function absoluteRank(values: number[], value: number): number {
+function absoluteRank(
+  values: number[],
+  value: number,
+  absoluteFloor: number
+): number {
   if (!values.length) return 0;
-  const max = Math.max(...values, 1);
+  const max = Math.max(...values, absoluteFloor);
   return clampScore((value / max) * 100);
 }
 
 export function blendedMetricRank(
   values: number[],
   value: number,
-  sampleSize: number
+  sampleSize: number,
+  absoluteFloor = 1
 ): number {
   const percentile = percentileRank(values, value);
   if (sampleSize >= SMALL_SAMPLE_FILE_COUNT) return percentile;
-  const absolute = absoluteRank(values, value);
+  const absolute = absoluteRank(values, value, absoluteFloor);
   const weight = sampleSize / SMALL_SAMPLE_FILE_COUNT;
   return weight * percentile + (1 - weight) * absolute;
 }

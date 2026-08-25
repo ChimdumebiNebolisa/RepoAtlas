@@ -1,0 +1,11 @@
+{
+  "productionFiles": ["src/label.ts"],
+  "excludedTestFiles": ["src/label.test.ts"],
+  "dangerZones": [
+    {
+      "path": "src/label.ts",
+      "maximumScore": 25,
+      "meaning": "A small leaf imported only by its colocated test is a low structural risk signal, not a repository hotspot."
+    }
+  ]
+}

@@ -387,6 +387,23 @@ describe("computeDangerZones", () => {
     expect(result.every((item) => item.score >= 0 && item.score <= 100)).toBe(true);
   });
 
+  it("keeps strong absolute signals visible in a one-file repository", () => {
+    const filePath = "src/large-complex.ts";
+    const pipeline = mockPipeline({
+      file_metadata: mockMetadata([filePath], { [filePath]: 2500 }),
+    });
+    const tsjs = mockPack({
+      complexity: new Map([[filePath, 20]]),
+      testProximity: new Map([[filePath, 0]]),
+    });
+
+    const result = computeDangerZones(pipeline, tsjs);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].path).toBe(filePath);
+    expect(result[0].score).toBeGreaterThanOrEqual(50);
+  });
+
   it("includes deterministic breakdown and explicit metrics", () => {
     const pipeline = mockPipeline({
       file_metadata: new Map([
