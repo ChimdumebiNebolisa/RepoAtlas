@@ -98,6 +98,25 @@ describe("Java module discovery boundaries", () => {
 });
 
 describe("Java source classification boundaries", () => {
+  it("requires direct Spring imports for web annotation entrypoints", async () => {
+    const workspace = path.join(
+      process.cwd(),
+      "fixtures",
+      "repo-java-spring-web-imports"
+    );
+    const expected = JSON.parse(
+      fs.readFileSync(path.join(workspace, "expected-entrypoints.json"), "utf-8")
+    ) as { entrypoints: string[]; nonEntrypoints: string[] };
+    const pipeline = await runIndexingPipeline(workspace);
+
+    const result = runJavaPack(workspace, pipeline);
+
+    expect([...result.entrypoints].sort()).toEqual(expected.entrypoints);
+    for (const filePath of expected.nonEntrypoints) {
+      expect(result.entrypoints.has(filePath)).toBe(false);
+    }
+  });
+
   it("requires direct JAX-RS import evidence for resource entrypoints", async () => {
     const workspace = path.join(
       process.cwd(),
@@ -159,7 +178,8 @@ describe("Java source classification boundaries", () => {
     const files = {
       "src/main/java/app/Boot.java": "@SpringBootApplication class Boot {}",
       "src/main/java/app/Runner.java": "class Runner { void start() { SpringApplication.run(Runner.class); } }",
-      "src/main/java/app/Controller.java": "@RequestMapping class Controller {}",
+      "src/main/java/app/Controller.java":
+        "import org.springframework.web.bind.annotation.RequestMapping; @RequestMapping class Controller {}",
       "src/main/java/app/Resource.java":
         'import javax.ws.rs.Path; @Path("/items") class Resource {}',
       "src/test/java/app/ControllerFixture.java": "@Controller class ControllerFixture {}",
@@ -222,9 +242,9 @@ describe("Java source classification boundaries", () => {
       "src/main/java/app/Runner.java":
         "class Runner { void start() { SpringApplication.run(Runner.class); } }",
       "src/main/java/app/Controller.java":
-        "@RestController class Controller {}",
+        "import org.springframework.stereotype.Controller; @Controller class Controller {}",
       "src/main/java/app/Mapped.java":
-        "@RequestMapping class Mapped {}",
+        "import org.springframework.web.bind.annotation.*; @RequestMapping class Mapped {}",
       "src/main/java/app/Resource.java":
         'import jakarta.ws.rs.*; @Path("/items") class Resource {}',
     };
