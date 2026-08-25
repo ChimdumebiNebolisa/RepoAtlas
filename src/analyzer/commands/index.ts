@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { RunCommand } from "@/types/report";
+import { pyprojectHasDependency } from "../dependencyEvidence/python";
 
 function safeFilePath(workspacePath: string, relativePath: string): string | null {
   try {
@@ -117,7 +118,9 @@ export function extractPythonCommands(workspacePath: string): RunCommand[] {
     }
     if (content.includes("[tool.poetry.scripts]")) {
       commands.push({ source: "pyproject.toml", command: "poetry install", description: "install" });
-      commands.push({ source: "pyproject.toml", command: "poetry run pytest", description: "test" });
+      if (pyprojectHasDependency(content, "pytest")) {
+        commands.push({ source: "pyproject.toml", command: "poetry run pytest", description: "test" });
+      }
     }
   }
   if (hasSafeFile(workspacePath, "Pipfile")) {

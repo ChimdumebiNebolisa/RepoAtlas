@@ -30,6 +30,7 @@ describe("analyzer evaluation suite (fixture gold labels)", () => {
       "repo-monorepo",
       "repo-node-api",
       "repo-python",
+      "repo-python-project-scripts",
       "repo-ts",
     ]);
   });
@@ -42,6 +43,21 @@ describe("analyzer evaluation suite (fixture gold labels)", () => {
 
     expect(result.entrypoints).toMatchObject({
       true_positives: 2,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
+  });
+
+  it("matches every human-labeled Python project-script command without extras", async () => {
+    const gold = goldLabels.find((item) => item.fixture === "repo-python-project-scripts");
+    expect(gold).toBeDefined();
+
+    const result = await evaluateFixture(gold!);
+
+    expect(result.run_commands).toMatchObject({
+      true_positives: 3,
       false_positives: 0,
       false_negatives: 0,
       precision: 1,
