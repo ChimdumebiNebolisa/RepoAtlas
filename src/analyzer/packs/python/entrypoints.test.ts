@@ -2,6 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterEach, describe, expect, it } from "vitest";
+import { computeSetMetrics } from "../../eval/metrics";
 import { detectEntrypoints } from "./entrypoints";
 
 const workspaces: string[] = [];
@@ -24,6 +25,32 @@ afterEach(() => {
 });
 
 describe("detectEntrypoints", () => {
+  it("recognizes a reversed __main__ guard without accepting nearby lookalikes", () => {
+    const workspace = path.join(
+      process.cwd(),
+      "fixtures",
+      "repo-python-reversed-main-guard"
+    );
+    const expected = JSON.parse(
+      fs.readFileSync(path.join(workspace, "expected-entrypoints.json"), "utf-8")
+    ) as { entrypoints: string[]; nonEntrypoints: string[] };
+    const files = [...expected.entrypoints, ...expected.nonEntrypoints];
+
+    const result = detectEntrypoints(files, workspace);
+    const metrics = computeSetMetrics([...result], expected.entrypoints);
+
+    expect(metrics).toMatchObject({
+      true_positives: 1,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
+    for (const filePath of expected.nonEntrypoints) {
+      expect(result.has(filePath)).toBe(false);
+    }
+  });
+
   it("requires executable evidence for conventional Python entrypoint names", () => {
     const workspace = path.join(
       process.cwd(),
