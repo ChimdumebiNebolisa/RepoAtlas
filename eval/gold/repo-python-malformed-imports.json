@@ -1,0 +1,12 @@
+{
+  "fixture": "repo-python-malformed-imports",
+  "entrypoints": [],
+  "internal_edges": [],
+  "run_commands": [],
+  "onboarding_files": ["README.md"],
+  "high_coupling_files": [],
+  "unresolved_imports": [],
+  "known_gaps": [
+    "The malformed bare-parenthesized import must not create internal dependency edges"
+  ]
+}
