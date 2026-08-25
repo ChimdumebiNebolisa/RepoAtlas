@@ -98,6 +98,25 @@ describe("Java module discovery boundaries", () => {
 });
 
 describe("Java source classification boundaries", () => {
+  it("recognizes a varargs main method without promoting scalar or test lookalikes", async () => {
+    const workspace = path.join(
+      process.cwd(),
+      "fixtures",
+      "repo-java-varargs-main"
+    );
+    const expected = JSON.parse(
+      fs.readFileSync(path.join(workspace, "expected-entrypoints.json"), "utf-8")
+    ) as { entrypoints: string[]; nonEntrypoints: string[] };
+    const pipeline = await runIndexingPipeline(workspace);
+
+    const result = runJavaPack(workspace, pipeline);
+
+    expect([...result.entrypoints].sort()).toEqual(expected.entrypoints);
+    for (const filePath of expected.nonEntrypoints) {
+      expect(result.entrypoints.has(filePath)).toBe(false);
+    }
+  });
+
   it("requires direct JAX-RS import evidence for resource entrypoints", async () => {
     const workspace = path.join(
       process.cwd(),

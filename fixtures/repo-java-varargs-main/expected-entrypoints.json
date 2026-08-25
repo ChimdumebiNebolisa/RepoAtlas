@@ -1,0 +1,9 @@
+{
+  "entrypoints": [
+    "src/main/java/example/VarargsMain.java"
+  ],
+  "nonEntrypoints": [
+    "src/main/java/example/ScalarMain.java",
+    "src/test/java/example/VarargsHarness.java"
+  ]
+}

@@ -19,7 +19,7 @@ const TEST_SOURCE_PATH_RE =
   /(^|\/)src\/(?:test|integrationtest|functionaltest|acceptancetest)\/java(\/|$)/i;
 
 const MAIN_METHOD_RE =
-  /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)/;
+  /public\s+static\s+void\s+main\s*\(\s*String\s*(?:\[\s*\]|\.\.\.)\s+\w+\s*\)/;
 const SPRING_BOOT_APP_RE = /@SpringBootApplication/;
 const SPRING_RUN_RE = /SpringApplication\.run\s*\(/;
 const SPRING_CONTROLLER_RE = /@(RestController|Controller)\b/;
