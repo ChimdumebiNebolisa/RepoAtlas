@@ -30,8 +30,31 @@ describe("analyzer evaluation suite (fixture gold labels)", () => {
       "repo-monorepo",
       "repo-node-api",
       "repo-python",
+      "repo-python-import-aliases",
       "repo-ts",
     ]);
+  });
+
+  it("matches the human-labeled alias-heavy Python fixture exactly", async () => {
+    const gold = goldLabels.find((item) => item.fixture === "repo-python-import-aliases");
+    expect(gold).toBeDefined();
+
+    const result = await evaluateFixture(gold!);
+
+    expect(result.entrypoints).toMatchObject({
+      true_positives: 1,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
+    expect(result.internal_edges).toMatchObject({
+      true_positives: 7,
+      false_positives: 0,
+      false_negatives: 0,
+      precision: 1,
+      recall: 1,
+    });
   });
 
   it("detects every human-labeled monorepo entrypoint without extras", async () => {
